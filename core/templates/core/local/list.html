@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}Locais — Decolog{% endblock %}
+{% block page_title %}Locais{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">Locais</h4>
+    <p class="text-muted small mb-0">Fábricas e lojas cadastradas no sistema</p>
+  </div>
+  <a href="{% url 'core:local_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i> Novo Local
+  </a>
+</div>
+
+<div class="row g-3">
+  {% for local in locais %}
+  <div class="col-sm-6 col-lg-4">
+    <div class="card h-100">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div class="rounded-3 p-2 {% if local.is_fabrica %}bg-primary bg-opacity-10{% else %}bg-success bg-opacity-10{% endif %}">
+            <i class="bi {% if local.is_fabrica %}bi-building-gear text-primary{% else %}bi-shop text-success{% endif %} fs-5"></i>
+          </div>
+          {% if local.ativo %}
+            <span class="badge bg-success bg-opacity-10 text-success">Ativo</span>
+          {% else %}
+            <span class="badge bg-secondary bg-opacity-10 text-secondary">Inativo</span>
+          {% endif %}
+        </div>
+
+        <h6 class="fw-bold mb-1">{{ local.nome }}</h6>
+        <p class="text-muted small mb-3">
+          {% if local.is_fabrica %}Fábrica{% else %}Loja{% endif %}
+          {% if local.endereco %} · {{ local.endereco }}{% endif %}
+        </p>
+
+        <div class="d-flex gap-2 mt-auto">
+          <a href="{% url 'core:local_update' local.pk %}" class="btn btn-sm btn-outline-secondary w-50">
+            <i class="bi bi-pencil me-1"></i> Editar
+          </a>
+          <a href="{% url 'core:local_delete' local.pk %}" class="btn btn-sm btn-outline-danger w-50">
+            <i class="bi bi-trash me-1"></i> Excluir
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body text-center py-5">
+        <i class="bi bi-building fs-1 text-muted opacity-50"></i>
+        <p class="text-muted mt-3 mb-3">Nenhum local cadastrado ainda.</p>
+        <a href="{% url 'core:local_create' %}" class="btn btn-primary btn-sm">
+          <i class="bi bi-plus-lg me-1"></i> Cadastrar primeiro local
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

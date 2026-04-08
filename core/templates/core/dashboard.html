@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard — Decolog{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-12">
+    <h5 class="text-muted">Bem-vindo, {{ user.get_full_name|default:user.username }}!</h5>
+  </div>
+</div>
+{% endblock %}

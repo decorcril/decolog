@@ -1,0 +1,192 @@
+/* ── Base ── */
+body {
+  background-color: #f0f2f5;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+/* ── Topbar ── */
+#topbar {
+  background: #1a2535;
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+}
+
+/* Brand */
+.topbar-brand {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #fff;
+  text-decoration: none;
+  letter-spacing: -0.5px;
+  margin-right: 2rem;
+  white-space: nowrap;
+}
+
+.topbar-brand span {
+  color: #4da3ff;
+}
+
+/* Nav links */
+.topbar-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.topbar-nav .nav-link {
+  color: rgba(255,255,255,0.65);
+  font-size: 0.875rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.topbar-nav .nav-link:hover,
+.topbar-nav .nav-link.active {
+  color: #fff;
+  background: rgba(255,255,255,0.1);
+}
+
+/* Dropdown */
+.topbar-nav .dropdown-menu {
+  background: #1e2d40;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 0.5rem;
+  min-width: 200px;
+  margin-top: 0.5rem;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+
+.topbar-nav .dropdown-item {
+  color: rgba(255,255,255,0.65);
+  font-size: 0.875rem;
+  border-radius: 8px;
+  padding: 0.5rem 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.15s, color 0.15s;
+}
+
+.topbar-nav .dropdown-item:hover {
+  color: #fff;
+  background: rgba(255,255,255,0.08);
+}
+
+/* Usuário */
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-left: auto;
+}
+
+.topbar-user .username {
+  color: rgba(255,255,255,0.5);
+  font-size: 0.82rem;
+}
+
+/* ── Conteúdo principal ── */
+#main-content {
+  margin-top: 56px;
+  min-height: calc(100vh - 56px);
+  display: flex;
+  flex-direction: column;
+}
+
+.page-wrapper {
+  padding: 2rem 1.75rem;
+  flex: 1;
+}
+
+/* ── Cards ── */
+.card {
+  border: none !important;
+  border-radius: 16px !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06) !important;
+}
+
+.card-header {
+  background: #fff !important;
+  border-bottom: 1px solid #f0f2f5 !important;
+  border-radius: 16px 16px 0 0 !important;
+  padding: 1.25rem 1.5rem !important;
+}
+
+/* ── Badges ── */
+.badge {
+  font-weight: 500;
+  padding: 0.4em 0.75em;
+  border-radius: 8px;
+}
+
+/* ── Botões ── */
+.btn {
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.btn-primary {
+  background-color: #4da3ff;
+  border-color: #4da3ff;
+}
+
+.btn-primary:hover {
+  background-color: #2e8fff;
+  border-color: #2e8fff;
+}
+
+/* ── Forms ── */
+.form-control,
+.form-select {
+  border-radius: 10px;
+  border: 1.5px solid #e8eaed;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.9rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #4da3ff;
+  box-shadow: 0 0 0 3px rgba(77, 163, 255, 0.12);
+}
+
+.form-check-input:checked {
+  background-color: #4da3ff;
+  border-color: #4da3ff;
+}
+
+/* ── Página centralizada ── */
+.page-centered {
+  min-height: calc(100vh - 56px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Responsivo ── */
+@media (max-width: 768px) {
+  .topbar-nav {
+    display: none;
+  }
+
+  #topbar {
+    padding: 0 1rem;
+  }
+}
