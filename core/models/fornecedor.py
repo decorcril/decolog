@@ -9,6 +9,12 @@ class Fornecedor(models.Model):
     contato = models.CharField(max_length=200, blank=True, verbose_name='Contato')
     email = models.EmailField(blank=True, verbose_name='E-mail')
     telefone = models.CharField(max_length=20, blank=True, verbose_name='Telefone')
+    tags = models.ManyToManyField(
+        'core.TagFornecedor',
+        blank=True,
+        related_name='fornecedores',
+        verbose_name='Tags'
+    )
     ativo = models.BooleanField(default=True, verbose_name='Ativo')
     criado_em = models.DateTimeField(auto_now_add=True)
 

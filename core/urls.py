@@ -4,6 +4,7 @@ from core.views import (
     local_list, local_create, local_update, local_delete,
     fornecedor_list, fornecedor_create, fornecedor_update, fornecedor_delete,
 )
+from core.views.fornecedor import tag_delete, tag_list
 
 app_name = 'core'
 
@@ -19,4 +20,6 @@ urlpatterns = [
     path('fornecedores/novo/', fornecedor_create, name='fornecedor_create'),
     path('fornecedores/<int:pk>/editar/', fornecedor_update, name='fornecedor_update'),
     path('fornecedores/<int:pk>/excluir/', fornecedor_delete, name='fornecedor_delete'),
+    path('fornecedores/tags/', tag_list, name='tag_list'),
+    path('fornecedores/tags/<int:pk>/excluir/', tag_delete, name='tag_delete'),
 ]

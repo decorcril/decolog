@@ -24,7 +24,7 @@
             <label class="form-label fw-semibold text-secondary small">NOME</label>
             {{ form.nome }}
             {% if form.nome.errors %}
-              <div class="text-danger small mt-1">{{ form.nome.errors }}</div>
+            <div class="text-danger small mt-1">{{ form.nome.errors }}</div>
             {% endif %}
           </div>
 
@@ -34,7 +34,7 @@
             </label>
             {{ form.documento }}
             {% if form.documento.errors %}
-              <div class="text-danger small mt-1">{{ form.documento.errors }}</div>
+            <div class="text-danger small mt-1">{{ form.documento.errors }}</div>
             {% endif %}
           </div>
 
@@ -43,14 +43,14 @@
               <label class="form-label fw-semibold text-secondary small">CONTATO</label>
               {{ form.contato }}
               {% if form.contato.errors %}
-                <div class="text-danger small mt-1">{{ form.contato.errors }}</div>
+              <div class="text-danger small mt-1">{{ form.contato.errors }}</div>
               {% endif %}
             </div>
             <div class="col-md-6 mb-3">
               <label class="form-label fw-semibold text-secondary small">TELEFONE</label>
               {{ form.telefone }}
               {% if form.telefone.errors %}
-                <div class="text-danger small mt-1">{{ form.telefone.errors }}</div>
+              <div class="text-danger small mt-1">{{ form.telefone.errors }}</div>
               {% endif %}
             </div>
           </div>
@@ -59,29 +59,60 @@
             <label class="form-label fw-semibold text-secondary small">E-MAIL</label>
             {{ form.email }}
             {% if form.email.errors %}
-              <div class="text-danger small mt-1">{{ form.email.errors }}</div>
+            <div class="text-danger small mt-1">{{ form.email.errors }}</div>
             {% endif %}
           </div>
 
-          <div class="mb-4 d-flex align-items-center gap-2">
-            {{ form.ativo }}
-            <label class="form-check-label text-secondary small">Fornecedor ativo no sistema</label>
+          <!-- Tags -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-secondary small">TAGS</label>
+            <div class="d-flex flex-wrap gap-2 p-3 rounded-3" style="border: 1.5px solid #e8eaed; min-height: 48px;">
+              {% for tag in form.tags %}
+              <div class="form-check form-check-inline m-0">
+                {{ tag.tag }}
+                <label class="form-check-label badge bg-primary bg-opacity-10 text-primary px-2 py-1"
+                  for="{{ tag.id_for_label }}" style="cursor:pointer; border-radius: 8px;">
+                  {{ tag.choice_label }}
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+            {% if form.tags.errors %}
+            <div class="text-danger small mt-1">{{ form.tags.errors }}</div>
+            {% endif %}
           </div>
 
-          <hr class="my-3" style="border-color: #f0f2f5;">
-
-          <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-primary px-4">
-              <i class="bi bi-check-lg me-1"></i> Salvar
-            </button>
-            <a href="{% url 'core:fornecedor_list' %}" class="btn btn-outline-secondary px-4">
-              Cancelar
-            </a>
+          <!-- Nova tag -->
+          <!-- Nova tag -->
+          <div class="mb-4">
+            <label class="form-label fw-semibold text-secondary small">CRIAR NOVA TAG</label>
+            {{ form.nova_tag }}
+            <div class="text-muted small mt-1">
+              <i class="bi bi-info-circle me-1"></i>
+              Digite o nome de uma nova tag e ela será criada ao salvar.
+            </div>
           </div>
-
-        </form>
       </div>
+
+      <div class="mb-4 d-flex align-items-center gap-2">
+        {{ form.ativo }}
+        <label class="form-check-label text-secondary small">Fornecedor ativo no sistema</label>
+      </div>
+
+      <hr class="my-3" style="border-color: #f0f2f5;">
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="bi bi-check-lg me-1"></i> Salvar
+        </button>
+        <a href="{% url 'core:fornecedor_list' %}" class="btn btn-outline-secondary px-4">
+          Cancelar
+        </a>
+      </div>
+
+      </form>
     </div>
   </div>
+</div>
 </div>
 {% endblock %}

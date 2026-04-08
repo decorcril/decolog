@@ -10,22 +10,31 @@
     <p class="text-muted small mb-0">Fornecedores cadastrados no sistema</p>
   </div>
   <a href="{% url 'core:fornecedor_create' %}" class="btn btn-primary">
-    <i class="bi bi-plus-lg me-1"></i> Novo Fornecedor
+    <i class="bi bi-plus-lg me-1"></i>
   </a>
 </div>
 
-<!-- Busca -->
-<div class="row mb-4">
-  <div class="col-md-4">
-    <form method="get">
-      <div class="input-group">
-        <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Buscar fornecedor...">
-        <button class="btn btn-outline-secondary" type="submit">
-          <i class="bi bi-search"></i>
-        </button>
-      </div>
-    </form>
-  </div>
+<!-- Busca e filtro por tag -->
+<div class="d-flex flex-wrap gap-2 mb-4">
+  <form method="get" class="d-flex gap-2 flex-wrap">
+    <input type="text" name="q" value="{{ q }}" class="form-control" style="max-width: 260px;" placeholder="Buscar fornecedor...">
+    <select name="tag" class="form-select" style="max-width: 200px;" onchange="this.form.submit()">
+      <option value="">Todas as tags</option>
+      {% for tag in tags %}
+        <option value="{{ tag.id }}" {% if tag_selecionada == tag.id|stringformat:"s" %}selected{% endif %}>
+          {{ tag.nome }}
+        </option>
+      {% endfor %}
+    </select>
+    <button class="btn btn-outline-secondary" type="submit">
+      <i class="bi bi-search"></i>
+    </button>
+    {% if q or tag_selecionada %}
+      <a href="{% url 'core:fornecedor_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-x-lg"></i>
+      </a>
+    {% endif %}
+  </form>
 </div>
 
 <div class="row g-3">
@@ -38,26 +47,35 @@
             <i class="bi bi-truck text-primary fs-5"></i>
           </div>
           {% if fornecedor.ativo %}
-          <span class="badge bg-success bg-opacity-10 text-success">Ativo</span>
+            <span class="badge bg-success bg-opacity-10 text-success">Ativo</span>
           {% else %}
-          <span class="badge bg-secondary bg-opacity-10 text-secondary">Inativo</span>
+            <span class="badge bg-secondary bg-opacity-10 text-secondary">Inativo</span>
           {% endif %}
         </div>
 
         <h6 class="fw-bold mb-1">{{ fornecedor.nome }}</h6>
 
+        <!-- Tags -->
+        {% if fornecedor.tags.all %}
+          <div class="d-flex flex-wrap gap-1 mb-2">
+            {% for tag in fornecedor.tags.all %}
+              <span class="badge bg-primary bg-opacity-10 text-primary">{{ tag.nome }}</span>
+            {% endfor %}
+          </div>
+        {% endif %}
+
         <div class="text-muted small mb-3">
           {% if fornecedor.documento %}
-          <div><i class="bi bi-file-earmark-text me-1"></i>{{ fornecedor.documento|documento }}</div>
+            <div><i class="bi bi-file-earmark-text me-1"></i>{{ fornecedor.documento|documento }}</div>
           {% endif %}
           {% if fornecedor.contato %}
-          <div><i class="bi bi-person me-1"></i>{{ fornecedor.contato }}</div>
+            <div><i class="bi bi-person me-1"></i>{{ fornecedor.contato }}</div>
           {% endif %}
           {% if fornecedor.telefone %}
-          <div><i class="bi bi-telephone me-1"></i>{{ fornecedor.telefone|telefone }}</div>
+            <div><i class="bi bi-telephone me-1"></i>{{ fornecedor.telefone|telefone }}</div>
           {% endif %}
           {% if fornecedor.email %}
-          <div><i class="bi bi-envelope me-1"></i>{{ fornecedor.email }}</div>
+            <div><i class="bi bi-envelope me-1"></i>{{ fornecedor.email }}</div>
           {% endif %}
         </div>
 
@@ -77,16 +95,16 @@
     <div class="card">
       <div class="card-body text-center py-5">
         <i class="bi bi-truck fs-1 text-muted opacity-50"></i>
-        {% if q %}
-        <p class="text-muted mt-3 mb-3">Nenhum fornecedor encontrado para "<strong>{{ q }}</strong>".</p>
-        <a href="{% url 'core:fornecedor_list' %}" class="btn btn-outline-secondary btn-sm">
-          <i class="bi bi-x-lg me-1"></i> Limpar busca
-        </a>
+        {% if q or tag_selecionada %}
+          <p class="text-muted mt-3 mb-3">Nenhum fornecedor encontrado com esses filtros.</p>
+          <a href="{% url 'core:fornecedor_list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-x-lg me-1"></i> Limpar filtros
+          </a>
         {% else %}
-        <p class="text-muted mt-3 mb-3">Nenhum fornecedor cadastrado ainda.</p>
-        <a href="{% url 'core:fornecedor_create' %}" class="btn btn-primary btn-sm">
-          <i class="bi bi-plus-lg me-1"></i> Cadastrar primeiro fornecedor
-        </a>
+          <p class="text-muted mt-3 mb-3">Nenhum fornecedor cadastrado ainda.</p>
+          <a href="{% url 'core:fornecedor_create' %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i> Cadastrar primeiro fornecedor
+          </a>
         {% endif %}
       </div>
     </div>
