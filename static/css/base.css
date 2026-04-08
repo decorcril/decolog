@@ -1,12 +1,12 @@
 /* ── Base ── */
 body {
   background-color: #f0f2f5;
-  font-family: 'Segoe UI', sans-serif;
+   font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 /* ── Topbar ── */
 #topbar {
-  background: #1a2535;
+  background: #2422b1;
   padding: 0 1.5rem;
   display: flex;
   align-items: center;
