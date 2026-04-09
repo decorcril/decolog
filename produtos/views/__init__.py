@@ -1,0 +1,1 @@
+from .produto import produto_list, produto_create, produto_update, produto_delete

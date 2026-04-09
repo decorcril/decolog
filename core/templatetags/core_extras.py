@@ -25,3 +25,14 @@ def documento(value):
     elif len(v) == 14:
         return f'{v[0:2]}.{v[2:5]}.{v[5:8]}/{v[8:12]}-{v[12:14]}'
     return value
+
+@register.filter
+def moeda(value):
+    if value is None:
+        return 'R$ 0,00'
+    try:
+        value = float(value)
+        formatted = f'{value:,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.')
+        return f'R$ {formatted}'
+    except (ValueError, TypeError):
+        return 'R$ 0,00'

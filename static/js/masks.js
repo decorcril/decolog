@@ -25,13 +25,27 @@ function maskDocumento(v) {
   return v;
 }
 
+function maskMoeda(v) {
+  v = v.replace(/\D/g, '');
+  if (v.length === 0) return '';
+  v = (parseInt(v, 10) / 100).toFixed(2);
+  v = v.replace('.', ',');
+  v = v.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
+  return v;
+}
+
+function formatarMoedaInicial(valor) {
+  if (!valor) return '';
+  const num = parseFloat(String(valor).replace(',', '.'));
+  if (isNaN(num)) return '';
+  return num.toFixed(2).replace('.', ',').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
+}
+
 function applyMask(input, maskFn) {
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Backspace' || e.key === 'Delete') {
-      // Remove último dígito numérico ao apagar
       let pos = input.selectionStart;
       let v = input.value;
-      // Se o caractere antes do cursor é separador, pula ele
       while (pos > 0 && /\D/.test(v[pos - 1])) {
         pos--;
       }
@@ -58,7 +72,16 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('input[name="telefone"]').forEach(input => {
     applyMask(input, maskTelefone);
   });
+
   document.querySelectorAll('input[name="documento"]').forEach(input => {
     applyMask(input, maskDocumento);
+  });
+
+  document.querySelectorAll('input[data-mask="moeda"]').forEach(input => {
+    // Formata valor inicial (edição)
+    if (input.value) {
+      input.value = formatarMoedaInicial(input.value);
+    }
+    applyMask(input, maskMoeda);
   });
 });

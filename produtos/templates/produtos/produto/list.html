@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% block title %}Produtos — Decolog{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">Produtos</h4>
+    <p class="text-muted small mb-0">Insumos, chapas e produtos finais</p>
+  </div>
+  <a href="{% url 'produtos:criar' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i> Novo Produto
+  </a>
+</div>
+
+<div class="d-flex flex-wrap gap-2 mb-4">
+  <form method="get" class="d-flex gap-2 flex-wrap">
+    <input type="text" name="q" value="{{ q }}" class="form-control" style="max-width: 260px;" placeholder="Buscar produto...">
+    <select name="categoria" class="form-select" style="max-width: 200px;" onchange="this.form.submit()">
+      <option value="">Todas as categorias</option>
+      {% for value, label in categoria_choices %}
+        <option value="{{ value }}" {% if categoria == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn btn-outline-secondary" type="submit">
+      <i class="bi bi-search"></i>
+    </button>
+    {% if q or categoria %}
+      <a href="{% url 'produtos:lista' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-x-lg"></i>
+      </a>
+    {% endif %}
+  </form>
+</div>
+
+<div class="row g-3">
+  {% for produto in produtos %}
+  <div class="col-sm-6 col-lg-4">
+    <div class="card h-100">
+      <div class="card-body p-4">
+
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div class="rounded-3 p-2 {% if produto.is_chapa %}bg-info bg-opacity-10{% elif produto.is_insumo %}bg-warning bg-opacity-10{% else %}bg-primary bg-opacity-10{% endif %}">
+            <i class="bi fs-5 {% if produto.is_chapa %}bi-grid text-info{% elif produto.is_insumo %}bi-box text-warning{% else %}bi-box-seam text-primary{% endif %}"></i>
+          </div>
+          <div class="d-flex flex-column align-items-end gap-1">
+            <span class="badge {% if produto.is_chapa %}bg-info bg-opacity-10 text-info{% elif produto.is_insumo %}bg-warning bg-opacity-10 text-warning{% else %}bg-primary bg-opacity-10 text-primary{% endif %}">
+              {{ produto.get_categoria_display }}
+            </span>
+            {% if produto.estoque_baixo %}
+              <span class="badge bg-danger bg-opacity-10 text-danger">Estoque Baixo</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <h6 class="fw-bold mb-0">
+          {% if produto.descricao %}
+            <span data-bs-toggle="tooltip" data-bs-placement="top" title="{{ produto.descricao }}">{{ produto.nome }}</span>
+          {% else %}
+            {{ produto.nome }}
+          {% endif %}
+        </h6>
+
+        {% if produto.codigo %}
+          <p class="text-muted small mb-2 mt-1" style="font-family: monospace;">{{ produto.codigo }}</p>
+        {% else %}
+          <div class="mb-2"></div>
+        {% endif %}
+
+        <div class="text-muted small mb-3">
+          {% if produto.cor %}
+            <div><span class="fw-semibold">Cor:</span> {{ produto.get_cor_display }}</div>
+          {% endif %}
+          {% with dims=produto.dimensoes_display %}
+            {% if dims %}
+              <div><span class="fw-semibold">Medidas:</span> {{ dims }}</div>
+            {% endif %}
+          {% endwith %}
+          <div>
+            <span class="fw-semibold">Estoque:</span> {{ produto.estoque_total }}
+            {% if produto.is_chapa %}unidade(s){% else %}{{ produto.get_unidade_medida_display }}{% endif %}
+          </div>
+        </div>
+
+        <div class="d-flex gap-2">
+          <a href="{% url 'produtos:editar' produto.pk %}" class="btn btn-sm btn-outline-secondary w-50">
+            <i class="bi bi-pencil me-1"></i> Editar
+          </a>
+          <a href="{% url 'produtos:excluir' produto.pk %}" class="btn btn-sm btn-outline-danger w-50">
+            <i class="bi bi-trash me-1"></i> Excluir
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body text-center py-5">
+        <i class="bi bi-box-seam fs-1 text-muted opacity-50"></i>
+        {% if q or categoria %}
+          <p class="text-muted mt-3 mb-3">Nenhum produto encontrado com esses filtros.</p>
+          <a href="{% url 'produtos:lista' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-x-lg me-1"></i> Limpar filtros
+          </a>
+        {% else %}
+          <p class="text-muted mt-3 mb-3">Nenhum produto cadastrado ainda.</p>
+          <a href="{% url 'produtos:criar' %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i> Cadastrar primeiro produto
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
