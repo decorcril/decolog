@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% load core_extras %}
+
+{% block title %}Estoque — Decolog{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">Consulta de Estoque</h4>
+    <p class="text-muted small mb-0">Saldo atual por produto e local</p>
+  </div>
+</div>
+
+<div class="d-flex flex-wrap gap-2 mb-4">
+  <form method="get" class="d-flex gap-2 flex-wrap">
+    <input type="text" name="q" value="{{ q }}" class="form-control"
+      style="max-width: 220px;" placeholder="Buscar produto...">
+    <select name="local" class="form-select" style="max-width: 180px;" onchange="this.form.submit()">
+      <option value="">Todos os locais</option>
+      {% for local in locais %}
+        <option value="{{ local.id }}" {% if local_id == local.id|stringformat:"s" %}selected{% endif %}>
+          {{ local.nome }}
+        </option>
+      {% endfor %}
+    </select>
+    <select name="categoria" class="form-select" style="max-width: 180px;" onchange="this.form.submit()">
+      <option value="">Todas as categorias</option>
+      {% for value, label in categoria_choices %}
+        <option value="{{ value }}" {% if categoria == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn btn-outline-secondary" type="submit">
+      <i class="bi bi-search"></i>
+    </button>
+    {% if q or local_id or categoria %}
+      <a href="{% url 'estoque:lista' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-x-lg"></i>
+      </a>
+    {% endif %}
+  </form>
+</div>
+
+<div class="row g-3">
+  {% for estoque in estoques %}
+  <div class="col-sm-6 col-lg-4">
+    <div class="card h-100">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <span class="badge {% if estoque.produto.is_chapa %}bg-info bg-opacity-10 text-info{% elif estoque.produto.is_insumo %}bg-warning bg-opacity-10 text-warning{% else %}bg-primary bg-opacity-10 text-primary{% endif %}">
+            {{ estoque.produto.get_categoria_display }}
+          </span>
+          <span class="badge bg-secondary bg-opacity-10 text-secondary">
+            {{ estoque.local.nome }}
+          </span>
+        </div>
+
+        <h6 class="fw-bold mb-1">{{ estoque.produto.nome }}</h6>
+
+        {% if estoque.produto.codigo %}
+          <p class="text-muted small mb-2" style="font-family: monospace;">{{ estoque.produto.codigo }}</p>
+        {% endif %}
+
+        <div class="text-muted small mb-3">
+          {% if estoque.produto.cor %}
+            <div><span class="fw-semibold">Cor:</span> {{ estoque.produto.get_cor_display }}</div>
+          {% endif %}
+          {% with dims=estoque.produto.dimensoes_display %}
+            {% if dims %}
+              <div><span class="fw-semibold">Medidas:</span> {{ dims }}</div>
+            {% endif %}
+          {% endwith %}
+        </div>
+
+        <div class="d-flex align-items-center justify-content-between">
+          <span class="fw-semibold text-secondary small">SALDO</span>
+          <span class="fw-bold fs-5">
+            {{ estoque.quantidade|floatformat:"-3" }} {{ estoque.produto|unidade_abrev }}
+          </span>
+        </div>
+
+        {% if estoque.produto.estoque_baixo %}
+          <div class="mt-2">
+            <span class="badge bg-danger bg-opacity-10 text-danger w-100 text-center py-1">
+              <i class="bi bi-exclamation-triangle me-1"></i> Estoque Baixo
+            </span>
+          </div>
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body text-center py-5">
+        <i class="bi bi-archive fs-1 text-muted opacity-50"></i>
+        {% if q or local_id or categoria %}
+          <p class="text-muted mt-3 mb-3">Nenhum item encontrado com esses filtros.</p>
+          <a href="{% url 'estoque:lista' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-x-lg me-1"></i> Limpar filtros
+          </a>
+        {% else %}
+          <p class="text-muted mt-3 mb-3">Nenhum item em estoque ainda.</p>
+          <a href="{% url 'movimentacoes:entrada' %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-arrow-down-circle me-1"></i> Registrar primeira entrada
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -16,12 +16,10 @@
 
 <body>
 
-  {% if user.is_authenticated %}
+{% if user.is_authenticated %}
 
-  <!-- Overlay mobile -->
   <div id="sidebar-overlay"></div>
 
-  <!-- Sidebar mobile -->
   <div id="mobile-sidebar">
     <div class="mobile-sidebar-header">
       <a href="{% url 'core:dashboard' %}" class="topbar-brand">
@@ -47,8 +45,15 @@
       <a href="{% url 'produtos:lista' %}" class="mobile-nav-link">
         <i class="bi bi-box-seam"></i> Produtos
       </a>
+      <a href="{% url 'core:tag_list' %}" class="mobile-nav-link">
+        <i class="bi bi-tag"></i> Tags de Fornecedores
+      </a>
+
       <div class="mobile-nav-section">Estoque</div>
-      <a href="#" class="mobile-nav-link">
+      <a href="{% url 'estoque:lista' %}" class="mobile-nav-link">
+        <i class="bi bi-archive"></i> Consultar Estoque
+      </a>
+      <a href="{% url 'movimentacoes:entrada' %}" class="mobile-nav-link">
         <i class="bi bi-arrow-down-circle"></i> Entrada
       </a>
       <a href="#" class="mobile-nav-link">
@@ -83,9 +88,7 @@
     </div>
   </div>
 
-  <!-- Topbar -->
   <nav id="topbar">
-    <!-- Hamburger apenas no mobile -->
     <button id="mobile-menu-toggle" class="d-md-none">
       <i class="bi bi-list"></i>
     </button>
@@ -94,7 +97,6 @@
       Deco<span>log</span>
     </a>
 
-    <!-- Nav desktop -->
     <div class="topbar-nav">
       <a href="{% url 'core:dashboard' %}"
         class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
@@ -121,9 +123,7 @@
               <i class="bi bi-box-seam"></i> Produtos
             </a>
           </li>
-          <li>
-            <hr class="dropdown-divider" style="border-color: rgba(255,255,255,0.08);">
-          </li>
+          <li><hr class="dropdown-divider" style="border-color: rgba(255,255,255,0.08);"></li>
           <li>
             <a class="dropdown-item" href="{% url 'core:tag_list' %}">
               <i class="bi bi-tag"></i> Tags de Fornecedores
@@ -137,12 +137,19 @@
           <i class="bi bi-archive"></i> Estoque
         </a>
         <ul class="dropdown-menu">
-          <li><a class="dropdown-item" href="#"><i class="bi bi-arrow-down-circle"></i> Entrada</a></li>
+          <li>
+            <a class="dropdown-item" href="{% url 'estoque:lista' %}">
+              <i class="bi bi-archive"></i> Consultar Estoque
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" href="{% url 'movimentacoes:entrada' %}">
+              <i class="bi bi-arrow-down-circle"></i> Entrada
+            </a>
+          </li>
           <li><a class="dropdown-item" href="#"><i class="bi bi-arrow-up-circle"></i> Saída</a></li>
           <li><a class="dropdown-item" href="#"><i class="bi bi-arrow-left-right"></i> Transferência</a></li>
-          <li>
-            <hr class="dropdown-divider" style="border-color: rgba(255,255,255,0.08);">
-          </li>
+          <li><hr class="dropdown-divider" style="border-color: rgba(255,255,255,0.08);"></li>
           <li><a class="dropdown-item" href="#"><i class="bi bi-clock-history"></i> Histórico</a></li>
         </ul>
       </div>
@@ -175,27 +182,26 @@
   <div id="main-content">
     <div class="page-wrapper">
       {% if messages %}
-      {% for message in messages %}
-      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      </div>
-      {% endfor %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
       {% endif %}
 
       {% block content %}{% endblock %}
     </div>
   </div>
 
-  {% else %}
+{% else %}
   {% block unauthenticated_content %}{% endblock %}
-  {% endif %}
+{% endif %}
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="{% static 'js/base.js' %}"></script>
-  <script src="{% static 'js/masks.js' %}"></script>
-  {% block extra_js %}{% endblock %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{% static 'js/base.js' %}"></script>
+<script src="{% static 'js/masks.js' %}"></script>
+{% block extra_js %}{% endblock %}
 
 </body>
-
 </html>

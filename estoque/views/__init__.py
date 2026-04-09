@@ -1,0 +1,1 @@
+from .consulta import estoque_list

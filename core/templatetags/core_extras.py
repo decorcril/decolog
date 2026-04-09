@@ -26,6 +26,7 @@ def documento(value):
         return f'{v[0:2]}.{v[2:5]}.{v[5:8]}/{v[8:12]}-{v[12:14]}'
     return value
 
+
 @register.filter
 def moeda(value):
     if value is None:
@@ -36,3 +37,23 @@ def moeda(value):
         return f'R$ {formatted}'
     except (ValueError, TypeError):
         return 'R$ 0,00'
+
+
+@register.filter
+def unidade_abrev(produto):
+    abreviacoes = {
+        'un': 'un',
+        'kg': 'kg',
+        'g': 'g',
+        'm': 'm',
+        'm2': 'm²',
+        'cm': 'cm',
+        'l': 'L',
+        'ml': 'mL',
+        'cx': 'cx',
+        'pct': 'pct',
+        'chp': 'un',
+        'rolo': 'rolo',
+        'tubo': 'tubo',
+    }
+    return abreviacoes.get(produto.unidade_medida, produto.unidade_medida)

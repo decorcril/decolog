@@ -1,0 +1,1 @@
+from .movimentacao import Movimentacao

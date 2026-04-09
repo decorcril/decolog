@@ -32,8 +32,7 @@
 
         <h6 class="fw-bold mb-1">{{ local.nome }}</h6>
         <p class="text-muted small mb-3">
-          {% if local.is_fabrica %}Fábrica{% else %}Loja{% endif %}
-          {% if local.endereco %} · {{ local.endereco }}{% endif %}
+          {% if local.endereco %}{{ local.endereco }}{% endif %}
         </p>
 
         <div class="d-flex gap-2 mt-auto">
