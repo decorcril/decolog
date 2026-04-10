@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Transferência entre Locais — Decolog{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <h4 class="fw-bold mb-1">Transferência entre Locais</h4>
+  <p class="text-muted small mb-0">Mova produtos entre fábrica e lojas</p>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <div class="card">
+      <div class="card-body p-4">
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-secondary small">PRODUTO</label>
+            {{ form.produto }}
+            {% if form.produto.errors %}
+              <div class="text-danger small mt-1">{{ form.produto.errors }}</div>
+            {% endif %}
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-semibold text-secondary small">ORIGEM</label>
+              {{ form.local_origem }}
+              {% if form.local_origem.errors %}
+                <div class="text-danger small mt-1">{{ form.local_origem.errors }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-semibold text-secondary small">DESTINO</label>
+              {{ form.local_destino }}
+              {% if form.local_destino.errors %}
+                <div class="text-danger small mt-1">{{ form.local_destino.errors }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-secondary small">QUANTIDADE</label>
+            {{ form.quantidade }}
+            {% if form.quantidade.errors %}
+              <div class="text-danger small mt-1">{{ form.quantidade.errors }}</div>
+            {% endif %}
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-semibold text-secondary small">
+              OBSERVAÇÃO <span class="text-muted fw-normal">(opcional)</span>
+            </label>
+            {{ form.observacao }}
+          </div>
+
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger py-2 small">
+              {{ form.non_field_errors }}
+            </div>
+          {% endif %}
+
+          <hr class="my-3" style="border-color: #f0f2f5;">
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-arrow-left-right me-1"></i> Transferir
+            </button>
+            <a href="{% url 'estoque:lista' %}" class="btn btn-outline-secondary px-4">
+              Cancelar
+            </a>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
