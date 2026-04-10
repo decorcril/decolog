@@ -32,25 +32,23 @@ class Produto(models.Model):
         ('cristal', 'Cristal'),
         ('branco', 'Branco'),
         ('preto', 'Preto'),
+        ('vermelho', 'Vermelho'),
         ('azul_bebe', 'Azul Bebê'),
+        ('amarelo', 'Amarelo'),
         ('rosa_bebe', 'Rosa Bebê'),
         ('espelhado', 'Espelhado'),
-        ('dourado', 'Dourado'),
-        ('outro', 'Outro'),
+        ('outro', 'Outro (especificar cor nas observações)'),
     ]
 
     # Dados básicos
+    codigo = models.CharField(
+        max_length=50, blank=True, unique=True,
+        null=True, verbose_name='Código'
+    )
     nome = models.CharField(max_length=200, verbose_name='Nome')
     categoria = models.CharField(
         max_length=20, choices=CATEGORIA_CHOICES,
         verbose_name='Categoria'
-    )
-    codigo = models.CharField(
-    max_length=50,
-    blank=True,
-    unique=True,
-    null=True,
-    verbose_name='Código'
     )
     unidade_medida = models.CharField(
         max_length=5, choices=UNIDADE_CHOICES,
@@ -71,11 +69,17 @@ class Produto(models.Model):
         null=True, blank=True, verbose_name='Espessura (mm)'
     )
 
-    # Dimensões (todas opcionais)
-    altura_cm = models.DecimalField(
+    # Dimensões chapas (em mm)
+    largura_mm = models.DecimalField(
         max_digits=8, decimal_places=2,
-        null=True, blank=True, verbose_name='Altura (cm)'
+        null=True, blank=True, verbose_name='Largura (mm)'
     )
+    comprimento_mm = models.DecimalField(
+        max_digits=8, decimal_places=2,
+        null=True, blank=True, verbose_name='Comprimento (mm)'
+    )
+
+    # Dimensões outros produtos (em cm)
     largura_cm = models.DecimalField(
         max_digits=8, decimal_places=2,
         null=True, blank=True, verbose_name='Largura (cm)'
@@ -83,6 +87,10 @@ class Produto(models.Model):
     comprimento_cm = models.DecimalField(
         max_digits=8, decimal_places=2,
         null=True, blank=True, verbose_name='Comprimento (cm)'
+    )
+    altura_cm = models.DecimalField(
+        max_digits=8, decimal_places=2,
+        null=True, blank=True, verbose_name='Altura (cm)'
     )
     diametro_cm = models.DecimalField(
         max_digits=8, decimal_places=2,
@@ -127,37 +135,42 @@ class Produto(models.Model):
         return self.categoria in (self.CATEGORIA_INSUMO, self.CATEGORIA_CHAPA)
 
     def dimensoes_display(self):
+        def fmt(v):
+            if v is None:
+                return None
+            return int(v) if v == int(v) else v
+
         if self.is_chapa:
             parts = []
-            if self.largura_cm and self.comprimento_cm:
-                parts.append(f'{self.largura_cm}x{self.comprimento_cm}cm')
-            elif self.largura_cm:
-                parts.append(f'L: {self.largura_cm}cm')
-            elif self.comprimento_cm:
-                parts.append(f'C: {self.comprimento_cm}cm')
+            if self.largura_mm and self.comprimento_mm:
+                parts.append(f'{fmt(self.largura_mm)}x{fmt(self.comprimento_mm)}mm')
+            elif self.largura_mm:
+                parts.append(f'L: {fmt(self.largura_mm)}mm')
+            elif self.comprimento_mm:
+                parts.append(f'C: {fmt(self.comprimento_mm)}mm')
             if self.espessura_mm:
-                parts.append(f'Esp: {self.espessura_mm}mm')
+                parts.append(f'Esp: {fmt(self.espessura_mm)}mm')
             return ' · '.join(parts) if parts else ''
 
         dims = []
         if self.largura_cm and self.comprimento_cm and self.altura_cm:
-            dims.append(f'{self.largura_cm}x{self.comprimento_cm}x{self.altura_cm}cm')
+            dims.append(f'{fmt(self.largura_cm)}x{fmt(self.comprimento_cm)}x{fmt(self.altura_cm)}cm')
         elif self.largura_cm and self.comprimento_cm:
-            dims.append(f'{self.largura_cm}x{self.comprimento_cm}cm')
+            dims.append(f'{fmt(self.largura_cm)}x{fmt(self.comprimento_cm)}cm')
         elif self.largura_cm:
-            dims.append(f'L: {self.largura_cm}cm')
+            dims.append(f'L: {fmt(self.largura_cm)}cm')
         elif self.comprimento_cm:
-            dims.append(f'C: {self.comprimento_cm}cm')
+            dims.append(f'C: {fmt(self.comprimento_cm)}cm')
         elif self.altura_cm:
-            dims.append(f'A: {self.altura_cm}cm')
+            dims.append(f'A: {fmt(self.altura_cm)}cm')
         if self.diametro_cm:
-            dims.append(f'Ø: {self.diametro_cm}cm')
+            dims.append(f'Ø: {fmt(self.diametro_cm)}cm')
         if self.profundidade_cm:
-            dims.append(f'P: {self.profundidade_cm}cm')
+            dims.append(f'P: {fmt(self.profundidade_cm)}cm')
         if self.curvatura_cm:
-            dims.append(f'Curv: {self.curvatura_cm}cm')
+            dims.append(f'Curv: {fmt(self.curvatura_cm)}cm')
         if self.espessura_mm:
-            dims.append(f'Esp: {self.espessura_mm}mm')
+            dims.append(f'Esp: {fmt(self.espessura_mm)}mm')
         return ' · '.join(dims) if dims else ''
 
     def estoque_total(self):
@@ -169,8 +182,3 @@ class Produto(models.Model):
 
     def estoque_baixo(self):
         return self.estoque_minimo > 0 and self.estoque_total() <= self.estoque_minimo
-    
-    def unidade_estoque_display(self):
-        if self.is_chapa:
-            return 'unidade(s)'
-        return self.get_unidade_medida_display()

@@ -28,65 +28,97 @@
               <div class="text-danger small mt-1">{{ form.nome.errors }}</div>
             {% endif %}
           </div>
+
           <div class="mb-3">
-  <label class="form-label fw-semibold text-secondary small">
-    CÓDIGO <span class="text-muted fw-normal">(opcional)</span>
-  </label>
-  {{ form.codigo }}
-  {% if form.codigo.errors %}
-    <div class="text-danger small mt-1">{{ form.codigo.errors }}</div>
-  {% endif %}
-</div>
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label class="form-label fw-semibold text-secondary small">CATEGORIA</label>
-              {{ form.categoria }}
+            <label class="form-label fw-semibold text-secondary small">
+              CÓDIGO <span class="text-muted fw-normal">(opcional)</span>
+            </label>
+            {{ form.codigo }}
+            {% if form.codigo.errors %}
+              <div class="text-danger small mt-1">{{ form.codigo.errors }}</div>
+            {% endif %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-secondary small">CATEGORIA</label>
+            {{ form.categoria }}
+          </div>
+
+          <!-- Campos específicos da chapa -->
+          <div id="campos-chapa">
+            <div class="p-3 rounded-3 mb-3" style="background: #f8f9fa;">
+              <p class="fw-semibold text-secondary small mb-3">DADOS DA CHAPA</p>
+              <div class="mb-3">
+                <label class="form-label small text-secondary">COR</label>
+                {{ form.cor }}
+              </div>
+              <div class="row">
+                <div class="col-md-4 mb-2">
+                  <label class="form-label small text-secondary">LARGURA (mm)</label>
+                  {{ form.largura_mm }}
+                </div>
+                <div class="col-md-4 mb-2">
+                  <label class="form-label small text-secondary">COMPRIMENTO (mm)</label>
+                  {{ form.comprimento_mm }}
+                </div>
+                <div class="col-md-4 mb-2">
+                  <label class="form-label small text-secondary">ESPESSURA (mm)</label>
+                  {{ form.espessura_mm }}
+                  {% if form.espessura_mm.errors %}
+                    <div class="text-danger small mt-1">{{ form.espessura_mm.errors }}</div>
+                  {% endif %}
+                </div>
+              </div>
             </div>
-            <div class="col-md-6 mb-3" id="campo-unidade">
+          </div>
+
+          <!-- Campos insumo e produto final -->
+          <div id="campos-basicos">
+            <div class="mb-3">
               <label class="form-label fw-semibold text-secondary small">UNIDADE DE MEDIDA</label>
               {{ form.unidade_medida }}
             </div>
-          </div>
-
-          <!-- Cor e espessura -->
-          <div class="row" id="campos-cor-espessura">
-            <div class="col-md-6 mb-3">
-              <label class="form-label fw-semibold text-secondary small">COR</label>
-              {{ form.cor }}
-            </div>
-            <div class="col-md-6 mb-3">
-              <label class="form-label fw-semibold text-secondary small">ESPESSURA (mm)</label>
-              {{ form.espessura_mm }}
-            </div>
-          </div>
-
-          <!-- Dimensões -->
-          <div id="campos-dimensoes">
-            <p class="fw-semibold text-secondary small mb-2">DIMENSÕES <span class="fw-normal">(preencha apenas o que se aplica)</span></p>
-            <div class="row">
-              <div class="col-md-4 mb-3">
-                <label class="form-label small text-secondary">LARGURA (cm)</label>
-                {{ form.largura_cm }}
-              </div>
-              <div class="col-md-4 mb-3">
-                <label class="form-label small text-secondary">COMPRIMENTO (cm)</label>
-                {{ form.comprimento_cm }}
-              </div>
-              <div class="col-md-4 mb-3">
-                <label class="form-label small text-secondary">ALTURA (cm)</label>
-                {{ form.altura_cm }}
-              </div>
-              <div class="col-md-4 mb-3">
-                <label class="form-label small text-secondary">DIÂMETRO (cm)</label>
-                {{ form.diametro_cm }}
-              </div>
-              <div class="col-md-4 mb-3">
-                <label class="form-label small text-secondary">PROFUNDIDADE (cm)</label>
-                {{ form.profundidade_cm }}
-              </div>
-              <div class="col-md-4 mb-3">
-                <label class="form-label small text-secondary">CURVATURA (cm)</label>
-                {{ form.curvatura_cm }}
+            <div class="p-3 rounded-3 mb-3" style="background: #f8f9fa;">
+              <p class="fw-semibold text-secondary small mb-2">
+                DIMENSÕES <span class="fw-normal">(preencha apenas o que se aplica)</span>
+              </p>
+              <div class="row">
+                <div class="col-md-4 mb-2">
+                  <label class="form-label small text-secondary">LARGURA (cm)</label>
+                  {{ form.largura_cm }}
+                </div>
+                <div class="col-md-4 mb-2">
+                  <label class="form-label small text-secondary">COMPRIMENTO (cm)</label>
+                  {{ form.comprimento_cm }}
+                </div>
+                <div class="col-md-4 mb-2">
+                  <label class="form-label small text-secondary">ALTURA (cm)</label>
+                  {{ form.altura_cm }}
+                </div>
+                <div class="col-md-4 mb-2">
+                  <label class="form-label small text-secondary">DIÂMETRO (cm)</label>
+                  {{ form.diametro_cm }}
+                </div>
+                <div class="col-md-4 mb-2">
+                  <label class="form-label small text-secondary">PROFUNDIDADE (cm)</label>
+                  {{ form.profundidade_cm }}
+                </div>
+                <div class="col-md-4 mb-2">
+                  <label class="form-label small text-secondary">CURVATURA (cm)</label>
+                  {{ form.curvatura_cm }}
+                </div>
+                <!-- Espessura aqui para produto final -->
+                <div class="col-md-4 mb-2" id="campo-espessura-pf">
+                  <label class="form-label small text-secondary">
+                    ESPESSURA (mm) <span class="text-danger">*</span>
+                  </label>
+                  <input type="number" name="espessura_mm" id="id_espessura_mm_pf"
+                    class="form-control" placeholder="Ex: 3" step="0.01"
+                    value="{{ form.espessura_mm.value|default:'' }}">
+                  {% if form.espessura_mm.errors %}
+                    <div class="text-danger small mt-1">{{ form.espessura_mm.errors }}</div>
+                  {% endif %}
+                </div>
               </div>
             </div>
           </div>

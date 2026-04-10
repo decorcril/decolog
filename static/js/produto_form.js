@@ -1,23 +1,35 @@
 document.addEventListener('DOMContentLoaded', () => {
   const categoriaSelect = document.getElementById('id_categoria');
-  const campoCorEspessura = document.getElementById('campos-cor-espessura');
-  const campoDimensoes = document.getElementById('campos-dimensoes');
+  const camposChapa = document.getElementById('campos-chapa');
+  const camposBasicos = document.getElementById('campos-basicos');
+  const campoEspessuraPF = document.getElementById('campo-espessura-pf');
+
+  function setCamposDisabled(container, disabled) {
+    container.querySelectorAll('input, select').forEach(campo => {
+      campo.disabled = disabled;
+    });
+  }
 
   function atualizarCampos() {
     const categoria = categoriaSelect.value;
 
-    if (categoria === 'insumo') {
-      campoCorEspessura.style.display = 'none';
-      campoDimensoes.style.display = 'none';
-    } else if (categoria === 'chapa') {
-      campoCorEspessura.style.display = 'flex';
-      campoDimensoes.style.display = 'block';
+    if (categoria === 'chapa') {
+      camposChapa.style.display = 'block';
+      camposBasicos.style.display = 'none';
+      setCamposDisabled(camposChapa, false);
+      setCamposDisabled(camposBasicos, true);
     } else if (categoria === 'produto_final') {
-      campoCorEspessura.style.display = 'flex';
-      campoDimensoes.style.display = 'block';
+      camposChapa.style.display = 'none';
+      camposBasicos.style.display = 'block';
+      campoEspessuraPF.style.display = 'block';
+      setCamposDisabled(camposChapa, true);
+      setCamposDisabled(camposBasicos, false);
     } else {
-      campoCorEspessura.style.display = 'none';
-      campoDimensoes.style.display = 'none';
+      camposChapa.style.display = 'none';
+      camposBasicos.style.display = 'block';
+      campoEspessuraPF.style.display = 'none';
+      setCamposDisabled(camposChapa, true);
+      setCamposDisabled(camposBasicos, false);
     }
   }
 
