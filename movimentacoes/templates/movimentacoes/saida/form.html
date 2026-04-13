@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Saída de Estoque — Decolog{% endblock %}
+
+{% block content %}
+
+{# ==================== CABEÇALHO ==================== #}
+<div class="mb-4">
+  <h4 class="fw-bold mb-1">Saída de Estoque</h4>
+  <p class="text-muted small mb-0">Registre a saída de produtos do estoque</p>
+</div>
+
+{# ==================== FORMULÁRIO ==================== #}
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <div class="card">
+      <div class="card-body p-4">
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          {# -- Produto -- #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-secondary small">PRODUTO</label>
+            {{ form.produto }}
+            {% if form.produto.errors %}
+              <div class="text-danger small mt-1">{{ form.produto.errors }}</div>
+            {% endif %}
+
+            {# -- Saldo por local (carregado via JS) -- #}
+            <div id="saldo-info" class="mt-2" style="display: none;">
+              <div class="p-2 rounded-3" style="background: #f8f9fa; font-size: 0.82rem;">
+                <span class="fw-semibold text-secondary small">SALDO DISPONÍVEL</span>
+                <div id="saldo-lista" class="mt-1"></div>
+              </div>
+            </div>
+          </div>
+
+          {# -- Local -- #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-secondary small">LOCAL DE ESTOCAGEM</label>
+            {{ form.local }}
+            {% if form.local.errors %}
+              <div class="text-danger small mt-1">{{ form.local.errors }}</div>
+            {% endif %}
+          </div>
+
+          {# -- Quantidade -- #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-secondary small">QUANTIDADE</label>
+            {{ form.quantidade }}
+            {% if form.quantidade.errors %}
+              <div class="text-danger small mt-1">{{ form.quantidade.errors }}</div>
+            {% endif %}
+          </div>
+
+          {# -- Motivo -- #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-secondary small">MOTIVO</label>
+            {{ form.motivo }}
+            {% if form.motivo.errors %}
+              <div class="text-danger small mt-1">{{ form.motivo.errors }}</div>
+            {% endif %}
+          </div>
+
+          {# -- Observação -- #}
+          <div class="mb-4">
+            <label class="form-label fw-semibold text-secondary small">
+              OBSERVAÇÃO <span class="text-muted fw-normal">(opcional)</span>
+            </label>
+            {{ form.observacao }}
+          </div>
+
+          {# -- Erros gerais -- #}
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger py-2 small">
+              {{ form.non_field_errors }}
+            </div>
+          {% endif %}
+
+          <hr class="my-3" style="border-color: #f0f2f5;">
+
+          {# -- Botões -- #}
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-arrow-up-circle me-1"></i> Registrar Saída
+            </button>
+            <a href="{% url 'estoque:lista' %}" class="btn btn-outline-secondary px-4">
+              Cancelar
+            </a>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{# ==================== SCRIPTS ==================== #}
+{% block extra_js %}
+<script src="{% static 'js/saida_form.js' %}"></script>
+{% endblock %}

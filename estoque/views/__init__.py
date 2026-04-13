@@ -1,1 +1,1 @@
-from .consulta import estoque_list
+from .consulta import estoque_list, saldo_por_produto

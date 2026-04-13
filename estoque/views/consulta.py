@@ -33,3 +33,22 @@ def estoque_list(request):
         'categoria': categoria,
         'categoria_choices': Produto.CATEGORIA_CHOICES,
     })
+
+from django.http import JsonResponse
+
+@login_required
+def saldo_por_produto(request, produto_id):
+    from estoque.models import Estoque
+    estoques = Estoque.objects.filter(
+        produto_id=produto_id,
+        quantidade__gt=0
+    ).select_related('local')
+
+    dados = [
+        {
+            'local': e.local.nome,
+            'quantidade': int(e.quantidade) if e.quantidade == e.quantidade.to_integral_value() else str(e.quantidade),
+        }
+        for e in estoques
+    ]
+    return JsonResponse({'saldos': dados})

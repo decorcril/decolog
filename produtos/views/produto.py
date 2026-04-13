@@ -17,13 +17,19 @@ def produto_list(request):
     if categoria:
         produtos = produtos.filter(categoria=categoria)
 
+    # Adiciona saldos por local em cada produto
+    from estoque.models import Estoque
+    for produto in produtos:
+        produto.saldos_por_local = Estoque.objects.filter(
+            produto=produto, quantidade__gt=0
+        ).select_related('local')
+
     return render(request, 'produtos/produto/list.html', {
         'produtos': produtos,
         'q': q,
         'categoria': categoria,
         'categoria_choices': Produto.CATEGORIA_CHOICES,
     })
-
 
 @login_required
 def produto_create(request):

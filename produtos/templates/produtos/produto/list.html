@@ -4,6 +4,8 @@
 {% block title %}Produtos — Decolog{% endblock %}
 
 {% block content %}
+
+{# ==================== CABEÇALHO ==================== #}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
     <h4 class="fw-bold mb-1">Produtos</h4>
@@ -14,6 +16,7 @@
   </a>
 </div>
 
+{# ==================== FILTROS ==================== #}
 <div class="d-flex flex-wrap gap-2 mb-4">
   <form method="get" class="d-flex gap-2 flex-wrap">
     <input type="text" name="q" value="{{ q }}" class="form-control"
@@ -35,12 +38,14 @@
   </form>
 </div>
 
+{# ==================== LISTA DE PRODUTOS ==================== #}
 <div class="row g-3">
   {% for produto in produtos %}
   <div class="col-sm-6 col-lg-4">
     <div class="card h-100">
       <div class="card-body p-4">
 
+        {# -- Ícone e badges -- #}
         <div class="d-flex justify-content-between align-items-start mb-3">
           <div class="rounded-3 p-2 {% if produto.is_chapa %}bg-info bg-opacity-10{% elif produto.is_insumo %}bg-warning bg-opacity-10{% else %}bg-primary bg-opacity-10{% endif %}">
             <i class="bi fs-5 {% if produto.is_chapa %}bi-grid text-info{% elif produto.is_insumo %}bi-box text-warning{% else %}bi-box-seam text-primary{% endif %}"></i>
@@ -55,6 +60,7 @@
           </div>
         </div>
 
+        {# -- Nome e código -- #}
         <h6 class="fw-bold mb-0">
           {% if produto.descricao %}
             <span data-bs-toggle="tooltip" data-bs-placement="top" title="{{ produto.descricao }}">{{ produto.nome }}</span>
@@ -62,13 +68,13 @@
             {{ produto.nome }}
           {% endif %}
         </h6>
-
         {% if produto.codigo %}
           <p class="text-muted small mb-2 mt-1" style="font-family: monospace;">{{ produto.codigo }}</p>
         {% else %}
           <div class="mb-2"></div>
         {% endif %}
 
+        {# -- Detalhes: cor, medidas, estoque -- #}
         <div class="text-muted small mb-3">
           {% if produto.cor %}
             <div><span class="fw-semibold">Cor:</span> {{ produto.get_cor_display }}</div>
@@ -78,12 +84,32 @@
               <div><span class="fw-semibold">Medidas:</span> {{ dims }}</div>
             {% endif %}
           {% endwith %}
+
+          {# -- Estoque total com expansão por local -- #}
           <div>
-            <span class="fw-semibold">Estoque:</span>
-            {{ produto.estoque_total|floatformat:"-3" }} {{ produto|unidade_abrev }}
+            <span class="fw-semibold">Estoque Total: </span>
+            <span style="cursor: pointer; text-decoration: underline dotted;"
+              data-bs-toggle="collapse" data-bs-target="#saldo-{{ produto.pk }}">
+              {{ produto.estoque_total|floatformat:"-3" }} {{ produto|unidade_abrev }}
+            </span>
+
+            <div class="collapse mt-1" id="saldo-{{ produto.pk }}">
+              <div class="p-2 rounded-3" style="background: #f0f2f5;">
+                {% for saldo in produto.saldos_por_local %}
+                  <div class="d-flex justify-content-between">
+                    <span class="text-muted">{{ saldo.local.nome }}</span>
+                    <span class="fw-semibold">{{ saldo.quantidade|floatformat:"-3" }} {{ produto|unidade_abrev }}</span>
+                  </div>
+                {% empty %}
+                  <span class="text-muted">Sem estoque em nenhum local</span>
+                {% endfor %}
+              </div>
+            </div>
           </div>
+
         </div>
 
+        {# -- Ações -- #}
         <div class="d-flex gap-2">
           <a href="{% url 'produtos:editar' produto.pk %}" class="btn btn-sm btn-outline-secondary w-50">
             <i class="bi bi-pencil me-1"></i> Editar
@@ -96,6 +122,8 @@
       </div>
     </div>
   </div>
+
+  {# -- Estado vazio -- #}
   {% empty %}
   <div class="col-12">
     <div class="card">
@@ -117,4 +145,5 @@
   </div>
   {% endfor %}
 </div>
+
 {% endblock %}
