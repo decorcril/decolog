@@ -60,10 +60,11 @@ def saldo_por_produto(request, produto_id):
     ).select_related('local')
 
     dados = [
-        {
-            'local': e.local.nome,
-            'quantidade': int(e.quantidade) if e.quantidade == e.quantidade.to_integral_value() else str(e.quantidade),
-        }
-        for e in estoques
+    {
+        'local': e.local.nome,
+        'local_id': e.local.id,
+        'quantidade': int(e.quantidade) if e.quantidade == e.quantidade.to_integral_value() else str(e.quantidade),
+    }
+    for e in estoques
     ]
     return JsonResponse({'saldos': dados})

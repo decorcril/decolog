@@ -4,6 +4,7 @@ from movimentacoes.views import (
     transferencia_create,
     saida_create,
     historico_list,
+    ajuste_create,
 )
 
 app_name = 'movimentacoes'
@@ -13,4 +14,5 @@ urlpatterns = [
     path('transferencia/', transferencia_create, name='transferencia'),
     path('saida/', saida_create, name='saida'),
     path('historico/', historico_list, name='historico'),
+    path('ajuste/', ajuste_create, name='ajuste'),
 ]

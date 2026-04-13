@@ -38,7 +38,7 @@
         <i class="bi bi-speedometer2"></i> Dashboard
       </a>
 
-      {# -- Cadastros -- #}
+      {# -- Cadastros [MOBILE] -- #}
       <div class="mobile-nav-section">Cadastros</div>
       <a href="{% url 'core:local_list' %}" class="mobile-nav-link">
         <i class="bi bi-building"></i> Locais
@@ -53,7 +53,7 @@
         <i class="bi bi-tag"></i> Tags de Fornecedores
       </a>
 
-      {# -- Estoque -- #}
+      {# -- Estoque [MOBILE] -- #}
       <div class="mobile-nav-section">Estoque</div>
       <a href="{% url 'estoque:lista' %}" class="mobile-nav-link">
         <i class="bi bi-archive"></i> Consultar Estoque
@@ -67,11 +67,14 @@
       <a href="{% url 'movimentacoes:transferencia' %}" class="mobile-nav-link">
         <i class="bi bi-arrow-left-right"></i> Transferência
       </a>
+      <a href="{% url 'movimentacoes:ajuste' %}" class="mobile-nav-link">
+        <i class="bi bi-sliders"></i> Ajuste de Estoque
+      </a>
       <a href="{% url 'movimentacoes:historico' %}" class="mobile-nav-link">
         <i class="bi bi-clock-history"></i> Histórico
       </a>
 
-      {# -- Relatórios -- #}
+      {# -- Relatórios [MOBILE] -- #}
       <div class="mobile-nav-section">Relatórios</div>
       <a href="#" class="mobile-nav-link">
         <i class="bi bi-bar-chart"></i> Estoque Atual
@@ -80,7 +83,7 @@
         <i class="bi bi-exclamation-triangle"></i> Estoque Baixo
       </a>
 
-      {# -- Administração (só staff) -- #}
+      {# -- Administração [MOBILE] (só staff) -- #}
       {% if user.is_staff %}
       <div class="mobile-nav-section">Administração</div>
       <a href="{% url 'admin:index' %}" class="mobile-nav-link">
@@ -108,13 +111,13 @@
 
     <div class="topbar-nav">
 
-      {# -- Dashboard -- #}
+      {# -- Dashboard [DESKTOP] -- #}
       <a href="{% url 'core:dashboard' %}"
         class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
         <i class="bi bi-speedometer2"></i> Dashboard
       </a>
 
-      {# -- Dropdown: Cadastros -- #}
+      {# -- Cadastros [DESKTOP] -- #}
       <div class="dropdown">
         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
           <i class="bi bi-grid"></i> Cadastros
@@ -144,7 +147,7 @@
         </ul>
       </div>
 
-      {# -- Dropdown: Estoque -- #}
+      {# -- Estoque [DESKTOP] -- #}
       <div class="dropdown">
         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
           <i class="bi bi-archive"></i> Estoque
@@ -170,6 +173,11 @@
               <i class="bi bi-arrow-left-right"></i> Transferência
             </a>
           </li>
+          <li>
+            <a class="dropdown-item" href="{% url 'movimentacoes:ajuste' %}">
+              <i class="bi bi-sliders"></i> Ajuste de Estoque
+            </a>
+          </li>
           <li><hr class="dropdown-divider" style="border-color: rgba(255,255,255,0.08);"></li>
           <li>
             <a class="dropdown-item" href="{% url 'movimentacoes:historico' %}">
@@ -179,7 +187,7 @@
         </ul>
       </div>
 
-      {# -- Dropdown: Relatórios -- #}
+      {# -- Relatórios [DESKTOP] -- #}
       <div class="dropdown">
         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
           <i class="bi bi-bar-chart"></i> Relatórios
@@ -198,7 +206,7 @@
         </ul>
       </div>
 
-      {# -- Admin (só staff) -- #}
+      {# -- Admin [DESKTOP] (só staff) -- #}
       {% if user.is_staff %}
       <a href="{% url 'admin:index' %}" class="nav-link">
         <i class="bi bi-gear"></i> Admin

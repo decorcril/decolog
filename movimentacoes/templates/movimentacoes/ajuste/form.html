@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Ajuste de Estoque — Decolog{% endblock %}
+
+{% block content %}
+
+{# ==================== CABEÇALHO ==================== #}
+<div class="mb-4">
+  <h4 class="fw-bold mb-1">Ajuste de Estoque</h4>
+  <p class="text-muted small mb-0">Corrija o saldo de um produto em um local específico</p>
+</div>
+
+{# ==================== ALERTA ==================== #}
+<div class="alert alert-warning py-2 small mb-4">
+  <i class="bi bi-exclamation-triangle me-1"></i>
+  O ajuste define o <strong>saldo correto</strong> do produto. Use apenas para corrigir divergências após contagem física.
+</div>
+
+{# ==================== FORMULÁRIO ==================== #}
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <div class="card">
+      <div class="card-body p-4">
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          {# -- Produto -- #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-secondary small">PRODUTO</label>
+            {{ form.produto }}
+            {% if form.produto.errors %}
+              <div class="text-danger small mt-1">{{ form.produto.errors }}</div>
+            {% endif %}
+          </div>
+
+          {# -- Local -- #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-secondary small">LOCAL</label>
+            {{ form.local }}
+            {% if form.local.errors %}
+              <div class="text-danger small mt-1">{{ form.local.errors }}</div>
+            {% endif %}
+          </div>
+
+          {# -- Saldo atual (carregado via JS) -- #}
+          <div id="saldo-info" class="mb-3" style="display: none;">
+            <div class="p-2 rounded-3" style="background: #f8f9fa; font-size: 0.82rem;">
+              <span class="fw-semibold text-secondary small">SALDO ATUAL:</span>
+              <span id="saldo-valor" class="fw-bold ms-1"></span>
+            </div>
+          </div>
+
+          {# -- Nova quantidade -- #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-secondary small">NOVO SALDO</label>
+            {{ form.quantidade }}
+            {% if form.quantidade.errors %}
+              <div class="text-danger small mt-1">{{ form.quantidade.errors }}</div>
+            {% endif %}
+          </div>
+
+          {# -- Motivo -- #}
+          <div class="mb-4">
+            <label class="form-label fw-semibold text-secondary small">MOTIVO DO AJUSTE</label>
+            {{ form.observacao }}
+            {% if form.observacao.errors %}
+              <div class="text-danger small mt-1">{{ form.observacao.errors }}</div>
+            {% endif %}
+          </div>
+
+          {# -- Erros gerais -- #}
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger py-2 small">
+              {{ form.non_field_errors }}
+            </div>
+          {% endif %}
+
+          <hr class="my-3" style="border-color: #f0f2f5;">
+
+          {# -- Botões -- #}
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-warning px-4">
+              <i class="bi bi-sliders me-1"></i> Aplicar Ajuste
+            </button>
+            <a href="{% url 'estoque:lista' %}" class="btn btn-outline-secondary px-4">
+              Cancelar
+            </a>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{# ==================== SCRIPTS ==================== #}
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const produtoSelect = document.getElementById('id_produto');
+  const localSelect = document.getElementById('id_local');
+  const saldoInfo = document.getElementById('saldo-info');
+  const saldoValor = document.getElementById('saldo-valor');
+
+  function carregarSaldo() {
+    const produtoId = produtoSelect.value;
+    const localId = localSelect.value;
+
+    if (!produtoId || !localId) {
+      saldoInfo.style.display = 'none';
+      return;
+    }
+
+    fetch(`/estoque/saldo/${produtoId}/`)
+      .then(res => res.json())
+      .then(data => {
+        const saldo = data.saldos.find(s => s.local_id == localId);
+        if (saldo) {
+          saldoValor.textContent = saldo.quantidade;
+          saldoInfo.style.display = 'block';
+        } else {
+          saldoValor.textContent = '0 (sem registro)';
+          saldoInfo.style.display = 'block';
+        }
+      });
+  }
+
+  if (produtoSelect) produtoSelect.addEventListener('change', carregarSaldo);
+  if (localSelect) localSelect.addEventListener('change', carregarSaldo);
+});
+</script>
+{% endblock %}
