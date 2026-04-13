@@ -85,26 +85,18 @@
             {% endif %}
           {% endwith %}
 
-          {# -- Estoque total com expansão por local -- #}
+          {# -- Estoque por local -- #}
           <div>
-            <span class="fw-semibold">Estoque Total: </span>
-            <span style="cursor: pointer; text-decoration: underline dotted;"
-              data-bs-toggle="collapse" data-bs-target="#saldo-{{ produto.pk }}">
-              {{ produto.estoque_total|floatformat:"-3" }} {{ produto|unidade_abrev }}
-            </span>
-
-            <div class="collapse mt-1" id="saldo-{{ produto.pk }}">
-              <div class="p-2 rounded-3" style="background: #f0f2f5;">
-                {% for saldo in produto.saldos_por_local %}
-                  <div class="d-flex justify-content-between">
-                    <span class="text-muted">{{ saldo.local.nome }}</span>
-                    <span class="fw-semibold">{{ saldo.quantidade|floatformat:"-3" }} {{ produto|unidade_abrev }}</span>
-                  </div>
-                {% empty %}
-                  <span class="text-muted">Sem estoque em nenhum local</span>
-                {% endfor %}
-              </div>
-            </div>
+            <span class="fw-semibold">Estoque:</span>
+            {% if produto.saldos_por_local %}
+              {% for saldo in produto.saldos_por_local %}
+                <span class="text-muted">{{ saldo.local.nome }}:</span>
+                <span class="fw-semibold">{{ saldo.quantidade|floatformat:"-3" }} {{ produto|unidade_abrev }}</span>
+                {% if not forloop.last %} · {% endif %}
+              {% endfor %}
+            {% else %}
+              <span class="text-muted">Sem estoque</span>
+            {% endif %}
           </div>
 
         </div>

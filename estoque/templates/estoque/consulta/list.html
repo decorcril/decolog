@@ -4,6 +4,8 @@
 {% block title %}Estoque — Decolog{% endblock %}
 
 {% block content %}
+
+{# ==================== CABEÇALHO ==================== #}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
     <h4 class="fw-bold mb-1">Consulta de Estoque</h4>
@@ -11,6 +13,7 @@
   </div>
 </div>
 
+{# ==================== FILTROS ==================== #}
 <div class="d-flex flex-wrap gap-2 mb-4">
   <form method="get" class="d-flex gap-2 flex-wrap">
     <input type="text" name="q" value="{{ q }}" class="form-control"
@@ -40,55 +43,56 @@
   </form>
 </div>
 
+{# ==================== LISTA DE PRODUTOS ==================== #}
 <div class="row g-3">
-  {% for estoque in estoques %}
+  {% for produto in produtos %}
   <div class="col-sm-6 col-lg-4">
     <div class="card h-100">
       <div class="card-body p-4">
+
+        {# -- Badge categoria -- #}
         <div class="d-flex justify-content-between align-items-start mb-2">
-          <span class="badge {% if estoque.produto.is_chapa %}bg-info bg-opacity-10 text-info{% elif estoque.produto.is_insumo %}bg-warning bg-opacity-10 text-warning{% else %}bg-primary bg-opacity-10 text-primary{% endif %}">
-            {{ estoque.produto.get_categoria_display }}
+          <span class="badge {% if produto.is_chapa %}bg-info bg-opacity-10 text-info{% elif produto.is_insumo %}bg-warning bg-opacity-10 text-warning{% else %}bg-primary bg-opacity-10 text-primary{% endif %}">
+            {{ produto.get_categoria_display }}
           </span>
-          <span class="badge bg-secondary bg-opacity-10 text-secondary">
-            {{ estoque.local.nome }}
-          </span>
+          {% if produto.estoque_baixo %}
+            <span class="badge bg-danger bg-opacity-10 text-danger">Estoque Baixo</span>
+          {% endif %}
         </div>
 
-        <h6 class="fw-bold mb-1">{{ estoque.produto.nome }}</h6>
-
-        {% if estoque.produto.codigo %}
-          <p class="text-muted small mb-2" style="font-family: monospace;">{{ estoque.produto.codigo }}</p>
+        {# -- Nome e código -- #}
+        <h6 class="fw-bold mb-1">{{ produto.nome }}</h6>
+        {% if produto.codigo %}
+          <p class="text-muted small mb-2" style="font-family: monospace;">{{ produto.codigo }}</p>
         {% endif %}
 
+        {# -- Detalhes: cor e medidas -- #}
         <div class="text-muted small mb-3">
-          {% if estoque.produto.cor %}
-            <div><span class="fw-semibold">Cor:</span> {{ estoque.produto.get_cor_display }}</div>
+          {% if produto.cor %}
+            <div><span class="fw-semibold">Cor:</span> {{ produto.get_cor_display }}</div>
           {% endif %}
-          {% with dims=estoque.produto.dimensoes_display %}
+          {% with dims=produto.dimensoes_display %}
             {% if dims %}
               <div><span class="fw-semibold">Medidas:</span> {{ dims }}</div>
             {% endif %}
           {% endwith %}
         </div>
 
-        <div class="d-flex align-items-center justify-content-between">
-          <span class="fw-semibold text-secondary small">SALDO</span>
-          <span class="fw-bold fs-5">
-            {{ estoque.quantidade|floatformat:"-3" }} {{ estoque.produto|unidade_abrev }}
-          </span>
+        {# -- Saldo por local -- #}
+        <div class="text-muted small">
+          <span class="fw-semibold">Estoque:</span>
+          {% for saldo in produto.saldos_por_local %}
+            <span class="text-muted">{{ saldo.local.nome }}:</span>
+            <span class="fw-semibold">{{ saldo.quantidade|floatformat:"-3" }} {{ produto|unidade_abrev }}</span>
+            {% if not forloop.last %} · {% endif %}
+          {% endfor %}
         </div>
-
-        {% if estoque.produto.estoque_baixo %}
-          <div class="mt-2">
-            <span class="badge bg-danger bg-opacity-10 text-danger w-100 text-center py-1">
-              <i class="bi bi-exclamation-triangle me-1"></i> Estoque Baixo
-            </span>
-          </div>
-        {% endif %}
 
       </div>
     </div>
   </div>
+
+  {# -- Estado vazio -- #}
   {% empty %}
   <div class="col-12">
     <div class="card">
@@ -110,4 +114,5 @@
   </div>
   {% endfor %}
 </div>
+
 {% endblock %}

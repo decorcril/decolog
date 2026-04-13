@@ -1,9 +1,10 @@
-from django.shortcuts import render
+from django.db.models import Q
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum
-from estoque.models import Estoque
+from django.http import JsonResponse
+from django.shortcuts import render
 from core.models import Local
 from produtos.models import Produto
+from estoque.models import Estoque
 
 
 @login_required
@@ -12,21 +13,36 @@ def estoque_list(request):
     local_id = request.GET.get('local', '')
     categoria = request.GET.get('categoria', '')
 
-    estoques = Estoque.objects.select_related(
-        'produto', 'local'
-    ).filter(quantidade__gt=0)
+    from estoque.models import Estoque
+    from produtos.models import Produto
+
+    produtos = Produto.objects.filter(ativo=True)
 
     if q:
-        estoques = estoques.filter(produto__nome__icontains=q)
-    if local_id:
-        estoques = estoques.filter(local__id=local_id)
+        produtos = produtos.filter(
+            Q(nome__icontains=q) | Q(codigo__icontains=q)
+        )
     if categoria:
-        estoques = estoques.filter(produto__categoria=categoria)
+        produtos = produtos.filter(categoria=categoria)
+
+    # Adiciona saldos por local em cada produto
+    resultado = []
+    for produto in produtos:
+        saldos = Estoque.objects.filter(
+            produto=produto, quantidade__gt=0
+        ).select_related('local')
+
+        if local_id:
+            saldos = saldos.filter(local__id=local_id)
+
+        if saldos.exists():
+            produto.saldos_por_local = saldos
+            resultado.append(produto)
 
     locais = Local.objects.filter(ativo=True)
 
     return render(request, 'estoque/consulta/list.html', {
-        'estoques': estoques,
+        'produtos': resultado,
         'locais': locais,
         'q': q,
         'local_id': local_id,
@@ -34,7 +50,6 @@ def estoque_list(request):
         'categoria_choices': Produto.CATEGORIA_CHOICES,
     })
 
-from django.http import JsonResponse
 
 @login_required
 def saldo_por_produto(request, produto_id):
