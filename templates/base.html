@@ -67,7 +67,7 @@
       <a href="{% url 'movimentacoes:transferencia' %}" class="mobile-nav-link">
         <i class="bi bi-arrow-left-right"></i> Transferência
       </a>
-      <a href="#" class="mobile-nav-link">
+      <a href="{% url 'movimentacoes:historico' %}" class="mobile-nav-link">
         <i class="bi bi-clock-history"></i> Histórico
       </a>
 
@@ -172,7 +172,7 @@
           </li>
           <li><hr class="dropdown-divider" style="border-color: rgba(255,255,255,0.08);"></li>
           <li>
-            <a class="dropdown-item" href="#">
+            <a class="dropdown-item" href="{% url 'movimentacoes:historico' %}">
               <i class="bi bi-clock-history"></i> Histórico
             </a>
           </li>

@@ -15,6 +15,7 @@ def saida_create(request):
             local=form.cleaned_data['local'],
             tipo=Movimentacao.TIPO_SAIDA,
             quantidade=form.cleaned_data['quantidade'],
+            motivo=form.cleaned_data['motivo'],
             observacao=form.cleaned_data['observacao'],
             usuario=request.user,
         )
@@ -25,4 +26,3 @@ def saida_create(request):
         'form': form,
         'titulo': 'Saída de Estoque',
     })
-

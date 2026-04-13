@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% load core_extras %}
+
+{% block title %}Histórico de Movimentações — Decolog{% endblock %}
+
+{% block content %}
+
+{# ==================== CABEÇALHO ==================== #}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">Histórico de Movimentações</h4>
+    <p class="text-muted small mb-0">Todas as entradas, saídas e transferências</p>
+  </div>
+</div>
+
+{# ==================== FILTROS ==================== #}
+<div class="card mb-4">
+  <div class="card-body p-3">
+    <form method="get" class="row g-2">
+
+      {# -- Busca por produto -- #}
+      <div class="col-sm-6 col-lg-3">
+        <input type="text" name="q" value="{{ q }}" class="form-control"
+          placeholder="Buscar produto...">
+      </div>
+
+      {# -- Tipo -- #}
+      <div class="col-sm-6 col-lg-2">
+        <select name="tipo" class="form-select">
+          <option value="">Todos os tipos</option>
+          {% for value, label in tipo_choices %}
+            <option value="{{ value }}" {% if tipo == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {# -- Local -- #}
+      <div class="col-sm-6 col-lg-2">
+        <select name="local" class="form-select">
+          <option value="">Todos os locais</option>
+          {% for local in locais %}
+            <option value="{{ local.id }}" {% if local_id == local.id|stringformat:"s" %}selected{% endif %}>
+              {{ local.nome }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {# -- Fornecedor -- #}
+      <div class="col-sm-6 col-lg-2">
+        <select name="fornecedor" class="form-select">
+          <option value="">Todos os fornecedores</option>
+          {% for fornecedor in fornecedores %}
+            <option value="{{ fornecedor.id }}" {% if fornecedor_id == fornecedor.id|stringformat:"s" %}selected{% endif %}>
+              {{ fornecedor.nome }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {# -- Data início -- #}
+      <div class="col-sm-6 col-lg-2">
+        <input type="date" name="data_inicio" value="{{ data_inicio }}" class="form-control">
+      </div>
+
+      {# -- Data fim -- #}
+      <div class="col-sm-6 col-lg-2">
+        <input type="date" name="data_fim" value="{{ data_fim }}" class="form-control">
+      </div>
+
+      {# -- Botões -- #}
+      <div class="col-12 d-flex gap-2">
+        <button class="btn btn-outline-secondary" type="submit">
+          <i class="bi bi-search me-1"></i> Filtrar
+        </button>
+        {% if q or tipo or local_id or fornecedor_id or data_inicio or data_fim %}
+          <a href="{% url 'movimentacoes:historico' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-x-lg me-1"></i> Limpar
+          </a>
+        {% endif %}
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{# ==================== LISTA DE MOVIMENTAÇÕES ==================== #}
+<div class="card">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Data</th>
+          <th>Tipo / Motivo</th>
+          <th>Produto</th>
+          <th>Quantidade</th>
+          <th>Local</th>
+          <th>Fornecedor / NF</th>
+          <th>Observação</th>
+          <th>Usuário</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for mov in movimentacoes %}
+        <tr>
+
+          {# -- Data -- #}
+          <td class="text-muted small">{{ mov.data_hora|date:"d/m/Y H:i" }}</td>
+
+          {# -- Tipo e motivo -- #}
+          <td>
+            {% if mov.motivo %}
+              <span class="badge
+                {% if mov.tipo == 'entrada' %}bg-success bg-opacity-10 text-success
+                {% elif mov.tipo == 'saida' %}bg-danger bg-opacity-10 text-danger
+                {% elif mov.tipo == 'transferencia' %}bg-info bg-opacity-10 text-info
+                {% else %}bg-secondary bg-opacity-10 text-secondary{% endif %}">
+                {{ mov.get_motivo_display }}
+              </span>
+            {% else %}
+              <span class="badge
+                {% if mov.tipo == 'entrada' %}bg-success bg-opacity-10 text-success
+                {% elif mov.tipo == 'saida' %}bg-danger bg-opacity-10 text-danger
+                {% elif mov.tipo == 'transferencia' %}bg-info bg-opacity-10 text-info
+                {% else %}bg-secondary bg-opacity-10 text-secondary{% endif %}">
+                {{ mov.get_tipo_display }}
+              </span>
+            {% endif %}
+          </td>
+
+          {# -- Produto -- #}
+          <td>
+            <span class="fw-semibold">{{ mov.produto.nome }}</span>
+            {% if mov.produto.codigo %}
+              <br><span class="text-muted small" style="font-family: monospace;">{{ mov.produto.codigo }}</span>
+            {% endif %}
+          </td>
+
+          {# -- Quantidade -- #}
+          <td class="fw-semibold">
+            {{ mov.quantidade|floatformat:"-3" }} {{ mov.produto|unidade_abrev }}
+          </td>
+
+          {# -- Local (origem → destino para transferências) -- #}
+          <td class="text-muted small">
+            {{ mov.local.nome }}
+            {% if mov.local_destino %}
+              <i class="bi bi-arrow-right"></i> {{ mov.local_destino.nome }}
+            {% endif %}
+          </td>
+
+          {# -- Fornecedor e NF -- #}
+          <td class="text-muted small">
+            {% if mov.fornecedor %}
+              <div>{{ mov.fornecedor.nome }}</div>
+            {% endif %}
+            {% if mov.nota_fiscal %}
+              <div>NF: {{ mov.nota_fiscal }}</div>
+            {% endif %}
+            {% if not mov.fornecedor and not mov.nota_fiscal %}—{% endif %}
+          </td>
+
+          {# -- Observação -- #}
+          <td class="text-muted small">{{ mov.observacao|default:"—" }}</td>
+
+          {# -- Usuário -- #}
+          <td class="text-muted small">
+            {{ mov.usuario.get_full_name|default:mov.usuario.username }}
+          </td>
+
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="text-center text-muted py-4">
+            {% if q or tipo or local_id or fornecedor_id or data_inicio or data_fim %}
+              Nenhuma movimentação encontrada com esses filtros.
+            {% else %}
+              Nenhuma movimentação registrada ainda.
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

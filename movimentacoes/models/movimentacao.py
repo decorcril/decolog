@@ -5,6 +5,8 @@ from django.core.exceptions import ValidationError
 
 
 class Movimentacao(models.Model):
+
+    # ── Tipos de movimentação ──
     TIPO_ENTRADA = 'entrada'
     TIPO_SAIDA = 'saida'
     TIPO_TRANSFERENCIA = 'transferencia'
@@ -17,6 +19,22 @@ class Movimentacao(models.Model):
         (TIPO_AJUSTE, 'Ajuste'),
     ]
 
+    # ── Motivos ──
+    MOTIVO_CHOICES = [
+        ('compra', 'Compra'),
+        ('venda', 'Venda'),
+        ('perda', 'Perda / Avaria'),
+        ('uso_interno', 'Uso Interno'),
+        ('troca', 'Troca'),
+        ('publicidade', 'Publicidade'),
+        ('reposicao', 'Reposição'),
+        ('manutencao', 'Manutenção'),
+        ('transferencia', 'Transferência'),
+        ('ajuste', 'Ajuste'),
+        ('outro', 'Outro'),
+    ]
+
+    # ── Campos ──
     produto = models.ForeignKey(
         'produtos.Produto',
         on_delete=models.PROTECT,
@@ -39,6 +57,10 @@ class Movimentacao(models.Model):
     tipo = models.CharField(
         max_length=20, choices=TIPO_CHOICES,
         verbose_name='Tipo'
+    )
+    motivo = models.CharField(
+        max_length=20, choices=MOTIVO_CHOICES,
+        blank=True, verbose_name='Motivo'
     )
     quantidade = models.DecimalField(
         max_digits=12, decimal_places=3,
@@ -73,15 +95,16 @@ class Movimentacao(models.Model):
         ordering = ['-data_hora']
 
     def __str__(self):
-        return f'{self.get_tipo_display()} — {self.produto.nome} ({self.quantidade}) — {self.data_hora.strftime("%d/%m/%Y %H:%M")}'
+        return (
+            f'{self.get_tipo_display()} — {self.produto.nome} '
+            f'({self.quantidade}) — {self.data_hora.strftime("%d/%m/%Y %H:%M")}'
+        )
 
     def clean(self):
-        # Loja não pode receber matéria-prima
         if self.local and self.produto:
             if self.local.is_loja and self.produto.is_materia_prima:
                 raise ValidationError('Loja não pode receber matéria-prima.')
 
-        # Transferência precisa de destino
         if self.tipo == self.TIPO_TRANSFERENCIA:
             if not self.local_destino:
                 raise ValidationError('Transferência requer local de destino.')
