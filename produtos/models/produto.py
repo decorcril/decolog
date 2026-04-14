@@ -54,10 +54,6 @@ class Produto(models.Model):
         max_length=5, choices=UNIDADE_CHOICES,
         default='un', verbose_name='Unidade de Medida'
     )
-    estoque_minimo = models.DecimalField(
-        max_digits=10, decimal_places=3,
-        default=0, verbose_name='Estoque Mínimo'
-    )
 
     # Cor e espessura (chapas e produtos derivados)
     cor = models.CharField(
@@ -180,5 +176,4 @@ class Produto(models.Model):
         )
         return result['total'] or 0
 
-    def estoque_baixo(self):
-        return self.estoque_minimo > 0 and self.estoque_total() <= self.estoque_minimo
+    

@@ -13,7 +13,10 @@ def produto_list(request):
     produtos = Produto.objects.all()
 
     if q:
-        produtos = produtos.filter(nome__icontains=q)
+        from django.db.models import Q
+        produtos = produtos.filter(
+            Q(nome__icontains=q) | Q(codigo__icontains=q)
+        )
     if categoria:
         produtos = produtos.filter(categoria=categoria)
 
@@ -31,17 +34,14 @@ def produto_list(request):
         'categoria_choices': Produto.CATEGORIA_CHOICES,
     })
 
+
 @login_required
 def produto_create(request):
     form = ProdutoForm(request.POST or None)
-    if request.method == 'POST':
-        print('POST DATA:', request.POST)
-        print('FORM VALID:', form.is_valid())
-        print('FORM ERRORS:', form.errors)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Produto cadastrado com sucesso!')
-            return redirect('produtos:lista')
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, 'Produto cadastrado com sucesso!')
+        return redirect('produtos:lista')
     return render(request, 'produtos/produto/form.html', {
         'form': form,
         'titulo': 'Novo Produto',
@@ -54,9 +54,6 @@ def produto_update(request, pk):
     form = ProdutoForm(request.POST or None, instance=produto)
 
     if request.method == 'GET':
-        # Formata estoque_minimo
-        form.initial['estoque_minimo'] = int(produto.estoque_minimo) if produto.estoque_minimo == produto.estoque_minimo.to_integral_value() else produto.estoque_minimo
-
         # Formata campos de dimensão removendo zeros desnecessários
         campos_decimal = [
             'largura_mm', 'comprimento_mm', 'espessura_mm',
@@ -77,6 +74,7 @@ def produto_update(request, pk):
         'form': form,
         'titulo': 'Editar Produto',
     })
+
 
 @login_required
 def produto_delete(request, pk):

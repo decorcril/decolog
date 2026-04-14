@@ -3,6 +3,8 @@
 {% block title %}{{ titulo }} — Decolog{% endblock %}
 
 {% block content %}
+
+{# ==================== CABEÇALHO ==================== #}
 <div class="mb-4">
   <h4 class="fw-bold mb-1">{{ titulo }}</h4>
   <p class="text-muted small mb-0">
@@ -14,6 +16,7 @@
   </p>
 </div>
 
+{# ==================== FORMULÁRIO ==================== #}
 <div class="row justify-content-center">
   <div class="col-md-8 col-lg-7">
     <div class="card">
@@ -21,6 +24,7 @@
         <form method="post" id="produto-form" novalidate>
           {% csrf_token %}
 
+          {# -- Nome -- #}
           <div class="mb-3">
             <label class="form-label fw-semibold text-secondary small">NOME</label>
             {{ form.nome }}
@@ -29,6 +33,7 @@
             {% endif %}
           </div>
 
+          {# -- Código -- #}
           <div class="mb-3">
             <label class="form-label fw-semibold text-secondary small">
               CÓDIGO <span class="text-muted fw-normal">(opcional)</span>
@@ -39,12 +44,13 @@
             {% endif %}
           </div>
 
+          {# -- Categoria -- #}
           <div class="mb-3">
             <label class="form-label fw-semibold text-secondary small">CATEGORIA</label>
             {{ form.categoria }}
           </div>
 
-          <!-- Campos específicos da chapa -->
+          {# -- Campos específicos da chapa -- #}
           <div id="campos-chapa">
             <div class="p-3 rounded-3 mb-3" style="background: #f8f9fa;">
               <p class="fw-semibold text-secondary small mb-3">DADOS DA CHAPA</p>
@@ -72,7 +78,7 @@
             </div>
           </div>
 
-          <!-- Campos insumo e produto final -->
+          {# -- Campos insumo e produto final -- #}
           <div id="campos-basicos">
             <div class="mb-3">
               <label class="form-label fw-semibold text-secondary small">UNIDADE DE MEDIDA</label>
@@ -107,7 +113,8 @@
                   <label class="form-label small text-secondary">CURVATURA (cm)</label>
                   {{ form.curvatura_cm }}
                 </div>
-                <!-- Espessura aqui para produto final -->
+
+                {# -- Espessura para produto final -- #}
                 <div class="col-md-4 mb-2" id="campo-espessura-pf">
                   <label class="form-label small text-secondary">
                     ESPESSURA (mm) <span class="text-danger">*</span>
@@ -123,16 +130,13 @@
             </div>
           </div>
 
-          <div class="mb-3">
-            <label class="form-label fw-semibold text-secondary small">ESTOQUE MÍNIMO</label>
-            {{ form.estoque_minimo }}
-          </div>
-
+          {# -- Descrição -- #}
           <div class="mb-3">
             <label class="form-label fw-semibold text-secondary small">DESCRIÇÃO</label>
             {{ form.descricao }}
           </div>
 
+          {# -- Ativo -- #}
           <div class="mb-4 d-flex align-items-center gap-2">
             {{ form.ativo }}
             <label class="form-check-label text-secondary small">Produto ativo no sistema</label>
@@ -140,6 +144,7 @@
 
           <hr class="my-3" style="border-color: #f0f2f5;">
 
+          {# -- Botões -- #}
           <div class="d-flex gap-2">
             <button type="submit" class="btn btn-primary px-4">
               <i class="bi bi-check-lg me-1"></i> Salvar
@@ -154,8 +159,10 @@
     </div>
   </div>
 </div>
+
 {% endblock %}
 
+{# ==================== SCRIPTS ==================== #}
 {% block extra_js %}
 <script src="{% static 'js/produto_form.js' %}"></script>
 {% endblock %}

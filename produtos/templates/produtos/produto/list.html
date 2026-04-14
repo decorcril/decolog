@@ -54,9 +54,6 @@
             <span class="badge {% if produto.is_chapa %}bg-info bg-opacity-10 text-info{% elif produto.is_insumo %}bg-warning bg-opacity-10 text-warning{% else %}bg-primary bg-opacity-10 text-primary{% endif %}">
               {{ produto.get_categoria_display }}
             </span>
-            {% if produto.estoque_baixo %}
-              <span class="badge bg-danger bg-opacity-10 text-danger">Estoque Baixo</span>
-            {% endif %}
           </div>
         </div>
 
@@ -85,15 +82,9 @@
             {% endif %}
           {% endwith %}
 
-          {# -- Estoque mínimo -- #}
-          <div>
-            <span class="fw-semibold">Estoque Mínimo:</span>
-            <span class="text-muted">{{ produto.estoque_minimo|floatformat:"-3" }} {{ produto|unidade_abrev }}</span>
-          </div>
-
           {# -- Estoque atual por local -- #}
           <div>
-            <span class="fw-semibold">Estoque Atual:</span>
+            <span class="fw-semibold">Estoque:</span>
             {% if produto.saldos_por_local %}
               {% for saldo in produto.saldos_por_local %}
                 <span class="text-muted">{{ saldo.local.nome }}:</span>

@@ -1,7 +1,7 @@
 /* ── Base ── */
 body {
   background-color: #f0f2f5;
-   font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 /* ── Topbar ── */
@@ -241,6 +241,17 @@ body {
   padding: 1.25rem 1.5rem !important;
 }
 
+/* ── Card clicável ── */
+.card-hover {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10) !important;
+}
+
 /* ── Badges ── */
 .badge {
   font-weight: 500;
@@ -292,7 +303,6 @@ body {
   align-items: center;
   justify-content: center;
 }
-
 
 /* ── Responsivo ── */
 @media (max-width: 768px) {

@@ -16,16 +16,6 @@
 {# ==================== FILTROS ==================== #}
 <div class="d-flex flex-wrap gap-2 mb-4">
   <form method="get" class="d-flex gap-2 flex-wrap">
-    <input type="text" name="q" value="{{ q }}" class="form-control"
-      style="max-width: 220px;" placeholder="Buscar produto...">
-    <select name="local" class="form-select" style="max-width: 180px;" onchange="this.form.submit()">
-      <option value="">Todos os locais</option>
-      {% for local in locais %}
-        <option value="{{ local.id }}" {% if local_id == local.id|stringformat:"s" %}selected{% endif %}>
-          {{ local.nome }}
-        </option>
-      {% endfor %}
-    </select>
     <select name="categoria" class="form-select" style="max-width: 180px;" onchange="this.form.submit()">
       <option value="">Todas as categorias</option>
       {% for value, label in categoria_choices %}
@@ -47,49 +37,34 @@
 <div class="row g-3">
   {% for produto in produtos %}
   <div class="col-sm-6 col-lg-4">
-    <div class="card h-100">
-      <div class="card-body p-4">
+    <a href="{% url 'estoque:detalhe' produto.pk %}" class="text-decoration-none">
+      <div class="card h-100 card-hover">
+        <div class="card-body p-4">
 
-        {# -- Badge categoria -- #}
-        <div class="d-flex justify-content-between align-items-start mb-2">
-          <span class="badge {% if produto.is_chapa %}bg-info bg-opacity-10 text-info{% elif produto.is_insumo %}bg-warning bg-opacity-10 text-warning{% else %}bg-primary bg-opacity-10 text-primary{% endif %}">
-            {{ produto.get_categoria_display }}
-          </span>
-          {% if produto.estoque_baixo %}
-            <span class="badge bg-danger bg-opacity-10 text-danger">Estoque Baixo</span>
+          {# -- Badge categoria -- #}
+          <div class="mb-2">
+            <span class="badge {% if produto.is_chapa %}bg-info bg-opacity-10 text-info{% elif produto.is_insumo %}bg-warning bg-opacity-10 text-warning{% else %}bg-primary bg-opacity-10 text-primary{% endif %}">
+              {{ produto.get_categoria_display }}
+            </span>
+          </div>
+
+          {# -- Nome e código -- #}
+          <h6 class="fw-bold mb-0 text-dark">{{ produto.nome }}</h6>
+          {% if produto.codigo %}
+            <p class="text-muted small mb-2 mt-1" style="font-family: monospace;">{{ produto.codigo }}</p>
+          {% else %}
+            <div class="mb-2"></div>
           {% endif %}
+
+          {# -- Total de locais -- #}
+          <div class="text-muted small">
+            <i class="bi bi-building me-1"></i>
+            {{ produto.saldos_por_local|length }} local{% if produto.saldos_por_local|length != 1 %}is{% endif %} com estoque
+          </div>
+
         </div>
-
-        {# -- Nome e código -- #}
-        <h6 class="fw-bold mb-1">{{ produto.nome }}</h6>
-        {% if produto.codigo %}
-          <p class="text-muted small mb-2" style="font-family: monospace;">{{ produto.codigo }}</p>
-        {% endif %}
-
-        {# -- Detalhes: cor e medidas -- #}
-        <div class="text-muted small mb-3">
-          {% if produto.cor %}
-            <div><span class="fw-semibold">Cor:</span> {{ produto.get_cor_display }}</div>
-          {% endif %}
-          {% with dims=produto.dimensoes_display %}
-            {% if dims %}
-              <div><span class="fw-semibold">Medidas:</span> {{ dims }}</div>
-            {% endif %}
-          {% endwith %}
-        </div>
-
-        {# -- Saldo por local -- #}
-        <div class="text-muted small">
-          <span class="fw-semibold">Estoque:</span>
-          {% for saldo in produto.saldos_por_local %}
-            <span class="text-muted">{{ saldo.local.nome }}:</span>
-            <span class="fw-semibold">{{ saldo.quantidade|floatformat:"-3" }} {{ produto|unidade_abrev }}</span>
-            {% if not forloop.last %} · {% endif %}
-          {% endfor %}
-        </div>
-
       </div>
-    </div>
+    </a>
   </div>
 
   {# -- Estado vazio -- #}

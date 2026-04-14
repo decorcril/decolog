@@ -1,19 +1,8 @@
 from django import forms
-from decimal import Decimal
 from produtos.models import Produto
 
 
 class ProdutoForm(forms.ModelForm):
-
-    estoque_minimo = forms.IntegerField(
-        required=False,
-        initial=0,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'placeholder': '0',
-            'min': '0',
-        })
-    )
 
     unidade_medida = forms.ChoiceField(
         required=False,
@@ -29,7 +18,7 @@ class ProdutoForm(forms.ModelForm):
             'largura_mm', 'comprimento_mm',
             'largura_cm', 'comprimento_cm', 'altura_cm',
             'diametro_cm', 'profundidade_cm', 'curvatura_cm',
-            'estoque_minimo', 'descricao', 'ativo'
+            'descricao', 'ativo'
         ]
         widgets = {
             'codigo': forms.TextInput(attrs={
@@ -94,10 +83,6 @@ class ProdutoForm(forms.ModelForm):
             }),
             'ativo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
-
-    def clean_estoque_minimo(self):
-        valor = self.cleaned_data.get('estoque_minimo') or 0
-        return Decimal(valor)
 
     def clean(self):
         cleaned_data = super().clean()
