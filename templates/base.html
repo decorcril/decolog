@@ -33,7 +33,7 @@
 
     <div class="mobile-sidebar-nav">
 
-      {# -- Geral -- #}
+      {# -- Geral [MOBILE] -- #}
       <a href="{% url 'core:dashboard' %}" class="mobile-nav-link">
         <i class="bi bi-speedometer2"></i> Dashboard
       </a>
@@ -76,10 +76,10 @@
 
       {# -- Relatórios [MOBILE] -- #}
       <div class="mobile-nav-section">Relatórios</div>
-      <a href="#" class="mobile-nav-link">
+      <a href="{% url 'relatorios:estoque_atual' %}" class="mobile-nav-link">
         <i class="bi bi-bar-chart"></i> Estoque Atual
       </a>
-      <a href="#" class="mobile-nav-link">
+      <a href="{% url 'relatorios:estoque_baixo' %}" class="mobile-nav-link">
         <i class="bi bi-exclamation-triangle"></i> Estoque Baixo
       </a>
 
@@ -194,12 +194,12 @@
         </a>
         <ul class="dropdown-menu">
           <li>
-            <a class="dropdown-item" href="#">
+            <a class="dropdown-item" href="{% url 'relatorios:estoque_atual' %}">
               <i class="bi bi-bar-chart"></i> Estoque Atual
             </a>
           </li>
           <li>
-            <a class="dropdown-item" href="#">
+            <a class="dropdown-item" href="{% url 'relatorios:estoque_baixo' %}">
               <i class="bi bi-exclamation-triangle"></i> Estoque Baixo
             </a>
           </li>
