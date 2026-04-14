@@ -85,9 +85,15 @@
             {% endif %}
           {% endwith %}
 
-          {# -- Estoque por local -- #}
+          {# -- Estoque mínimo -- #}
           <div>
-            <span class="fw-semibold">Estoque:</span>
+            <span class="fw-semibold">Estoque Mínimo:</span>
+            <span class="text-muted">{{ produto.estoque_minimo|floatformat:"-3" }} {{ produto|unidade_abrev }}</span>
+          </div>
+
+          {# -- Estoque atual por local -- #}
+          <div>
+            <span class="fw-semibold">Estoque Atual:</span>
             {% if produto.saldos_por_local %}
               {% for saldo in produto.saldos_por_local %}
                 <span class="text-muted">{{ saldo.local.nome }}:</span>
