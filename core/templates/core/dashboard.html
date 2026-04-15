@@ -1,12 +1,200 @@
 {% extends 'base.html' %}
+{% load static %}
+{% load core_extras %}
 
 {% block title %}Dashboard — Decolog{% endblock %}
-{% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
-<div class="row g-3">
-  <div class="col-12">
-    <h5 class="text-muted">Bem-vindo, {{ user.get_full_name|default:user.username }}!</h5>
+
+{# ==================== CABEÇALHO ==================== #}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">Dashboard</h4>
+    <p class="text-muted small mb-0">Visão geral do estoque</p>
+  </div>
+
+  {# -- Seletor de período -- #}
+  <div class="d-flex gap-2">
+    <a href="?periodo=7" class="btn btn-sm {% if periodo == '7' %}btn-primary{% else %}btn-outline-secondary{% endif %}">7 dias</a>
+    <a href="?periodo=30" class="btn btn-sm {% if periodo == '30' %}btn-primary{% else %}btn-outline-secondary{% endif %}">30 dias</a>
+    <a href="?periodo=90" class="btn btn-sm {% if periodo == '90' %}btn-primary{% else %}btn-outline-secondary{% endif %}">90 dias</a>
+    <a href="?periodo=365" class="btn btn-sm {% if periodo == '365' %}btn-primary{% else %}btn-outline-secondary{% endif %}">1 ano</a>
   </div>
 </div>
+
+{# ==================== INDICADORES ==================== #}
+<div class="row g-3 mb-4">
+
+  {# -- Produtos ativos -- #}
+  <div class="col-sm-6 col-lg-3">
+    <div class="card">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div>
+            <p class="text-muted small fw-semibold mb-1">PRODUTOS ATIVOS</p>
+            <h3 class="fw-bold mb-0">{{ total_produtos }}</h3>
+          </div>
+          <div class="rounded-3 p-2 bg-primary bg-opacity-10">
+            <i class="bi bi-box-seam fs-5 text-primary"></i>
+          </div>
+        </div>
+        <a href="{% url 'produtos:lista' %}" class="text-muted small text-decoration-none">
+          Ver produtos <i class="bi bi-arrow-right"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {# -- Itens em estoque -- #}
+  <div class="col-sm-6 col-lg-3">
+    <div class="card">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div>
+            <p class="text-muted small fw-semibold mb-1">ITENS EM ESTOQUE</p>
+            <h3 class="fw-bold mb-0">{{ total_itens_estoque }}</h3>
+          </div>
+          <div class="rounded-3 p-2 bg-success bg-opacity-10">
+            <i class="bi bi-archive fs-5 text-success"></i>
+          </div>
+        </div>
+        <a href="{% url 'estoque:lista' %}" class="text-muted small text-decoration-none">
+          Ver estoque <i class="bi bi-arrow-right"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {# -- Em alerta -- #}
+  <div class="col-sm-6 col-lg-3">
+    <div class="card">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div>
+            <p class="text-muted small fw-semibold mb-1">EM ALERTA</p>
+            <h3 class="fw-bold mb-0 text-warning">{{ total_alerta }}</h3>
+          </div>
+          <div class="rounded-3 p-2 bg-warning bg-opacity-10">
+            <i class="bi bi-exclamation-triangle fs-5 text-warning"></i>
+          </div>
+        </div>
+        <a href="{% url 'relatorios:estoque_baixo' %}" class="text-muted small text-decoration-none">
+          Ver relatório <i class="bi bi-arrow-right"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {# -- Críticos -- #}
+  <div class="col-sm-6 col-lg-3">
+    <div class="card">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div>
+            <p class="text-muted small fw-semibold mb-1">CRÍTICOS</p>
+            <h3 class="fw-bold mb-0 text-danger">{{ total_criticos }}</h3>
+          </div>
+          <div class="rounded-3 p-2 bg-danger bg-opacity-10">
+            <i class="bi bi-x-circle fs-5 text-danger"></i>
+          </div>
+        </div>
+        <a href="{% url 'relatorios:estoque_baixo' %}" class="text-muted small text-decoration-none">
+          Ver relatório <i class="bi bi-arrow-right"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{# ==================== GRÁFICOS ==================== #}
+<div class="row g-4 mb-4">
+
+  {# -- Gráfico de linha -- #}
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">EVOLUÇÃO — ENTRADAS E SAÍDAS</p>
+        <canvas id="graficoLinha" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+  {# -- Gráfico de barras -- #}
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">COMPARATIVO — ENTRADAS E SAÍDAS</p>
+        <canvas id="graficoBarras" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{# ==================== ÚLTIMAS MOVIMENTAÇÕES ==================== #}
+<div class="card">
+  <div class="card-body p-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <p class="fw-semibold text-secondary small mb-0">ÚLTIMAS MOVIMENTAÇÕES</p>
+      <a href="{% url 'movimentacoes:historico' %}" class="btn btn-sm btn-outline-secondary">
+        Ver todas <i class="bi bi-arrow-right ms-1"></i>
+      </a>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Data</th>
+            <th class="text-center">Tipo</th>
+            <th>Produto</th>
+            <th class="text-center">Quantidade</th>
+            <th class="text-center">Local</th>
+            <th class="text-center">Usuário</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for mov in ultimas_movimentacoes %}
+          <tr>
+            <td class="text-muted small">{{ mov.data_hora|date:"d/m/Y H:i" }}</td>
+            <td class="text-center">
+              <span class="badge
+                {% if mov.tipo == 'entrada' %}bg-success bg-opacity-10 text-success
+                {% elif mov.tipo == 'saida' %}bg-danger bg-opacity-10 text-danger
+                {% elif mov.tipo == 'transferencia' %}bg-info bg-opacity-10 text-info
+                {% else %}bg-secondary bg-opacity-10 text-secondary{% endif %}">
+                {% if mov.motivo %}{{ mov.get_motivo_display }}{% else %}{{ mov.get_tipo_display }}{% endif %}
+              </span>
+            </td>
+            <td class="fw-semibold">{{ mov.produto.nome }}</td>
+            <td class="text-center">{{ mov.quantidade|floatformat:"-3" }} {{ mov.produto|unidade_abrev }}</td>
+            <td class="text-center text-muted small">{{ mov.local.nome }}</td>
+            <td class="text-center text-muted small">{{ mov.usuario.get_full_name|default:mov.usuario.username }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-3">Nenhuma movimentação registrada.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{# ==================== SCRIPTS ==================== #}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script
+  id="dashboard-data"
+  data-labels='{{ dias_labels|safe }}'
+  data-entradas='{{ entradas_data|safe }}'
+  data-saidas='{{ saidas_data|safe }}'>
+</script>
+<script src="{% static 'js/dashboard.js' %}"></script>
 {% endblock %}
