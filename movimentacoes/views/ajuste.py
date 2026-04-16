@@ -1,12 +1,13 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from core.mixins import estoquista_ou_admin
 from movimentacoes.models import Movimentacao
 from movimentacoes.forms import AjusteForm
 from estoque.models import Estoque
 
 
-@login_required
+@estoquista_ou_admin
 def ajuste_create(request):
     form = AjusteForm(request.POST or None)
     saldo_atual = None

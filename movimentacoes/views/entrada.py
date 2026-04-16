@@ -1,11 +1,11 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from movimentacoes.models import Movimentacao
 from movimentacoes.forms import EntradaForm
+from core.mixins import estoquista_ou_admin
 
 
-@login_required
+@estoquista_ou_admin
 def entrada_create(request):
     form = EntradaForm(request.POST or None)
 

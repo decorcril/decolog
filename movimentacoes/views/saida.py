@@ -1,11 +1,12 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from core.mixins import estoquista_ou_admin
 from movimentacoes.models import Movimentacao
 from movimentacoes.forms import SaidaForm
 
 
-@login_required
+@estoquista_ou_admin
 def saida_create(request):
     form = SaidaForm(request.POST or None)
 

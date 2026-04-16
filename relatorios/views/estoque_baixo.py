@@ -1,13 +1,14 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from core import models
+from core.mixins import estoque_ou_gerente
 from estoque.models import Estoque
 from core.models import Local
 from produtos.models import Produto
 from django.db.models import F
 
 
-@login_required
+@estoque_ou_gerente
 def estoque_baixo(request):
     local_id = request.GET.get('local', '')
     categoria = request.GET.get('categoria', '')

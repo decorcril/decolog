@@ -1,12 +1,13 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
+from core.mixins import estoque_ou_gerente
 from movimentacoes.models import Movimentacao
 from core.models import Local, Fornecedor
 from produtos.models import Produto
 
 
-@login_required
+@estoque_ou_gerente
 def historico_list(request):
     q = request.GET.get('q', '')
     tipo = request.GET.get('tipo', '')

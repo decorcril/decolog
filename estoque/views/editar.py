@@ -1,11 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from core.mixins import estoquista_ou_admin
 from estoque.models import Estoque
 from estoque.forms import EstoqueMinimoForm
 
 
-@login_required
+@estoquista_ou_admin
 def estoque_minimo_edit(request, pk):
     estoque = get_object_or_404(Estoque, pk=pk)
     form = EstoqueMinimoForm(request.POST or None, instance=estoque)

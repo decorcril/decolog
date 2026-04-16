@@ -132,6 +132,17 @@
 
 </div>
 
+{# ==================== GRÁFICO TRANSFERÊNCIAS (só Gerente/Admin) ==================== #}
+{# is_gerente é calculado na view dashboard e passado como contexto #}
+{% if is_gerente %}
+<div class="card mb-4">
+  <div class="card-body p-4">
+    <p class="fw-semibold text-secondary small mb-3">TRANSFERÊNCIAS ENTRE LOCAIS</p>
+    <canvas id="graficoTransferencias" height="100"></canvas>
+  </div>
+</div>
+{% endif %}
+
 {# ==================== ÚLTIMAS MOVIMENTAÇÕES ==================== #}
 <div class="card">
   <div class="card-body p-4">
@@ -188,13 +199,18 @@
 {% endblock %}
 
 {# ==================== SCRIPTS ==================== #}
+{# Para adicionar novos dados ao JS: adicione um data-atributo aqui #}
+{# e leia com el.dataset.nomeAtributo no dashboard.js #}
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script
   id="dashboard-data"
   data-labels='{{ dias_labels|safe }}'
   data-entradas='{{ entradas_data|safe }}'
-  data-saidas='{{ saidas_data|safe }}'>
+  data-saidas='{{ saidas_data|safe }}'
+  data-transferencias-count='{{ transferencias_count_data|safe }}'
+  data-transferencias-volume='{{ transferencias_volume_data|safe }}'
+  data-is-gerente='{% if is_gerente %}true{% else %}false{% endif %}'>
 </script>
 <script src="{% static 'js/dashboard.js' %}"></script>
 {% endblock %}

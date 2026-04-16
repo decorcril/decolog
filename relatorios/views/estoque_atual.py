@@ -1,12 +1,13 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
+from core.mixins import estoque_ou_gerente
 from estoque.models import Estoque
 from core.models import Local
 from produtos.models import Produto
 
 
-@login_required
+@estoque_ou_gerente
 def estoque_atual(request):
     q = request.GET.get('q', '')
     local_id = request.GET.get('local', '')

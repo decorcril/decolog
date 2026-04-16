@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from core.mixins import estoquista_ou_admin
 from produtos.models import Produto
 from produtos.forms import ProdutoForm
 from django.db.models.deletion import ProtectedError
@@ -35,7 +36,7 @@ def produto_list(request):
     })
 
 
-@login_required
+@estoquista_ou_admin
 def produto_create(request):
     form = ProdutoForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
@@ -48,7 +49,7 @@ def produto_create(request):
     })
 
 
-@login_required
+@estoquista_ou_admin
 def produto_update(request, pk):
     produto = get_object_or_404(Produto, pk=pk)
     form = ProdutoForm(request.POST or None, instance=produto)
@@ -76,7 +77,7 @@ def produto_update(request, pk):
     })
 
 
-@login_required
+@estoquista_ou_admin
 def produto_delete(request, pk):
     produto = get_object_or_404(Produto, pk=pk)
     if request.method == 'POST':
