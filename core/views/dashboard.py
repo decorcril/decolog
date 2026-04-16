@@ -7,6 +7,7 @@ from datetime import timedelta
 from movimentacoes.models import Movimentacao
 from estoque.models import Estoque
 from produtos.models import Produto
+from core.models import Local
 import json
 
 
@@ -83,6 +84,32 @@ def dashboard(request):
     transferencias_count_data = [transferencias_count_dict.get(d, 0) for d in dias_labels]
     transferencias_volume_data = [transferencias_volume_dict.get(d, 0) for d in dias_labels]
 
+    # Transferências por local (visível só para Gerente/Admin no template)
+    transferencias_por_local = {}
+    for local in Local.objects.filter(ativo=True):
+        saidas_local = Movimentacao.objects.filter(
+            tipo=Movimentacao.TIPO_TRANSFERENCIA,
+            local=local,
+            data_hora__gte=data_inicio
+        ).annotate(dia=TruncDate('data_hora')).values('dia').annotate(
+            total=Count('id')
+        ).order_by('dia')
+        saidas_local_dict = {t['dia'].strftime('%d/%m'): t['total'] for t in saidas_local}
+
+        entradas_local = Movimentacao.objects.filter(
+            tipo=Movimentacao.TIPO_TRANSFERENCIA,
+            local_destino=local,
+            data_hora__gte=data_inicio
+        ).annotate(dia=TruncDate('data_hora')).values('dia').annotate(
+            total=Count('id')
+        ).order_by('dia')
+        entradas_local_dict = {t['dia'].strftime('%d/%m'): t['total'] for t in entradas_local}
+
+        transferencias_por_local[local.nome] = {
+            'saidas': [saidas_local_dict.get(d, 0) for d in dias_labels],
+            'entradas': [entradas_local_dict.get(d, 0) for d in dias_labels],
+        }
+
     # ── Últimas movimentações ──
     # Para mostrar mais ou menos itens, altere o [:8] abaixo
     ultimas_movimentacoes = Movimentacao.objects.select_related(
@@ -101,8 +128,10 @@ def dashboard(request):
         'saidas_data': json.dumps(saidas_data),
         'transferencias_count_data': json.dumps(transferencias_count_data),
         'transferencias_volume_data': json.dumps(transferencias_volume_data),
+        'transferencias_por_local': json.dumps(transferencias_por_local),
         # Tabela
         'ultimas_movimentacoes': ultimas_movimentacoes,
+        # Permissões
         'periodo': periodo,
         'is_gerente': request.user.is_staff or request.user.groups.filter(name='Gerente').exists(),
     })

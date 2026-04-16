@@ -143,6 +143,16 @@
 </div>
 {% endif %}
 
+{# ==================== GRÁFICO EVOLUÇÃO POR LOCAL (só Gerente/Admin) ==================== #}
+{% if is_gerente %}
+<div class="card mb-4">
+  <div class="card-body p-4">
+    <p class="fw-semibold text-secondary small mb-3">EVOLUÇÃO DE TRANSFERÊNCIAS POR LOCAL</p>
+    <canvas id="graficoTransferenciasPorLocal" height="100"></canvas>
+  </div>
+</div>
+{% endif %}
+
 {# ==================== ÚLTIMAS MOVIMENTAÇÕES ==================== #}
 <div class="card">
   <div class="card-body p-4">
@@ -210,6 +220,7 @@
   data-saidas='{{ saidas_data|safe }}'
   data-transferencias-count='{{ transferencias_count_data|safe }}'
   data-transferencias-volume='{{ transferencias_volume_data|safe }}'
+  data-transferencias-por-local='{{ transferencias_por_local|safe }}'
   data-is-gerente='{% if is_gerente %}true{% else %}false{% endif %}'>
 </script>
 <script src="{% static 'js/dashboard.js' %}"></script>

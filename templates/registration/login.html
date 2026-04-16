@@ -1,38 +1,87 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Login — Decolog{% endblock %}
 
 {% block unauthenticated_content %}
-<div class="min-vh-100 d-flex align-items-center justify-content-center" style="background-color: #f5f6fa;">
-  <div class="card shadow-sm border-0" style="width: 100%; max-width: 400px;">
-    <div class="card-body p-4">
+<div class="min-vh-100 d-flex flex-row-reverse">
+  {# ==================== LADO ESQUERDO — FORMULÁRIO ==================== #}
+  <div class="d-flex flex-column justify-content-center align-items-center p-5"
+    style="width: 100%; max-width: 520px; background: #fff; min-height: 100vh;">
 
-      <div class="text-center mb-4">
-        <h4 class="fw-bold mb-0">Deco<span style="color: #4da3ff;">log</span></h4>
-        <p class="text-muted small mt-1">Controle de Estoque</p>
+    
+    {# -- Título -- #}
+    <div class="w-100" style="max-width: 360px;">
+      <h4 class="fw-bold mb-1" style="color: #1a2535;">Bem-vindo de volta</h4>
+      <p class="text-muted small mb-4">Faça login para continuar</p>
+
+      {# -- Erros -- #}
+      {% if form.errors %}
+      <div class="alert alert-danger py-2 small mb-3">
+        <i class="bi bi-exclamation-triangle me-1"></i> Usuário ou senha inválidos.
       </div>
+      {% endif %}
 
+      {# -- Formulário -- #}
       <form method="post">
         {% csrf_token %}
+
         <div class="mb-3">
-          <label for="id_username" class="form-label">Usuário</label>
-          <input type="text" name="username" id="id_username" class="form-control" autofocus required>
-        </div>
-        <div class="mb-3">
-          <label for="id_password" class="form-label">Senha</label>
-          <input type="password" name="password" id="id_password" class="form-control" required>
+          <label for="id_username" class="form-label fw-semibold small" style="color: #1a2535;">USUÁRIO</label>
+          <input type="text" name="username" id="id_username"
+            class="form-control" placeholder="Digite seu usuário" autofocus required>
         </div>
 
-        {% if form.errors %}
-        <div class="alert alert-danger py-2 small">
-          Usuário ou senha inválidos.
+        <div class="mb-4">
+          <label for="id_password" class="form-label fw-semibold small" style="color: #1a2535;">SENHA</label>
+          <div class="input-group">
+            <input type="password" name="password" id="id_password"
+              class="form-control" placeholder="Digite sua senha" required>
+            <button type="button" class="btn btn-outline-secondary" id="toggle-senha"
+              tabindex="-1" title="Mostrar/ocultar senha">
+              <i class="bi bi-eye" id="toggle-senha-icon"></i>
+            </button>
+          </div>
         </div>
-        {% endif %}
 
-        <button type="submit" class="btn btn-primary w-100 mt-2">Entrar</button>
+        <button type="submit" class="btn btn-primary w-100">
+          <i class="bi bi-box-arrow-in-right me-1"></i> Entrar
+        </button>
+
       </form>
-
     </div>
+
   </div>
+
+  <div class="d-none d-md-block flex-grow-1" style="
+    background-image: 
+        url('{% static 'img/decolog.png' %}'), 
+        linear-gradient(135deg, #a8d1ff 2%, #ffffff 100%); /* Azul primeiro, Branco depois */
+    background-size:50%, cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    max-height: 100vh;
+"></div>
+
+
+
+
 </div>
+{% endblock %}
+
+{# ==================== SCRIPTS ==================== #}
+{% block extra_js %}
+<script>
+  document.getElementById('toggle-senha').addEventListener('click', () => {
+    const input = document.getElementById('id_password');
+    const icon = document.getElementById('toggle-senha-icon');
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.classList.replace('bi-eye', 'bi-eye-slash');
+    } else {
+      input.type = 'password';
+      icon.classList.replace('bi-eye-slash', 'bi-eye');
+    }
+  });
+</script>
 {% endblock %}
