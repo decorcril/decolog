@@ -1,13 +1,18 @@
 {% extends 'base.html' %}
 {% load static %}
+
 {% block title %}Ajuste de Estoque — Decolog{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+{% endblock %}
 
 {% block content %}
 
 {# ==================== CABEÇALHO ==================== #}
 <div class="mb-4">
-  <h4 class="fw-bold mb-1">Ajuste de Estoque</h4>
-  <p class="text-muted small mb-0">Corrija o saldo de um produto em um local específico</p>
+  <h4 class="page-title">Ajuste de Estoque</h4>
+  <p class="page-subtitle">Corrija o saldo de um produto em um local específico</p>
 </div>
 
 {# ==================== ALERTA ==================== #}
@@ -17,16 +22,20 @@
 </div>
 
 {# ==================== FORMULÁRIO ==================== #}
-<div class="row justify-content-center">
-  <div class="col-md-8 col-lg-6">
-    <div class="card">
-      <div class="card-body p-4">
-        <form method="post" novalidate>
-          {% csrf_token %}
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="row g-3">
+
+    {# ── Coluna esquerda: produto e local ── #}
+    <div class="col-lg-5">
+      <div class="card">
+        <div class="card-body p-4">
+
+          <div class="card-section-title">Selecionar Produto</div>
 
           {# -- Produto -- #}
           <div class="mb-3">
-            <label class="form-label fw-semibold text-secondary small">PRODUTO</label>
+            <label class="form-label">Produto</label>
             {{ form.produto }}
             {% if form.produto.errors %}
               <div class="text-danger small mt-1">{{ form.produto.errors }}</div>
@@ -34,25 +43,36 @@
           </div>
 
           {# -- Local -- #}
-          <div class="mb-3">
-            <label class="form-label fw-semibold text-secondary small">LOCAL</label>
+          <div class="mb-0">
+            <label class="form-label">Local</label>
             {{ form.local }}
             {% if form.local.errors %}
               <div class="text-danger small mt-1">{{ form.local.errors }}</div>
             {% endif %}
           </div>
 
-          {# -- Saldo atual (carregado via JS) -- #}
+        </div>
+      </div>
+    </div>
+
+    {# ── Coluna direita: saldo e ajuste ── #}
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-body p-4">
+
+          <div class="card-section-title">Novo Saldo</div>
+
+          {# -- Saldo atual carregado via JS -- #}
           <div id="saldo-info" class="mb-3" style="display: none;">
-            <div class="p-2 rounded-3" style="background: #f8f9fa; font-size: 0.82rem;">
-              <span class="fw-semibold text-secondary small">SALDO ATUAL:</span>
-              <span id="saldo-valor" class="fw-bold ms-1"></span>
+            <div class="p-2 rounded" style="background: #f9fafb; border: 1px solid #e8eaed; font-size: 0.8rem;">
+              <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #6b7280;">Saldo Atual</span>
+              <span id="saldo-valor" class="fw-bold ms-2" style="color: #2422b1;"></span>
             </div>
           </div>
 
           {# -- Nova quantidade -- #}
           <div class="mb-3">
-            <label class="form-label fw-semibold text-secondary small">NOVO SALDO</label>
+            <label class="form-label">Novo Saldo</label>
             {{ form.quantidade }}
             {% if form.quantidade.errors %}
               <div class="text-danger small mt-1">{{ form.quantidade.errors }}</div>
@@ -60,42 +80,43 @@
           </div>
 
           {# -- Motivo -- #}
-          <div class="mb-4">
-            <label class="form-label fw-semibold text-secondary small">MOTIVO DO AJUSTE</label>
+          <div class="mb-0">
+            <label class="form-label">Motivo do Ajuste</label>
             {{ form.observacao }}
             {% if form.observacao.errors %}
               <div class="text-danger small mt-1">{{ form.observacao.errors }}</div>
             {% endif %}
           </div>
 
-          {# -- Erros gerais -- #}
-          {% if form.non_field_errors %}
-            <div class="alert alert-danger py-2 small">
-              {{ form.non_field_errors }}
-            </div>
-          {% endif %}
-
-          <hr class="my-3" style="border-color: #f0f2f5;">
-
-          {# -- Botões -- #}
-          <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-warning px-4">
-              <i class="bi bi-sliders me-1"></i> Aplicar Ajuste
-            </button>
-            <a href="{% url 'estoque:lista' %}" class="btn btn-outline-secondary px-4">
-              Cancelar
-            </a>
-          </div>
-
-        </form>
+        </div>
       </div>
+
+      {# -- Erros gerais -- #}
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger py-2 small mt-3">
+          {{ form.non_field_errors }}
+        </div>
+      {% endif %}
+
+      {# -- Botões -- #}
+      <div class="d-flex gap-2 mt-3 justify-content-end">
+        <a href="{% url 'estoque:lista' %}" class="btn btn-outline-secondary px-4">
+          Cancelar
+        </a>
+        <button type="submit" class="btn btn-warning px-4">
+          <i class="bi bi-sliders me-1"></i> Aplicar Ajuste
+        </button>
+      </div>
+
     </div>
   </div>
-</div>
+</form>
 
 {% endblock %}
 
 {# ==================== SCRIPTS ==================== #}
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script src="{% static 'js/tom_select_init.js' %}"></script>
 <script src="{% static 'js/ajuste_form.js' %}"></script>
 {% endblock %}

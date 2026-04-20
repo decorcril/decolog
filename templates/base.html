@@ -65,8 +65,11 @@
         <i class="bi bi-arrow-up-circle"></i> Saída
       </a>
       <a href="{% url 'movimentacoes:transferencia' %}" class="mobile-nav-link">
-        <i class="bi bi-arrow-left-right"></i> Transferência
+        <i class="bi bi-arrow-left-right"></i> Transferência Unitária
       </a>
+      <a href="{% url 'movimentacoes:ordem_list' %}" class="mobile-nav-link">
+  <i class="bi bi-arrow-left-right"></i> Transferência em Lote
+</a>
       <a href="{% url 'movimentacoes:ajuste' %}" class="mobile-nav-link">
         <i class="bi bi-sliders"></i> Ajuste de Estoque
       </a>
@@ -170,9 +173,14 @@
           </li>
           <li>
             <a class="dropdown-item" href="{% url 'movimentacoes:transferencia' %}">
-              <i class="bi bi-arrow-left-right"></i> Transferência
+              <i class="bi bi-arrow-left-right"></i> Transferência Unitária
             </a>
           </li>
+          <li>
+  <a class="dropdown-item" href="{% url 'movimentacoes:ordem_list' %}">
+    <i class="bi bi-arrow-left-right"></i> Transferência em Lote
+  </a>
+</li>
           <li>
             <a class="dropdown-item" href="{% url 'movimentacoes:ajuste' %}">
               <i class="bi bi-sliders"></i> Ajuste de Estoque

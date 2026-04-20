@@ -1,0 +1,284 @@
+{% load static %}
+{% load core_extras %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comprovante de Transferência — Decolog</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      font-size: 13px;
+      color: #1a1a1a;
+      background: #fff;
+      padding: 40px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid #1a2535;
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+    }
+
+    .brand {
+      font-size: 24px;
+      font-weight: 800;
+      color: #1a2535;
+      letter-spacing: -0.5px;
+    }
+
+    .brand span { color: #4da3ff; }
+
+    .numero-ref {
+      text-align: right;
+      color: #666;
+      font-size: 12px;
+    }
+
+    .numero-ref strong {
+      display: block;
+      font-size: 16px;
+      color: #1a2535;
+    }
+
+    .dados {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .dado-bloco {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 12px 16px;
+    }
+
+    .dado-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #888;
+      margin-bottom: 4px;
+    }
+
+    .dado-valor {
+      font-weight: 600;
+      color: #1a2535;
+      font-size: 14px;
+    }
+
+    .titulo-secao {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #888;
+      margin-bottom: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 32px;
+    }
+
+    thead th {
+      background: #1a2535;
+      color: #fff;
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    thead th:last-child { text-align: right; }
+
+    tbody td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #e8eaed;
+      font-size: 13px;
+    }
+
+    tbody td:last-child {
+      text-align: right;
+      font-weight: 600;
+    }
+
+    .observacao {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 32px;
+      font-size: 12px;
+      color: #555;
+    }
+
+    .assinaturas {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      margin-top: 40px;
+    }
+
+    .assinatura { text-align: center; }
+
+    .linha-assinatura {
+      border-top: 1px solid #1a2535;
+      margin-bottom: 8px;
+    }
+
+    .assinatura-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #888;
+    }
+
+    .assinatura-nome {
+      font-size: 12px;
+      color: #555;
+      margin-top: 2px;
+    }
+
+    .rodape {
+      margin-top: 40px;
+      padding-top: 16px;
+      border-top: 1px solid #e8eaed;
+      font-size: 11px;
+      color: #aaa;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .btn-imprimir {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #4da3ff;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(77,163,255,0.3);
+    }
+
+    .btn-voltar {
+      position: fixed;
+      top: 20px;
+      right: 150px;
+      background: #fff;
+      color: #1a2535;
+      border: 1.5px solid #e8eaed;
+      border-radius: 10px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    @media print {
+      .btn-imprimir, .btn-voltar { display: none; }
+      body { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  {# -- Botões -- #}
+  <button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir</button>
+  <a href="{% url 'movimentacoes:historico' %}" class="btn-voltar">← Voltar</a>
+
+  {# ==================== CABEÇALHO ==================== #}
+  <div class="header">
+    <div>
+      <div class="brand">Deco<span>log</span></div>
+      <div style="font-size: 11px; color: #888; margin-top: 2px;">Comprovante de Transferência</div>
+    </div>
+    <div class="numero-ref">
+      <strong>Transferência #{{ mov.pk }}</strong>
+      {{ mov.data_hora|date:"d/m/Y H:i" }}
+    </div>
+  </div>
+
+  {# ==================== DADOS ==================== #}
+  <div class="dados">
+    <div class="dado-bloco">
+      <div class="dado-label">Local de Origem</div>
+      <div class="dado-valor">{{ mov.local.nome }}</div>
+    </div>
+    <div class="dado-bloco">
+      <div class="dado-label">Local de Destino</div>
+      <div class="dado-valor">{{ mov.local_destino.nome }}</div>
+    </div>
+    <div class="dado-bloco">
+      <div class="dado-label">Registrado por</div>
+      <div class="dado-valor">{{ mov.usuario.get_full_name|default:mov.usuario.username }}</div>
+    </div>
+    <div class="dado-bloco">
+      <div class="dado-label">Data</div>
+      <div class="dado-valor">{{ mov.data_hora|date:"d/m/Y H:i" }}</div>
+    </div>
+  </div>
+
+  {# ==================== PRODUTO ==================== #}
+  <div class="titulo-secao">Produto Transferido</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Produto</th>
+        <th>Código</th>
+        <th>Quantidade</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>{{ mov.produto.nome }}</td>
+        <td style="font-family: monospace; font-size: 11px; color: #888;">
+          {{ mov.produto.codigo|default:"—" }}
+        </td>
+        <td>{{ mov.quantidade|floatformat:"-3" }} {{ mov.produto|unidade_abrev }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  {# ==================== OBSERVAÇÃO ==================== #}
+  {% if mov.observacao %}
+  <div class="titulo-secao">Observação</div>
+  <div class="observacao">{{ mov.observacao }}</div>
+  {% endif %}
+
+  {# ==================== ASSINATURAS ==================== #}
+  <div class="assinaturas">
+    <div class="assinatura">
+      <div style="height: 50px;"></div>
+      <div class="linha-assinatura"></div>
+      <div class="assinatura-label">Responsável pelo Envio</div>
+      <div class="assinatura-nome">{{ mov.usuario.get_full_name|default:mov.usuario.username }}</div>
+    </div>
+    <div class="assinatura">
+      <div style="height: 50px;"></div>
+      <div class="linha-assinatura"></div>
+      <div class="assinatura-label">Responsável pelo Recebimento</div>
+      <div class="assinatura-nome"></div>
+    </div>
+  </div>
+
+  {# ==================== RODAPÉ ==================== #}
+  <div class="rodape">
+    <span>Decolog — Sistema de Controle de Estoque</span>
+    <span>Transferência #{{ mov.pk }} — {{ mov.data_hora|date:"d/m/Y" }}</span>
+  </div>
+
+</body>
+</html>

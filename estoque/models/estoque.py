@@ -21,7 +21,7 @@ class Estoque(models.Model):
     )
     atualizado_em = models.DateTimeField(auto_now=True)
     estoque_minimo = models.DecimalField(
-    max_digits=10, decimal_places=3,
+    max_digits=10, decimal_places=0,
     default=0, verbose_name='Estoque Mínimo'
     )
 

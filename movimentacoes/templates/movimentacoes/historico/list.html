@@ -84,8 +84,8 @@
   </div>
 </div>
 
-{# ==================== LISTA DE MOVIMENTAÇÕES ==================== #}
-<div class="card">
+{# ==================== MOVIMENTAÇÕES SIMPLES ==================== #}
+<div class="card mb-4">
   <div class="table-responsive">
     <table class="table mb-0">
       <thead class="table-light">
@@ -98,6 +98,7 @@
           <th class="text-center">Fornecedor / NF</th>
           <th class="text-center">Observação</th>
           <th class="text-center">Usuário</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -141,7 +142,7 @@
             {{ mov.quantidade|floatformat:"-3" }} {{ mov.produto|unidade_abrev }}
           </td>
 
-          {# -- Local (origem → destino para transferências) -- #}
+          {# -- Local -- #}
           <td class="text-center text-muted small">
             {{ mov.local.nome }}
             {% if mov.local_destino %}
@@ -168,10 +169,21 @@
             {{ mov.usuario.get_full_name|default:mov.usuario.username }}
           </td>
 
+          {# -- Imprimir (só transferências simples) -- #}
+          <td>
+            {% if mov.tipo == 'transferencia' %}
+              <a href="{% url 'movimentacoes:transferencia_imprimir' mov.pk %}"
+                class="btn btn-sm btn-outline-secondary" target="_blank"
+                title="Imprimir comprovante">
+                <i class="bi bi-printer"></i>
+              </a>
+            {% endif %}
+          </td>
+
         </tr>
         {% empty %}
         <tr>
-          <td colspan="8" class="text-center text-muted py-4">
+          <td colspan="9" class="text-center text-muted py-4">
             {% if q or tipo or local_id or fornecedor_id or data_inicio or data_fim %}
               Nenhuma movimentação encontrada com esses filtros.
             {% else %}
@@ -182,6 +194,94 @@
         {% endfor %}
       </tbody>
     </table>
+  </div>
+</div>
+
+{# ==================== ORDENS DE TRANSFERÊNCIA ==================== #}
+<div class="card">
+  <div class="card-body p-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <p class="fw-semibold text-secondary small mb-0">ORDENS DE TRANSFERÊNCIA EM LOTE</p>
+      <a href="{% url 'movimentacoes:ordem_list' %}" class="btn btn-sm btn-outline-secondary">
+        Ver todas <i class="bi bi-arrow-right ms-1"></i>
+      </a>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Data</th>
+            <th>Nº Ordem</th>
+            <th class="text-center">Status</th>
+            <th class="text-center">Origem</th>
+            <th class="text-center">Destino</th>
+            <th class="text-center">Itens</th>
+            <th class="text-center">Criado por</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ordem in ordens %}
+          <tr>
+
+            {# -- Data -- #}
+            <td class="text-muted small">{{ ordem.data_envio|date:"d/m/Y H:i" }}</td>
+
+            {# -- Número -- #}
+            <td class="fw-semibold">{{ ordem.numero }}</td>
+
+            {# -- Status -- #}
+            <td class="text-center">
+              <span class="badge
+                {% if ordem.status == 'em_transito' %}bg-warning bg-opacity-10 text-warning
+                {% elif ordem.status == 'recebido' %}bg-success bg-opacity-10 text-success
+                {% else %}bg-secondary bg-opacity-10 text-secondary{% endif %}">
+                {{ ordem.get_status_display }}
+              </span>
+            </td>
+
+            {# -- Origem -- #}
+            <td class="text-center text-muted small">{{ ordem.local_origem.nome }}</td>
+
+            {# -- Destino -- #}
+            <td class="text-center text-muted small">{{ ordem.local_destino.nome }}</td>
+
+            {# -- Itens -- #}
+            <td class="text-center text-muted small">{{ ordem.itens.count }} produto(s)</td>
+
+            {# -- Criado por -- #}
+            <td class="text-center text-muted small">
+              {{ ordem.criado_por.get_full_name|default:ordem.criado_por.username }}
+            </td>
+
+            {# -- Ações -- #}
+            <td class="text-end">
+              <a href="{% url 'movimentacoes:ordem_detalhe' ordem.pk %}"
+                class="btn btn-sm btn-outline-secondary me-1"
+                title="Ver detalhes">
+                <i class="bi bi-eye"></i>
+              </a>
+              <a href="{% url 'movimentacoes:ordem_imprimir' ordem.pk %}"
+                class="btn btn-sm btn-outline-secondary" target="_blank"
+                title="Imprimir comprovante">
+                <i class="bi bi-printer"></i>
+              </a>
+            </td>
+
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-4">
+              Nenhuma ordem de transferência registrada.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
   </div>
 </div>
 

@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from core.mixins import estoquista_ou_admin
@@ -26,4 +26,16 @@ def transferencia_create(request):
     return render(request, 'movimentacoes/transferencia/form.html', {
         'form': form,
         'titulo': 'Transferência entre Locais',
+    })
+
+@login_required
+def transferencia_imprimir(request, pk):
+    from movimentacoes.models import Movimentacao
+    mov = get_object_or_404(
+        Movimentacao,
+        pk=pk,
+        tipo=Movimentacao.TIPO_TRANSFERENCIA
+    )
+    return render(request, 'movimentacoes/transferencia/imprimir.html', {
+        'mov': mov,
     })

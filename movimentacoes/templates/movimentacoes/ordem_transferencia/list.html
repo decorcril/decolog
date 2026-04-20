@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% load core_extras %}
+
+{% block title %}Ordens de Transferência — Decolog{% endblock %}
+
+{% block content %}
+
+{# ==================== CABEÇALHO ==================== #}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">Ordens de Transferência</h4>
+    <p class="text-muted small mb-0">Transferências em lote entre locais</p>
+  </div>
+  <a href="{% url 'movimentacoes:ordem_criar' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i> Nova Ordem
+  </a>
+</div>
+
+{# ==================== FILTRO DE STATUS ==================== #}
+<div class="d-flex gap-2 mb-4">
+  <a href="{% url 'movimentacoes:ordem_list' %}"
+    class="btn btn-sm {% if not status %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    Todas
+  </a>
+  {% for value, label in status_choices %}
+    <a href="?status={{ value }}"
+      class="btn btn-sm {% if status == value %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+      {{ label }}
+    </a>
+  {% endfor %}
+</div>
+
+{# ==================== LISTA ==================== #}
+<div class="card">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Nº Ordem</th>
+          <th>Origem</th>
+          <th>Destino</th>
+          <th>Itens</th>
+          <th>Status</th>
+          <th>Data Envio</th>
+          <th>Criado por</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ordem in ordens %}
+        <tr>
+          <td class="fw-semibold">{{ ordem.numero }}</td>
+          <td class="text-muted small">{{ ordem.local_origem.nome }}</td>
+          <td class="text-muted small">{{ ordem.local_destino.nome }}</td>
+          <td class="text-muted small">{{ ordem.itens.count }} produto(s)</td>
+          <td>
+            <span class="badge
+              {% if ordem.status == 'em_transito' %}bg-warning bg-opacity-10 text-warning
+              {% elif ordem.status == 'recebido' %}bg-success bg-opacity-10 text-success
+              {% else %}bg-secondary bg-opacity-10 text-secondary{% endif %}">
+              {{ ordem.get_status_display }}
+            </span>
+          </td>
+          <td class="text-muted small">{{ ordem.data_envio|date:"d/m/Y H:i" }}</td>
+          <td class="text-muted small">{{ ordem.criado_por.get_full_name|default:ordem.criado_por.username }}</td>
+          <td>
+            <a href="{% url 'movimentacoes:ordem_detalhe' ordem.pk %}"
+              class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="text-center text-muted py-4">Nenhuma ordem registrada.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

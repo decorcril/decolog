@@ -1,37 +1,52 @@
 {% extends 'base.html' %}
 {% load static %}
+
 {% block title %}Entrada de Estoque — Decolog{% endblock %}
 
-
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+{% endblock %}
 
 {% block content %}
 
 {# ==================== CABEÇALHO ==================== #}
 <div class="mb-4">
-  <h4 class="fw-bold mb-1">Entrada de Estoque</h4>
-  <p class="text-muted small mb-0">Registre a chegada de produtos no estoque</p>
+  <h4 class="page-title">Entrada de Estoque</h4>
+  <p class="page-subtitle">Registre a chegada de produtos no estoque</p>
 </div>
 
 {# ==================== FORMULÁRIO ==================== #}
-<div class="row justify-content-center">
-  <div class="col-md-8 col-lg-6">
-    <div class="card">
-      <div class="card-body p-4">
-        <form method="post" novalidate>
-          {% csrf_token %}
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="row g-3">
+
+    {# ── Coluna esquerda: dados principais ── #}
+    <div class="col-lg-5">
+      <div class="card">
+        <div class="card-body p-4">
+
+          <div class="card-section-title">Dados do Recebimento</div>
 
           {# -- Produto -- #}
           <div class="mb-3">
-            <label class="form-label fw-semibold text-secondary small">PRODUTO</label>
+            <label class="form-label">Produto</label>
             {{ form.produto }}
             {% if form.produto.errors %}
               <div class="text-danger small mt-1">{{ form.produto.errors }}</div>
             {% endif %}
+
+            {# -- Saldo disponível carregado via JS -- #}
+            <div id="saldo-info" class="mt-2" style="display: none;">
+              <div class="p-2 rounded" style="background: #f9fafb; border: 1px solid #e8eaed; font-size: 0.8rem;">
+                <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #6b7280;">Saldo Atual</span>
+                <div id="saldo-lista" class="mt-1"></div>
+              </div>
+            </div>
           </div>
 
           {# -- Local -- #}
           <div class="mb-3">
-            <label class="form-label fw-semibold text-secondary small">LOCAL</label>
+            <label class="form-label">Local de Destino</label>
             {{ form.local }}
             {% if form.local.errors %}
               <div class="text-danger small mt-1">{{ form.local.errors }}</div>
@@ -39,65 +54,74 @@
           </div>
 
           {# -- Quantidade -- #}
-          <div class="mb-3">
-            <label class="form-label fw-semibold text-secondary small">QUANTIDADE</label>
+          <div class="mb-0">
+            <label class="form-label">Quantidade</label>
             {{ form.quantidade }}
             {% if form.quantidade.errors %}
               <div class="text-danger small mt-1">{{ form.quantidade.errors }}</div>
             {% endif %}
           </div>
 
+        </div>
+      </div>
+    </div>
+
+    {# ── Coluna direita: informações adicionais ── #}
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-body p-4">
+
+          <div class="card-section-title">Informações do Fornecedor</div>
+
           {# -- Fornecedor -- #}
           <div class="mb-3">
-            <label class="form-label fw-semibold text-secondary small">
-              FORNECEDOR <span class="text-muted fw-normal">(opcional)</span>
+            <label class="form-label">
+              Fornecedor
+              <span class="text-muted" style="text-transform: none; letter-spacing: 0; font-weight: 400;">(opcional)</span>
             </label>
             {{ form.fornecedor }}
           </div>
 
           {# -- Nota Fiscal -- #}
           <div class="mb-3">
-            <label class="form-label fw-semibold text-secondary small">
-              NOTA FISCAL <span class="text-muted fw-normal">(opcional)</span>
+            <label class="form-label">
+              Nota Fiscal
+              <span class="text-muted" style="text-transform: none; letter-spacing: 0; font-weight: 400;">(opcional)</span>
             </label>
             {{ form.nota_fiscal }}
           </div>
 
           {# -- Observação -- #}
-          <div class="mb-4">
-            <label class="form-label fw-semibold text-secondary small">
-              OBSERVAÇÃO <span class="text-muted fw-normal">(opcional)</span>
+          <div class="mb-0">
+            <label class="form-label">
+              Observação
+              <span class="text-muted" style="text-transform: none; letter-spacing: 0; font-weight: 400;">(opcional)</span>
             </label>
             {{ form.observacao }}
           </div>
 
-          <hr class="my-3" style="border-color: #f0f2f5;">
-
-          {# -- Botões -- #}
-          <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-primary px-4">
-              <i class="bi bi-check-lg me-1"></i> Registrar Entrada
-            </button>
-            <a href="{% url 'estoque:lista' %}" class="btn btn-outline-secondary px-4">
-              Cancelar
-            </a>
-          </div>
-
-        </form>
+        </div>
       </div>
+
+      {# -- Botões -- #}
+      <div class="d-flex gap-2 mt-3 justify-content-end">
+        <a href="{% url 'estoque:lista' %}" class="btn btn-outline-secondary px-4">
+          Cancelar
+        </a>
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="bi bi-check-lg me-1"></i> Registrar Entrada
+        </button>
+      </div>
+
     </div>
   </div>
-</div>
+</form>
 
 {% endblock %}
 
 {# ==================== SCRIPTS ==================== #}
-{% block extra_css %}
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
-{% endblock %}
-
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<script src="{% static 'js/select2_init.js' %}"></script>
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script src="{% static 'js/tom_select_init.js' %}"></script>
+<script src="{% static 'js/saida_form.js' %}"></script>
 {% endblock %}

@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% load core_extras %}
+
+{% block title %}Ordem {{ ordem.numero }} — Decolog{% endblock %}
+
+{% block content %}
+
+{# ==================== CABEÇALHO ==================== #}
+<div class="mb-4">
+  <h4 class="fw-bold mb-1">Ordem {{ ordem.numero }}</h4>
+  <p class="text-muted small mb-0">
+    <a href="{% url 'movimentacoes:ordem_list' %}" class="text-muted text-decoration-none">
+      <i class="bi bi-arrow-left-right me-1"></i>Ordens de Transferência
+    </a>
+    <i class="bi bi-chevron-right mx-1" style="font-size: 0.7rem;"></i>
+    {{ ordem.numero }}
+  </p>
+</div>
+
+<div class="row g-4">
+
+  {# ==================== DADOS DA ORDEM ==================== #}
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">DADOS DA ORDEM</p>
+
+        {# -- Informações -- #}
+        <div class="text-muted small">
+          <div class="mb-2">
+            <span class="fw-semibold">Status:</span>
+            <span class="badge ms-1
+              {% if ordem.status == 'em_transito' %}bg-warning bg-opacity-10 text-warning
+              {% elif ordem.status == 'recebido' %}bg-success bg-opacity-10 text-success
+              {% else %}bg-secondary bg-opacity-10 text-secondary{% endif %}">
+              {{ ordem.get_status_display }}
+            </span>
+          </div>
+          <div class="mb-2"><span class="fw-semibold">Origem:</span> {{ ordem.local_origem.nome }}</div>
+          <div class="mb-2"><span class="fw-semibold">Destino:</span> {{ ordem.local_destino.nome }}</div>
+          <div class="mb-2"><span class="fw-semibold">Enviado em:</span> {{ ordem.data_envio|date:"d/m/Y H:i" }}</div>
+          <div class="mb-2"><span class="fw-semibold">Criado por:</span> {{ ordem.criado_por.get_full_name|default:ordem.criado_por.username }}</div>
+          {% if ordem.recebido_por %}
+            <div class="mb-2"><span class="fw-semibold">Recebido por:</span> {{ ordem.recebido_por.get_full_name|default:ordem.recebido_por.username }}</div>
+            <div class="mb-2"><span class="fw-semibold">Recebido em:</span> {{ ordem.data_recebimento|date:"d/m/Y H:i" }}</div>
+          {% endif %}
+          {% if ordem.observacao %}
+            <div class="mb-2"><span class="fw-semibold">Observação:</span> {{ ordem.observacao }}</div>
+          {% endif %}
+        </div>
+
+        <hr class="my-3" style="border-color: #f0f2f5;">
+
+        {# -- Botão imprimir (sempre visível) -- #}
+        <a href="{% url 'movimentacoes:ordem_imprimir' ordem.pk %}"
+          class="btn btn-outline-secondary w-100 mb-2" target="_blank">
+          <i class="bi bi-printer me-1"></i> Imprimir Comprovante
+        </a>
+
+        {# -- Ações (só em trânsito) -- #}
+        {% if ordem.status == 'em_transito' %}
+        <div class="d-grid gap-2">
+          <form method="post" action="{% url 'movimentacoes:ordem_confirmar' ordem.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success w-100">
+              <i class="bi bi-check-circle me-1"></i> Confirmar Recebimento
+            </button>
+          </form>
+          <form method="post" action="{% url 'movimentacoes:ordem_cancelar' ordem.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger w-100"
+              onclick="return confirm('Cancelar esta ordem? O estoque será revertido.')">
+              <i class="bi bi-x-circle me-1"></i> Cancelar Ordem
+            </button>
+          </form>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+
+  {# ==================== ITENS DA ORDEM ==================== #}
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">PRODUTOS TRANSFERIDOS</p>
+        <div class="table-responsive">
+          <table class="table mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Produto</th>
+                <th>Código</th>
+                <th class="text-end">Quantidade</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in itens %}
+              <tr>
+                <td class="fw-semibold">{{ item.produto.nome }}</td>
+                <td class="text-muted small" style="font-family: monospace;">
+                  {{ item.produto.codigo|default:"—" }}
+                </td>
+                <td class="text-end fw-semibold">
+                  {{ item.quantidade|floatformat:"-3" }} {{ item.produto|unidade_abrev }}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

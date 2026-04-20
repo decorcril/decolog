@@ -15,12 +15,12 @@ class EntradaForm(forms.Form):
         label='Local'
     )
     quantidade = forms.DecimalField(
-        max_digits=12, decimal_places=3,
+        max_digits=12, decimal_places=0,
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
             'placeholder': '0',
-            'step': '0.001',
-            'min': '0.001',
+            'step': '1',
+            'min': '1',
         }),
         label='Quantidade'
     )

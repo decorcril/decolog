@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load core_extras %}
+
+{% block title %}Nova Ordem de Transferência — Decolog{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+
+{# ==================== CABEÇALHO ==================== #}
+<div class="mb-4">
+  <h4 class="page-title">Nova Ordem de Transferência</h4>
+  <p class="page-subtitle">Transfira múltiplos produtos de uma vez</p>
+</div>
+
+{# ==================== FORMULÁRIO ==================== #}
+<form method="post" novalidate id="form-ordem">
+  {% csrf_token %}
+  <div class="row g-3">
+
+    {# ── Coluna esquerda: dados da ordem ── #}
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-body p-4">
+
+          <div class="card-section-title">Dados da Transferência</div>
+
+          {# -- Origem -- #}
+          <div class="mb-3">
+            <label class="form-label">Origem</label>
+            {{ form.local_origem }}
+            {% if form.local_origem.errors %}
+              <div class="text-danger small mt-1">{{ form.local_origem.errors }}</div>
+            {% endif %}
+          </div>
+
+          {# -- Destino -- #}
+          <div class="mb-3">
+            <label class="form-label">Destino</label>
+            {{ form.local_destino }}
+            {% if form.local_destino.errors %}
+              <div class="text-danger small mt-1">{{ form.local_destino.errors }}</div>
+            {% endif %}
+          </div>
+
+          {# -- Observação -- #}
+          <div class="mb-0">
+            <label class="form-label">
+              Observação
+              <span class="text-muted" style="text-transform: none; letter-spacing: 0; font-weight: 400;">(opcional)</span>
+            </label>
+            {{ form.observacao }}
+          </div>
+
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger py-2 small mt-3">{{ form.non_field_errors }}</div>
+          {% endif %}
+
+        </div>
+      </div>
+    </div>
+
+    {# ── Coluna direita: produtos ── #}
+    <div class="col-lg-8">
+      <div class="card mb-3">
+        <div class="card-body p-4">
+
+          <div class="card-section-title">Adicionar Produto</div>
+
+          {# -- Seletor de produto e quantidade -- #}
+          <div class="row g-2 align-items-end">
+
+            {# -- Produto com saldo -- #}
+            <div class="col-7">
+              <label class="form-label">Produto</label>
+              <select id="select-produto" class="form-select">
+                <option value="">Buscar por nome ou código...</option>
+                {% for produto in produtos %}
+                  <option value="{{ produto.pk }}"
+                    data-nome="{{ produto.nome }}"
+                    data-codigo="{{ produto.codigo|default:'' }}"
+                    data-unidade="{{ produto|unidade_abrev }}">
+                    {{ produto.nome }}{% if produto.codigo %} ({{ produto.codigo }}){% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+
+              {# -- Saldo disponível carregado via JS ao selecionar -- #}
+              <div id="saldo-ordem-info" class="mt-2" style="display: none;">
+                <div class="p-2 rounded" style="background: #f9fafb; border: 1px solid #e8eaed; font-size: 0.8rem;">
+                  <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #6b7280;">Saldo Disponível</span>
+                  <div id="saldo-ordem-lista" class="mt-1"></div>
+                </div>
+              </div>
+            </div>
+
+            {# -- Quantidade -- #}
+            <div class="col-3">
+              <label class="form-label">Quantidade</label>
+              <input type="number" id="input-quantidade" class="form-control"
+                placeholder="0" step="0.001" min="0.001">
+            </div>
+
+            {# -- Botão adicionar -- #}
+            <div class="col-2">
+              <button type="button" class="btn btn-primary w-100" id="btn-adicionar">
+                <i class="bi bi-plus-lg"></i>
+              </button>
+            </div>
+
+          </div>
+
+          {# -- Alerta erro -- #}
+          <div id="alerta-erro" class="alert alert-danger py-2 small mt-2" style="display: none;"></div>
+
+        </div>
+      </div>
+
+      {# ── Cards dos produtos adicionados ── #}
+      <div id="lista-produtos" class="row g-2 mb-3"></div>
+
+      {# -- Mensagem quando vazio -- #}
+      <div id="msg-vazio" class="card">
+        <div class="card-body text-center py-4">
+          <i class="bi bi-box-seam fs-2 text-muted opacity-50"></i>
+          <p class="text-muted small mt-2 mb-0">Nenhum produto adicionado ainda.</p>
+        </div>
+      </div>
+
+      {# -- Inputs hidden enviados ao submeter -- #}
+      <div id="inputs-hidden"></div>
+
+      {# -- Botões -- #}
+      <div class="d-flex gap-2 mt-3 justify-content-end">
+        <a href="{% url 'movimentacoes:ordem_list' %}" class="btn btn-outline-secondary px-4">
+          Cancelar
+        </a>
+        <button type="submit" class="btn btn-primary px-4" id="btn-enviar">
+          <i class="bi bi-send me-1"></i> Enviar Transferência
+        </button>
+      </div>
+
+    </div>
+  </div>
+</form>
+
+{% endblock %}
+
+{# ==================== SCRIPTS ==================== #}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script src="{% static 'js/ordem_transferencia.js' %}"></script>
+{% endblock %}

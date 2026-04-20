@@ -1,13 +1,12 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from core.mixins import estoque_ou_gerente
-from movimentacoes.models import Movimentacao
+from movimentacoes.models import Movimentacao, OrdemTransferencia
 from core.models import Local, Fornecedor
 from produtos.models import Produto
 
 
-@estoque_ou_gerente
+@login_required
 def historico_list(request):
     q = request.GET.get('q', '')
     tipo = request.GET.get('tipo', '')
@@ -16,6 +15,7 @@ def historico_list(request):
     data_inicio = request.GET.get('data_inicio', '')
     data_fim = request.GET.get('data_fim', '')
 
+    # ── Movimentações simples ──
     movimentacoes = Movimentacao.objects.select_related(
         'produto', 'local', 'local_destino', 'fornecedor', 'usuario'
     ).order_by('-data_hora')
@@ -37,8 +37,29 @@ def historico_list(request):
     if data_fim:
         movimentacoes = movimentacoes.filter(data_hora__date__lte=data_fim)
 
+    # ── Ordens de transferência ──
+    ordens = OrdemTransferencia.objects.select_related(
+        'local_origem', 'local_destino', 'criado_por'
+    ).order_by('-data_envio')
+
+    if local_id:
+        ordens = ordens.filter(
+            Q(local_origem__id=local_id) | Q(local_destino__id=local_id)
+        )
+    if data_inicio:
+        ordens = ordens.filter(data_envio__date__gte=data_inicio)
+    if data_fim:
+        ordens = ordens.filter(data_envio__date__lte=data_fim)
+
+    # Filtra ordens por produto se houver busca
+    if q:
+        ordens = ordens.filter(
+            itens__produto__nome__icontains=q
+        ).distinct()
+
     return render(request, 'movimentacoes/historico/list.html', {
         'movimentacoes': movimentacoes,
+        'ordens': ordens,
         'locais': Local.objects.filter(ativo=True),
         'fornecedores': Fornecedor.objects.filter(ativo=True),
         'tipo_choices': Movimentacao.TIPO_CHOICES,

@@ -8,28 +8,47 @@
 {# ==================== CABEÇALHO ==================== #}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
-    <h4 class="fw-bold mb-1">Consulta de Estoque</h4>
-    <p class="text-muted small mb-0">Saldo atual por produto e local</p>
+    <h4 class="page-title">Consulta de Estoque</h4>
+    <p class="page-subtitle">Saldo atual por produto e local</p>
   </div>
 </div>
 
 {# ==================== FILTROS ==================== #}
 <div class="d-flex flex-wrap gap-2 mb-4">
   <form method="get" class="d-flex gap-2 flex-wrap">
+
+    {# -- Busca por nome ou código -- #}
+    <input type="text" name="q" value="{{ q }}" class="form-control"
+      style="max-width: 240px;" placeholder="Buscar por nome ou código...">
+
+    {# -- Filtro por local -- #}
+    <select name="local" class="form-select" style="max-width: 180px;" onchange="this.form.submit()">
+      <option value="">Todos os locais</option>
+      {% for local in locais %}
+        <option value="{{ local.id }}" {% if local_id == local.id|stringformat:"s" %}selected{% endif %}>
+          {{ local.nome }}
+        </option>
+      {% endfor %}
+    </select>
+
+    {# -- Filtro por categoria -- #}
     <select name="categoria" class="form-select" style="max-width: 180px;" onchange="this.form.submit()">
       <option value="">Todas as categorias</option>
       {% for value, label in categoria_choices %}
         <option value="{{ value }}" {% if categoria == value %}selected{% endif %}>{{ label }}</option>
       {% endfor %}
     </select>
+
     <button class="btn btn-outline-secondary" type="submit">
       <i class="bi bi-search"></i>
     </button>
+
     {% if q or local_id or categoria %}
       <a href="{% url 'estoque:lista' %}" class="btn btn-outline-secondary">
         <i class="bi bi-x-lg"></i>
       </a>
     {% endif %}
+
   </form>
 </div>
 
