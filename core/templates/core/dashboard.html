@@ -107,7 +107,7 @@
 
 </div>
 
-{# ==================== GRÁFICOS ==================== #}
+{# ==================== GRÁFICOS GERAIS ==================== #}
 <div class="row g-4 mb-4">
 
   {# -- Gráfico de linha -- #}
@@ -132,25 +132,40 @@
 
 </div>
 
-{# ==================== GRÁFICO TRANSFERÊNCIAS (só Gerente/Admin) ==================== #}
-{# is_gerente é calculado na view dashboard e passado como contexto #}
+{# ==================== GRÁFICOS EXCLUSIVOS GERENTE/ADMIN ==================== #}
+{# is_gerente é calculado na view e passado como contexto #}
 {% if is_gerente %}
-<div class="card mb-4">
-  <div class="card-body p-4">
-    <p class="fw-semibold text-secondary small mb-3">TRANSFERÊNCIAS ENTRE LOCAIS</p>
-    <canvas id="graficoTransferencias" height="100"></canvas>
-  </div>
-</div>
-{% endif %}
 
-{# ==================== GRÁFICO EVOLUÇÃO POR LOCAL (só Gerente/Admin) ==================== #}
-{% if is_gerente %}
-<div class="card mb-4">
-  <div class="card-body p-4">
-    <p class="fw-semibold text-secondary small mb-3">EVOLUÇÃO DE TRANSFERÊNCIAS POR LOCAL</p>
-    <canvas id="graficoTransferenciasPorLocal" height="100"></canvas>
+  {# -- Transferências entre locais -- #}
+  <div class="card mb-4">
+    <div class="card-body p-4">
+      <p class="fw-semibold text-secondary small mb-3">TRANSFERÊNCIAS ENTRE LOCAIS</p>
+      <canvas id="graficoTransferencias" height="100"></canvas>
+    </div>
   </div>
-</div>
+
+  {# -- Evolução de transferências por local -- #}
+  <div class="card mb-4">
+    <div class="card-body p-4">
+      <p class="fw-semibold text-secondary small mb-3">EVOLUÇÃO DE TRANSFERÊNCIAS POR LOCAL</p>
+      <canvas id="graficoTransferenciasPorLocal" height="100"></canvas>
+    </div>
+  </div>
+
+  {# -- Vendas por loja ou por produto -- #}
+  <div class="card mb-4">
+    <div class="card-body p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <p class="fw-semibold text-secondary small mb-0">EVOLUÇÃO DE VENDAS</p>
+        <div class="d-flex gap-2">
+          <button class="btn btn-sm btn-primary" id="btn-por-loja">Por Loja</button>
+          <button class="btn btn-sm btn-outline-secondary" id="btn-por-produto">Por Produto</button>
+        </div>
+      </div>
+      <canvas id="graficoVendas" height="100"></canvas>
+    </div>
+  </div>
+
 {% endif %}
 
 {# ==================== ÚLTIMAS MOVIMENTAÇÕES ==================== #}
@@ -221,6 +236,8 @@
   data-transferencias-count='{{ transferencias_count_data|safe }}'
   data-transferencias-volume='{{ transferencias_volume_data|safe }}'
   data-transferencias-por-local='{{ transferencias_por_local|safe }}'
+  data-saidas-por-local='{{ saidas_por_local|safe }}'
+  data-saidas-por-produto='{{ saidas_por_produto|safe }}'
   data-is-gerente='{% if is_gerente %}true{% else %}false{% endif %}'>
 </script>
 <script src="{% static 'js/dashboard.js' %}"></script>

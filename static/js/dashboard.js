@@ -11,13 +11,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // ══════════════════════════════════════════════════
   const el = document.getElementById('dashboard-data');
 
-  const labels = JSON.parse(el.dataset.labels);                             // Datas do período
-  const entradas = JSON.parse(el.dataset.entradas);                         // Qtd entradas por dia
-  const saidas = JSON.parse(el.dataset.saidas);                             // Qtd saídas por dia
-  const transferenciasCount = JSON.parse(el.dataset.transferenciasCount);   // Qtd transferências por dia
-  const transferenciasVolume = JSON.parse(el.dataset.transferenciasVolume); // Volume transferido por dia
+  const labels              = JSON.parse(el.dataset.labels);                    // Datas do período
+  const entradas            = JSON.parse(el.dataset.entradas);                  // Qtd entradas por dia
+  const saidas              = JSON.parse(el.dataset.saidas);                    // Qtd saídas por dia
+  const transferenciasCount = JSON.parse(el.dataset.transferenciasCount);       // Qtd transferências por dia
+  const transferenciasVolume= JSON.parse(el.dataset.transferenciasVolume);      // Volume transferido por dia
   const transferenciasporLocal = JSON.parse(el.dataset.transferenciasPorLocal); // Transferências por local
-  const isGerente = el.dataset.isGerente === 'true';                        // Se usuário é Gerente/Admin
+  const isGerente           = el.dataset.isGerente === 'true';                  // Se usuário é Gerente/Admin
 
 
   // ══════════════════════════════════════════════════
@@ -28,9 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const commonOptions = {
     responsive: true,
     plugins: { legend: { position: 'top' } },
-    scales: {
-      y: { beginAtZero: true, ticks: { stepSize: 1 } }
-    }
+    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
   };
 
 
@@ -192,6 +190,53 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
+    // ── GRÁFICO 5 — BARRAS: Vendas por loja ou por produto ──
+    // Seletor alterna entre as duas visões sem recarregar a página
+    if (document.getElementById('graficoVendas')) {
+
+      const saidasPorLocal   = JSON.parse(el.dataset.saidasPorLocal);
+      const saidasPorProduto = JSON.parse(el.dataset.saidasPorProduto);
+
+      const graficoVendas = new Chart(document.getElementById('graficoVendas'), {
+        type: 'bar',
+        data: {
+          labels: saidasPorLocal.labels,
+          datasets: [{
+            label: 'Vendas por Loja',
+            data: saidasPorLocal.data,
+            backgroundColor: 'rgba(36,34,177,0.7)',
+            borderRadius: 6,
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+      });
+
+      // Alterna para visão por loja
+      document.getElementById('btn-por-loja').addEventListener('click', () => {
+        graficoVendas.data.labels = saidasPorLocal.labels;
+        graficoVendas.data.datasets[0].data = saidasPorLocal.data;
+        graficoVendas.data.datasets[0].label = 'Vendas por Loja';
+        graficoVendas.update();
+        document.getElementById('btn-por-loja').className = 'btn btn-sm btn-primary';
+        document.getElementById('btn-por-produto').className = 'btn btn-sm btn-outline-secondary';
+      });
+
+      // Alterna para visão por produto
+      document.getElementById('btn-por-produto').addEventListener('click', () => {
+        graficoVendas.data.labels = saidasPorProduto.labels;
+        graficoVendas.data.datasets[0].data = saidasPorProduto.data;
+        graficoVendas.data.datasets[0].label = 'Vendas por Produto';
+        graficoVendas.update();
+        document.getElementById('btn-por-produto').className = 'btn btn-sm btn-primary';
+        document.getElementById('btn-por-loja').className = 'btn btn-sm btn-outline-secondary';
+      });
+
+    }
+
   } // fim if isGerente
 
-});
+}); // fim DOMContentLoaded

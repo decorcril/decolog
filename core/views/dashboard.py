@@ -21,9 +21,10 @@ def dashboard(request):
 
     data_inicio = timezone.now() - timedelta(days=dias)
 
-    # ── Indicadores gerais ──
-    # Para adicionar novos indicadores, crie uma query aqui
-    # e passe no return render abaixo
+    # ══════════════════════════════════════════════════
+    # INDICADORES GERAIS
+    # Para adicionar novos: crie a query e passe no return render
+    # ══════════════════════════════════════════════════
     total_produtos = Produto.objects.filter(ativo=True).count()
     total_itens_estoque = Estoque.objects.filter(quantidade__gt=0).count()
     total_criticos = Estoque.objects.filter(
@@ -36,13 +37,17 @@ def dashboard(request):
         quantidade__lte=F('estoque_minimo') * 2
     ).count()
 
-    # ── Gera lista de dias do período ──
+    # ══════════════════════════════════════════════════
+    # EIXO DE DATAS
+    # Lista de dias do período selecionado
+    # ══════════════════════════════════════════════════
     dias_labels = []
     for i in range(dias):
         dia = (data_inicio + timedelta(days=i+1)).date()
         dias_labels.append(dia.strftime('%d/%m'))
 
-    # ── Dados para gráficos ──
+    # ══════════════════════════════════════════════════
+    # GRÁFICOS — ENTRADAS E SAÍDAS POR DIA
     # Para adicionar novos gráficos:
     # 1. Crie a query aqui
     # 2. Monte o dict com strftime('%d/%m') como chave
@@ -50,8 +55,9 @@ def dashboard(request):
     # 4. Passe no return render com json.dumps()
     # 5. Adicione data-atributo no <script id="dashboard-data"> no template
     # 6. Leia e renderize no dashboard.js
+    # ══════════════════════════════════════════════════
 
-    # Entradas
+    # Entradas por dia
     entradas = Movimentacao.objects.filter(
         tipo=Movimentacao.TIPO_ENTRADA,
         data_hora__gte=data_inicio
@@ -61,7 +67,7 @@ def dashboard(request):
     entradas_dict = {e['dia'].strftime('%d/%m'): e['total'] for e in entradas}
     entradas_data = [entradas_dict.get(d, 0) for d in dias_labels]
 
-    # Saídas
+    # Saídas por dia
     saidas = Movimentacao.objects.filter(
         tipo=Movimentacao.TIPO_SAIDA,
         data_hora__gte=data_inicio
@@ -71,7 +77,11 @@ def dashboard(request):
     saidas_dict = {s['dia'].strftime('%d/%m'): s['total'] for s in saidas}
     saidas_data = [saidas_dict.get(d, 0) for d in dias_labels]
 
-    # Transferências (visível só para Gerente/Admin no template)
+    # ══════════════════════════════════════════════════
+    # GRÁFICOS — TRANSFERÊNCIAS (só Gerente/Admin)
+    # ══════════════════════════════════════════════════
+
+    # Transferências totais por dia
     transferencias = Movimentacao.objects.filter(
         tipo=Movimentacao.TIPO_TRANSFERENCIA,
         data_hora__gte=data_inicio
@@ -84,7 +94,7 @@ def dashboard(request):
     transferencias_count_data = [transferencias_count_dict.get(d, 0) for d in dias_labels]
     transferencias_volume_data = [transferencias_volume_dict.get(d, 0) for d in dias_labels]
 
-    # Transferências por local (visível só para Gerente/Admin no template)
+    # Transferências por local (origem e destino)
     transferencias_por_local = {}
     for local in Local.objects.filter(ativo=True):
         saidas_local = Movimentacao.objects.filter(
@@ -110,28 +120,63 @@ def dashboard(request):
             'entradas': [entradas_local_dict.get(d, 0) for d in dias_labels],
         }
 
-    # ── Últimas movimentações ──
-    # Para mostrar mais ou menos itens, altere o [:8] abaixo
+    # ══════════════════════════════════════════════════
+    # GRÁFICOS — VENDAS (só Gerente/Admin)
+    # Soma quantidade vendida (não contagem de registros)
+    # ══════════════════════════════════════════════════
+
+    # Vendas por loja — soma quantidade de itens vendidos
+    saidas_por_local = Movimentacao.objects.filter(
+        tipo=Movimentacao.TIPO_SAIDA,
+        motivo='venda',
+        data_hora__gte=data_inicio
+    ).values('local__nome').annotate(
+        total=Sum('quantidade')
+    ).order_by('-total')
+
+    # Top 10 produtos mais vendidos — soma quantidade de itens vendidos
+    saidas_por_produto = Movimentacao.objects.filter(
+        tipo=Movimentacao.TIPO_SAIDA,
+        motivo='venda',
+        data_hora__gte=data_inicio
+    ).values('produto__nome').annotate(
+        total=Sum('quantidade')
+    ).order_by('-total')[:10]
+
+    # ══════════════════════════════════════════════════
+    # ÚLTIMAS MOVIMENTAÇÕES
+    # Para mostrar mais ou menos itens, altere o [:8]
+    # ══════════════════════════════════════════════════
     ultimas_movimentacoes = Movimentacao.objects.select_related(
         'produto', 'local', 'usuario'
     ).order_by('-data_hora')[:8]
 
     return render(request, 'core/dashboard.html', {
-        # Indicadores
+        # ── Indicadores ──
         'total_produtos': total_produtos,
         'total_itens_estoque': total_itens_estoque,
         'total_criticos': total_criticos,
         'total_alerta': total_alerta,
-        # Gráficos
+        # ── Gráficos gerais ──
         'dias_labels': json.dumps(dias_labels),
         'entradas_data': json.dumps(entradas_data),
         'saidas_data': json.dumps(saidas_data),
+        # ── Gráficos transferências ──
         'transferencias_count_data': json.dumps(transferencias_count_data),
         'transferencias_volume_data': json.dumps(transferencias_volume_data),
         'transferencias_por_local': json.dumps(transferencias_por_local),
-        # Tabela
+        # ── Gráficos vendas ──
+        'saidas_por_local': json.dumps({
+            'labels': [s['local__nome'] for s in saidas_por_local],
+            'data': [float(s['total']) for s in saidas_por_local],
+        }),
+        'saidas_por_produto': json.dumps({
+            'labels': [s['produto__nome'] for s in saidas_por_produto],
+            'data': [float(s['total']) for s in saidas_por_produto],
+        }),
+        # ── Tabela ──
         'ultimas_movimentacoes': ultimas_movimentacoes,
-        # Permissões
+        # ── Controles ──
         'periodo': periodo,
         'is_gerente': request.user.is_staff or request.user.groups.filter(name='Gerente').exists(),
     })
