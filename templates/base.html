@@ -68,8 +68,8 @@
         <i class="bi bi-arrow-left-right"></i> Transferência Unitária
       </a>
       <a href="{% url 'movimentacoes:ordem_list' %}" class="mobile-nav-link">
-  <i class="bi bi-arrow-left-right"></i> Transferência em Lote
-</a>
+        <i class="bi bi-arrow-left-right"></i> Transferência em Lote
+      </a>
       <a href="{% url 'movimentacoes:ajuste' %}" class="mobile-nav-link">
         <i class="bi bi-sliders"></i> Ajuste de Estoque
       </a>
@@ -84,6 +84,15 @@
       </a>
       <a href="{% url 'relatorios:estoque_baixo' %}" class="mobile-nav-link">
         <i class="bi bi-exclamation-triangle"></i> Estoque Baixo
+      </a>
+
+      {# -- Produção [MOBILE] -- #}
+      <div class="mobile-nav-section">Produção</div>
+      <a href="{% url 'producao_corte:list' %}" class="mobile-nav-link">
+        <i class="bi bi-scissors"></i> Registros de Corte
+      </a>
+      <a href="{% url 'producao_corte:create' %}" class="mobile-nav-link">
+        <i class="bi bi-plus-circle"></i> Novo Corte
       </a>
 
       {# -- Administração [MOBILE] (só staff) -- #}
@@ -177,10 +186,10 @@
             </a>
           </li>
           <li>
-  <a class="dropdown-item" href="{% url 'movimentacoes:ordem_list' %}">
-    <i class="bi bi-arrow-left-right"></i> Transferência em Lote
-  </a>
-</li>
+            <a class="dropdown-item" href="{% url 'movimentacoes:ordem_list' %}">
+              <i class="bi bi-arrow-left-right"></i> Transferência em Lote
+            </a>
+          </li>
           <li>
             <a class="dropdown-item" href="{% url 'movimentacoes:ajuste' %}">
               <i class="bi bi-sliders"></i> Ajuste de Estoque
@@ -214,6 +223,25 @@
         </ul>
       </div>
 
+      {# -- Produção [DESKTOP] -- #}
+      <div class="dropdown">
+        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+          <i class="bi bi-scissors"></i> Produção
+        </a>
+        <ul class="dropdown-menu">
+          <li>
+            <a class="dropdown-item" href="{% url 'producao_corte:list' %}">
+              <i class="bi bi-list-ul"></i> Registros de Corte
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" href="{% url 'producao_corte:create' %}">
+              <i class="bi bi-plus-circle"></i> Novo Corte
+            </a>
+          </li>
+        </ul>
+      </div>
+
       {# -- Admin [DESKTOP] (só staff) -- #}
       {% if user.is_staff %}
       <a href="{% url 'admin:index' %}" class="nav-link">
@@ -224,14 +252,14 @@
     </div>
 
     <div class="topbar-user">
-  <span class="username d-none d-md-inline">{{ user.get_full_name|default:user.username }}</span>
-  <form method="post" action="{% url 'logout' %}" class="d-inline">
-    {% csrf_token %}
-    <button type="submit" class="btn btn-sm btn-outline-secondary">
-      <i class="bi bi-box-arrow-right"></i> Sair
-    </button>
-  </form>
-</div>
+      <span class="username d-none d-md-inline">{{ user.get_full_name|default:user.username }}</span>
+      <form method="post" action="{% url 'logout' %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-box-arrow-right"></i> Sair
+        </button>
+      </form>
+    </div>
   </nav>
 
   {# ==================== CONTEÚDO PRINCIPAL ==================== #}

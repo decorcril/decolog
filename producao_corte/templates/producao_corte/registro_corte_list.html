@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block title %}Registros de Corte — Decolog{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 py-3" style="max-width: 900px;">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0 fw-bold">Registros de Corte</h5>
+    <a href="{% url 'producao_corte:create' %}" class="btn btn-primary">+ Novo</a>
+  </div>
+
+  {% if registros %}
+    {% for r in registros %}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body py-3">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div>
+            <span class="fw-bold">{{ r.data|date:"d/m/Y" }}</span>
+            <span class="text-muted small ms-2">{{ r.operador.get_full_name|default:r.operador.username }}</span>
+          </div>
+        </div>
+
+        <div class="mb-2">
+          <span class="text-muted small fw-semibold d-block mb-1">MATERIAIS UTILIZADOS</span>
+          {% for item in r.entradas.all %}
+            <span class="badge bg-secondary me-1 mb-1">
+              {{ item.quantidade|floatformat:"-2" }}× {{ item.produto.nome }}
+            </span>
+          {% endfor %}
+        </div>
+
+        <div>
+          <span class="text-muted small fw-semibold d-block mb-1">PRODUTOS CORTADOS</span>
+          {% for item in r.saidas.all %}
+            <span class="badge bg-success me-1 mb-1">
+              {{ item.quantidade|floatformat:"-2" }}× {{ item.produto.nome }}
+            </span>
+          {% endfor %}
+        </div>
+
+        {% if r.observacao %}
+          <p class="text-muted small mt-2 mb-0">{{ r.observacao }}</p>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="text-center text-muted py-5">
+      <p>Nenhum registro ainda.</p>
+      <a href="{% url 'producao_corte:create' %}" class="btn btn-primary">Criar primeiro registro</a>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

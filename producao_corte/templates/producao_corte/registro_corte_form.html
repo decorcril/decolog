@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+
+{% block title %}Novo Registro de Corte — Decolog{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 py-3" style="max-width: 800px;">
+
+  <div class="d-flex align-items-center mb-3 gap-2">
+    <a href="{% url 'producao_corte:list' %}" class="btn btn-sm btn-outline-secondary">←</a>
+    <h5 class="mb-0 fw-bold">Registro de Corte</h5>
+  </div>
+
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags }} alert-dismissible py-2 small">
+        {{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" id="form-corte">
+    {% csrf_token %}
+
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body py-3">
+        <label class="form-label fw-semibold mb-1">Data do Corte</label>
+        <input
+          type="date"
+          name="data"
+          class="form-control form-control-lg"
+          max="{{ hoje }}"
+          value="{{ hoje }}"
+          required
+        >
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body py-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="fw-semibold">Chapas / Materiais Utilizados</span>
+          <button type="button" class="btn btn-sm btn-outline-primary" onclick="addEntrada()">+ Adicionar</button>
+        </div>
+        <div id="entradas-container"></div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body py-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="fw-semibold">Produtos Cortados</span>
+          <button type="button" class="btn btn-sm btn-outline-success" onclick="addSaida()">+ Adicionar</button>
+        </div>
+        <div id="saidas-container"></div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body py-3">
+        <label class="form-label fw-semibold mb-1">
+          Observação <span class="text-muted fw-normal">(opcional)</span>
+        </label>
+        <textarea name="observacao" class="form-control" rows="2" placeholder="Ex: lote urgente, retrabalho..."></textarea>
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary w-100 py-3 fw-bold fs-5">
+      Salvar Registro
+    </button>
+  </form>
+</div>
+
+<script>
+const MATERIAIS = [
+  {% for p in produtos_materiais %}
+  { id: {{ p.pk }}, nome: "{{ p.nome }}" },
+  {% endfor %}
+];
+const PRODUTOS_FINAIS = [
+  {% for p in produtos_finais %}
+  { id: {{ p.pk }}, nome: "{{ p.nome }}" },
+  {% endfor %}
+];
+
+let entradaCount = 0;
+let saidaCount = 0;
+
+function buildSelect(lista, name, idx) {
+  let opts = '<option value="">— selecione —</option>';
+  lista.forEach(p => {
+    opts += `<option value="${p.id}">${p.nome}</option>`;
+  });
+  return `<select name="${name}_${idx}" class="form-select" required>${opts}</select>`;
+}
+
+function addEntrada() {
+  const i = entradaCount++;
+  const div = document.createElement('div');
+  div.className = 'row g-2 mb-2 align-items-center';
+  div.id = `entrada-row-${i}`;
+  div.innerHTML = `
+    <div class="col">
+      ${buildSelect(MATERIAIS, 'entrada_produto', i)}
+    </div>
+    <div class="col-3">
+      <input type="number" name="entrada_quantidade_${i}" class="form-control"
+             placeholder="Qtd" min="0.01" step="0.01" required>
+    </div>
+    <div class="col-auto">
+      <button type="button" class="btn btn-outline-danger btn-sm"
+              onclick="this.closest('.row').remove()">✕</button>
+    </div>
+  `;
+  document.getElementById('entradas-container').appendChild(div);
+}
+
+function addSaida() {
+  const i = saidaCount++;
+  const div = document.createElement('div');
+  div.className = 'row g-2 mb-2 align-items-center';
+  div.id = `saida-row-${i}`;
+  div.innerHTML = `
+    <div class="col">
+      ${buildSelect(PRODUTOS_FINAIS, 'saida_produto', i)}
+    </div>
+    <div class="col-3">
+      <input type="number" name="saida_quantidade_${i}" class="form-control"
+             placeholder="Qtd" min="0.01" step="0.01" required>
+    </div>
+    <div class="col-auto">
+      <button type="button" class="btn btn-outline-danger btn-sm"
+              onclick="this.closest('.row').remove()">✕</button>
+    </div>
+  `;
+  document.getElementById('saidas-container').appendChild(div);
+}
+
+addEntrada();
+addSaida();
+
+document.getElementById('form-corte').addEventListener('submit', function() {
+  document.querySelectorAll('#entradas-container .row').forEach((row, idx) => {
+    row.querySelector('select').name = `entrada_produto_${idx}`;
+    row.querySelector('input[type=number]').name = `entrada_quantidade_${idx}`;
+  });
+  document.querySelectorAll('#saidas-container .row').forEach((row, idx) => {
+    row.querySelector('select').name = `saida_produto_${idx}`;
+    row.querySelector('input[type=number]').name = `saida_quantidade_${idx}`;
+  });
+});
+</script>
+{% endblock %}

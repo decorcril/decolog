@@ -2,6 +2,8 @@ asgiref==3.11.1
 crispy-bootstrap5==2026.3
 Django==6.0.4
 django-crispy-forms==2.6
+et_xmlfile==2.0.0
+openpyxl==3.1.5
 python-decouple==3.8
 sqlparse==0.5.5
 tzdata==2026.1
