@@ -51,3 +51,6 @@ def operador_laser_ou_acima(view_func):
 
 def supervisor_laser_ou_admin(view_func):
     return grupo_requerido('Supervisor de Laser')(view_func)
+
+def producao_ou_gerente(view_func):
+    return grupo_requerido('Operador laser', 'Supervisor de Laser', 'Gerente')(view_func)

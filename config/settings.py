@@ -23,7 +23,7 @@ INSTALLED_APPS = [
     'estoque',
     'movimentacoes',
     'relatorios',
-    'producao_corte'
+    'producao_corte',
 ]
 
 MIDDLEWARE = [
@@ -49,6 +49,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.perfis_usuario',
             ],
         },
     },

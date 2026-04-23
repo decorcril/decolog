@@ -18,8 +18,6 @@
 
 {% if user.is_authenticated %}
 
-{% with grupos=user.groups.all %}
-
   <div id="sidebar-overlay"></div>
 
   {# ==================== SIDEBAR MOBILE ==================== #}
@@ -40,7 +38,7 @@
       </a>
 
       {# -- Cadastros [MOBILE] -- #}
-      {% if user.is_staff %}
+      {% if is_gerente %}
       <div class="mobile-nav-section">Cadastros</div>
       <a href="{% url 'core:local_list' %}" class="mobile-nav-link">
         <i class="bi bi-building"></i> Locais
@@ -57,12 +55,12 @@
       {% endif %}
 
       {# -- Estoque [MOBILE] -- #}
-      {% if user.is_staff or grupos|length %}
+      {% if is_gerente or is_laser %}
       <div class="mobile-nav-section">Estoque</div>
       <a href="{% url 'estoque:lista' %}" class="mobile-nav-link">
         <i class="bi bi-archive"></i> Consultar Estoque
       </a>
-      {% if user.is_staff %}
+      {% if is_gerente %}
       <a href="{% url 'movimentacoes:entrada' %}" class="mobile-nav-link">
         <i class="bi bi-arrow-down-circle"></i> Entrada
       </a>
@@ -78,8 +76,6 @@
       <a href="{% url 'movimentacoes:ajuste' %}" class="mobile-nav-link">
         <i class="bi bi-sliders"></i> Ajuste de Estoque
       </a>
-      {% endif %}
-      {% if user.is_staff %}
       <a href="{% url 'movimentacoes:historico' %}" class="mobile-nav-link">
         <i class="bi bi-clock-history"></i> Histórico
       </a>
@@ -87,7 +83,7 @@
       {% endif %}
 
       {# -- Relatórios [MOBILE] -- #}
-      {% if user.is_staff %}
+      {% if is_gerente %}
       <div class="mobile-nav-section">Relatórios</div>
       <a href="{% url 'relatorios:estoque_atual' %}" class="mobile-nav-link">
         <i class="bi bi-bar-chart"></i> Estoque Atual
@@ -98,7 +94,7 @@
       {% endif %}
 
       {# -- Produção [MOBILE] -- #}
-      {% if user.is_staff or grupos|length %}
+      {% if is_laser or is_gerente %}
       <div class="mobile-nav-section">Produção</div>
       <a href="{% url 'producao_corte:list' %}" class="mobile-nav-link">
         <i class="bi bi-scissors"></i> Registros de Corte
@@ -142,7 +138,7 @@
       </a>
 
       {# -- Cadastros [DESKTOP] -- #}
-      {% if user.is_staff %}
+      {% if is_gerente %}
       <div class="dropdown">
         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
           <i class="bi bi-grid"></i> Cadastros
@@ -174,7 +170,7 @@
       {% endif %}
 
       {# -- Estoque [DESKTOP] -- #}
-      {% if user.is_staff %}
+      {% if is_gerente %}
       <div class="dropdown">
         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
           <i class="bi bi-archive"></i> Estoque
@@ -221,7 +217,7 @@
       {% endif %}
 
       {# -- Relatórios [DESKTOP] -- #}
-      {% if user.is_staff %}
+      {% if is_gerente %}
       <div class="dropdown">
         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
           <i class="bi bi-bar-chart"></i> Relatórios
@@ -242,7 +238,7 @@
       {% endif %}
 
       {# -- Produção [DESKTOP] -- #}
-      {% if user.is_staff or grupos|length %}
+      {% if is_laser or is_gerente %}
       <div class="dropdown">
         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
           <i class="bi bi-scissors"></i> Produção
@@ -299,8 +295,6 @@
 
     </div>
   </div>
-
-{% endwith %}
 
 {% else %}
   {% block unauthenticated_content %}{% endblock %}

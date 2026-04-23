@@ -28,12 +28,11 @@ def dashboard(request):
     is_operador_laser = user.groups.filter(name='Operador de Laser').exists()
     is_laser = is_supervisor_laser or is_operador_laser
 
-    # ── Indicadores gerais (admin/gerente) ──
+    # ── Indicadores gerais ──
     total_produtos = Produto.objects.filter(ativo=True).count()
     total_itens_estoque = Estoque.objects.filter(quantidade__gt=0).count()
     total_criticos = Estoque.objects.filter(
-        estoque_minimo__gt=0,
-        quantidade__lte=F('estoque_minimo')
+        estoque_minimo__gt=0, quantidade__lte=F('estoque_minimo')
     ).count()
     total_alerta = Estoque.objects.filter(
         estoque_minimo__gt=0,
@@ -82,7 +81,7 @@ def dashboard(request):
         total=Count('id'), volume=Sum('quantidade')
     ).order_by('dia')
     transferencias_count_dict = {t['dia'].strftime('%d/%m'): t['total'] for t in transferencias}
-    transferencias_volume_dict = {t['dia'].strftime('%d/%m'): float(t['volume']) for t in transferencias}
+    transferencias_volume_dict = {t['dia'].strftime('%d/%m'): float(t['volume'] or 0) for t in transferencias}
     transferencias_count_data = [transferencias_count_dict.get(d, 0) for d in dias_labels]
     transferencias_volume_data = [transferencias_volume_dict.get(d, 0) for d in dias_labels]
 
@@ -112,16 +111,16 @@ def dashboard(request):
         'produto', 'local', 'usuario'
     ).order_by('-data_hora')[:8]
 
-    # ── Cortes recentes para laser ──
-    if is_supervisor_laser:
+    # ── Cortes recentes ──
+    if is_gerente or is_supervisor_laser:
         cortes_recentes = RegistroCorte.objects.prefetch_related(
-            'entradas__produto', 'saidas__produto'
+            'itens__chapa', 'itens__produtos_cortados__produto'
         ).select_related('operador').order_by('-data', '-criado_em')[:8]
     elif is_operador_laser:
         cortes_recentes = RegistroCorte.objects.filter(
             operador=user
         ).prefetch_related(
-            'entradas__produto', 'saidas__produto'
+            'itens__chapa', 'itens__produtos_cortados__produto'
         ).select_related('operador').order_by('-data', '-criado_em')[:8]
     else:
         cortes_recentes = None

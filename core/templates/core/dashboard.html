@@ -195,7 +195,7 @@
 {% endif %}
 
 {# ── Cortes recentes (laser) ── #}
-{% if is_laser and cortes_recentes %}
+{% if cortes_recentes %}
 <div class="card mb-4">
   <div class="card-body p-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -208,19 +208,18 @@
     </div>
     {% for r in cortes_recentes %}
     <div class="py-2 border-bottom">
-      <div class="d-flex justify-content-between">
+      <div class="d-flex justify-content-between mb-1">
         <span class="fw-semibold small">{{ r.data|date:"d/m/Y" }}</span>
         <span class="text-muted small">{{ r.operador.get_full_name|default:r.operador.username }}</span>
       </div>
-      <div class="text-muted small mt-1">
-        {% for item in r.entradas.all %}
-          {{ item.quantidade|floatformat:"-2" }}× {{ item.produto.nome }}{% if not forloop.last %}, {% endif %}
-        {% endfor %}
-        <span class="mx-1">→</span>
-        {% for item in r.saidas.all %}
-          {{ item.quantidade|floatformat:"-2" }}× {{ item.produto.nome }}{% if not forloop.last %}, {% endif %}
+      {% for item in r.itens.all %}
+      <div class="small mb-1">
+        <span class="fw-semibold">{{ item.quantidade_chapa|floatformat:"-2" }}× {{ item.chapa.nome }}</span>
+        {% for pc in item.produtos_cortados.all %}
+        <span class="text-muted ms-2">→ {{ pc.quantidade|floatformat:"-2" }}× {{ pc.produto.nome }}</span>
         {% endfor %}
       </div>
+      {% endfor %}
     </div>
     {% endfor %}
   </div>

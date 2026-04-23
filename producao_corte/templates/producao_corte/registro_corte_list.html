@@ -13,25 +13,32 @@
   {% if registros %}
     {% for r in registros %}
     <div class="card border-0 shadow-sm mb-3">
-      <div class="card-body py-3">
+      <div class="card-body py-3 px-4">
 
         <div class="d-flex justify-content-between align-items-center mb-3">
           <span class="fw-bold">{{ r.data|date:"d/m/Y" }}</span>
           <span class="text-muted small">{{ r.operador.get_full_name|default:r.operador.username }}</span>
         </div>
 
-        <p class="text-muted small fw-semibold mb-1">MATERIAIS UTILIZADOS</p>
-        {% for item in r.entradas.all %}
-          <p class="mb-1 small">{{ item.quantidade|floatformat:"-2" }}× {{ item.produto.nome }}</p>
-        {% endfor %}
-
-        <p class="text-muted small fw-semibold mt-3 mb-1">PRODUTOS CORTADOS</p>
-        {% for item in r.saidas.all %}
-          <p class="mb-1 small">{{ item.quantidade|floatformat:"-2" }}× {{ item.produto.nome }}</p>
+        {% for item in r.itens.all %}
+        <div class="mb-3">
+          <div class="fw-semibold small mb-1">
+            {{ item.quantidade_chapa|floatformat:"-2" }}× {{ item.chapa.nome }}
+          </div>
+          <div class="ps-3 border-start border-2 border-success-subtle">
+            {% for pc in item.produtos_cortados.all %}
+            <div class="small mb-1">
+              <span class="text-muted">•</span>
+              <span class="fw-semibold">{{ pc.quantidade|floatformat:"-2" }}×</span>
+              {{ pc.produto.nome }}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
         {% endfor %}
 
         {% if r.observacao %}
-          <p class="text-muted small mt-3 mb-0"><em>{{ r.observacao }}</em></p>
+          <p class="text-muted small mt-2 mb-0 fst-italic">{{ r.observacao }}</p>
         {% endif %}
 
       </div>

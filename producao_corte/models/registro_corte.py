@@ -26,44 +26,43 @@ class RegistroCorte(models.Model):
             raise ValidationError('A data não pode ser no futuro.')
 
 
-class ItemCorteEntrada(models.Model):
-    """Chapas consumidas no corte — baixa no estoque."""
+class ItemCorte(models.Model):
+    """Uma chapa utilizada no corte, com seus produtos cortados."""
     registro = models.ForeignKey(
-        RegistroCorte, on_delete=models.CASCADE, related_name='entradas'
+        RegistroCorte, on_delete=models.CASCADE, related_name='itens'
     )
-    produto = models.ForeignKey(
-        Produto, on_delete=models.PROTECT, verbose_name='Chapa/Material'
+    chapa = models.ForeignKey(
+        Produto, on_delete=models.PROTECT,
+        limit_choices_to={'categoria__in': ['chapa', 'insumo']},
+        verbose_name='Chapa / Material'
     )
-    quantidade = models.DecimalField(
+    quantidade_chapa = models.DecimalField(
         max_digits=10, decimal_places=2, verbose_name='Quantidade'
     )
 
     class Meta:
-        verbose_name = 'Material Utilizado'
-        verbose_name_plural = 'Materiais Utilizados'
+        verbose_name = 'Item de Corte'
+        verbose_name_plural = 'Itens de Corte'
 
 
-class ItemCorteSaida(models.Model):
-    """Produtos cortados — ainda não montados."""
-    STATUS_AGUARDANDO = 'aguardando'
-    STATUS_MONTADO = 'montado'
-    STATUS_CHOICES = [
-        (STATUS_AGUARDANDO, 'Aguardando Montagem'),
-        (STATUS_MONTADO, 'Montado'),
-    ]
-
-    registro = models.ForeignKey(
-        RegistroCorte, on_delete=models.CASCADE, related_name='saidas'
+class ProdutoCortado(models.Model):
+    """Produto cortado a partir de uma chapa específica."""
+    item_corte = models.ForeignKey(
+        ItemCorte, on_delete=models.CASCADE, related_name='produtos_cortados'
     )
     produto = models.ForeignKey(
-        Produto, on_delete=models.PROTECT, verbose_name='Produto Cortado'
+        Produto, on_delete=models.PROTECT,
+        limit_choices_to={'categoria': 'produto_final'},
+        verbose_name='Produto Cortado'
     )
     quantidade = models.DecimalField(
         max_digits=10, decimal_places=2, verbose_name='Quantidade'
     )
     status = models.CharField(
-        max_length=20, choices=STATUS_CHOICES,
-        default=STATUS_AGUARDANDO, verbose_name='Status'
+        max_length=20,
+        choices=[('aguardando', 'Aguardando Montagem'), ('montado', 'Montado')],
+        default='aguardando',
+        verbose_name='Status'
     )
 
     class Meta:

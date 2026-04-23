@@ -25,34 +25,20 @@
     <div class="card border-0 shadow-sm mb-3">
       <div class="card-body py-3">
         <label class="form-label fw-semibold mb-1">Data do Corte</label>
-        <input
-          type="date"
-          name="data"
-          class="form-control form-control-lg"
-          max="{{ hoje }}"
-          value="{{ hoje }}"
-          required
-        >
+        <input type="date" name="data" class="form-control form-control-lg"
+               max="{{ hoje }}" value="{{ hoje }}" required>
       </div>
     </div>
 
     <div class="card border-0 shadow-sm mb-3">
       <div class="card-body py-3">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <span class="fw-semibold">Chapas / Materiais Utilizados</span>
-          <button type="button" class="btn btn-sm btn-outline-primary" onclick="addEntrada()">+</button>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <span class="fw-semibold">Chapas e Produtos Cortados</span>
+          <button type="button" class="btn btn-sm btn-primary" onclick="addChapa()">
+            + Adicionar Chapa
+          </button>
         </div>
-        <div id="entradas-container"></div>
-      </div>
-    </div>
-
-    <div class="card border-0 shadow-sm mb-3">
-      <div class="card-body py-3">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <span class="fw-semibold">Produtos Cortados</span>
-          <button type="button" class="btn btn-sm btn-outline-success" onclick="addSaida()">+</button>
-        </div>
-        <div id="saidas-container"></div>
+        <div id="chapas-container"></div>
       </div>
     </div>
 
@@ -61,7 +47,8 @@
         <label class="form-label fw-semibold mb-1">
           Observação <span class="text-muted fw-normal">(opcional)</span>
         </label>
-        <textarea name="observacao" class="form-control" rows="2" placeholder="Ex: lote urgente, retrabalho..."></textarea>
+        <textarea name="observacao" class="form-control" rows="2"
+                  placeholder="Ex: lote urgente, retrabalho..."></textarea>
       </div>
     </div>
 
@@ -83,71 +70,71 @@ const PRODUTOS_FINAIS = [
   {% endfor %}
 ];
 
-let entradaCount = 0;
-let saidaCount = 0;
+let chapaCount = 0;
 
-function buildSelect(lista, name, idx) {
+function buildSelect(lista, name) {
   let opts = '<option value="">— selecione —</option>';
   lista.forEach(p => {
     opts += `<option value="${p.id}">${p.nome}</option>`;
   });
-  return `<select name="${name}_${idx}" class="form-select" required>${opts}</select>`;
+  return `<select name="${name}" class="form-select" required>${opts}</select>`;
 }
 
-function addEntrada() {
-  const i = entradaCount++;
+function addChapa() {
+  const ci = chapaCount++;
+  const chapaDiv = document.createElement('div');
+  chapaDiv.className = 'chapa-block mb-3 border rounded-3 p-3';
+  chapaDiv.dataset.chapaIdx = ci;
+
+  chapaDiv.innerHTML = `
+    <div class="d-flex align-items-center gap-2 mb-3">
+      <span class="text-muted fw-semibold small text-uppercase">Chapa</span>
+      <div class="col">
+        ${buildSelect(MATERIAIS, `entrada_produto_${ci}`)}
+      </div>
+      <div style="width:90px">
+        <input type="number" name="entrada_quantidade_${ci}"
+               class="form-control" placeholder="Qtd" min="1" step="1" required>
+      </div>
+      <button type="button" class="btn btn-outline-danger btn-sm"
+              onclick="this.closest('.chapa-block').remove()">✕</button>
+    </div>
+
+    <div class="ps-3 border-start border-2 border-success-subtle">
+      <p class="text-muted small fw-semibold mb-2">PRODUTOS CORTADOS DESTA CHAPA</p>
+      <div class="saidas-list" data-chapa-idx="${ci}" data-prod-count="0"></div>
+      <button type="button" class="btn btn-sm btn-outline-success mt-1"
+              onclick="addProduto(this, ${ci})">+ produto</button>
+    </div>
+  `;
+
+  document.getElementById('chapas-container').appendChild(chapaDiv);
+  addProduto(chapaDiv.querySelector('.btn-outline-success'), ci);
+}
+
+function addProduto(btn, chapaIdx) {
+  const lista = btn.previousElementSibling;
+  const pi = parseInt(lista.dataset.prodCount);
+  lista.dataset.prodCount = pi + 1;
+
   const div = document.createElement('div');
   div.className = 'row g-2 mb-2 align-items-center';
-  div.id = `entrada-row-${i}`;
   div.innerHTML = `
     <div class="col">
-      ${buildSelect(MATERIAIS, 'entrada_produto', i)}
+      ${buildSelect(PRODUTOS_FINAIS, `saida_chapa_${chapaIdx}_produto_${pi}`)}
     </div>
     <div class="col-3">
-      <input type="number" name="entrada_quantidade_${i}" class="form-control"
-             placeholder="Qtd" min="1" step="1" required>
+      <input type="number" name="saida_chapa_${chapaIdx}_quantidade_${pi}"
+             class="form-control" placeholder="Qtd" min="1" step="1" required>
     </div>
     <div class="col-auto">
       <button type="button" class="btn btn-outline-danger btn-sm"
               onclick="this.closest('.row').remove()">✕</button>
     </div>
   `;
-  document.getElementById('entradas-container').appendChild(div);
+  lista.appendChild(div);
 }
 
-function addSaida() {
-  const i = saidaCount++;
-  const div = document.createElement('div');
-  div.className = 'row g-2 mb-2 align-items-center';
-  div.id = `saida-row-${i}`;
-  div.innerHTML = `
-    <div class="col">
-      ${buildSelect(PRODUTOS_FINAIS, 'saida_produto', i)}
-    </div>
-    <div class="col-3">
-      <input type="number" name="saida_quantidade_${i}" class="form-control"
-             placeholder="Qtd" min="1" step="1" required>
-    </div>
-    <div class="col-auto">
-      <button type="button" class="btn btn-outline-danger btn-sm"
-              onclick="this.closest('.row').remove()">✕</button>
-    </div>
-  `;
-  document.getElementById('saidas-container').appendChild(div);
-}
-
-addEntrada();
-addSaida();
-
-document.getElementById('form-corte').addEventListener('submit', function() {
-  document.querySelectorAll('#entradas-container .row').forEach((row, idx) => {
-    row.querySelector('select').name = `entrada_produto_${idx}`;
-    row.querySelector('input[type=number]').name = `entrada_quantidade_${idx}`;
-  });
-  document.querySelectorAll('#saidas-container .row').forEach((row, idx) => {
-    row.querySelector('select').name = `saida_produto_${idx}`;
-    row.querySelector('input[type=number]').name = `saida_quantidade_${idx}`;
-  });
-});
+addChapa();
 </script>
 {% endblock %}

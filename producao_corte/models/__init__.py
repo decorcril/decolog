@@ -1,1 +1,1 @@
-from .registro_corte import RegistroCorte, ItemCorteEntrada, ItemCorteSaida
+from .registro_corte import RegistroCorte, ItemCorte, ProdutoCortado
