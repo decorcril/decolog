@@ -42,3 +42,12 @@ def logistica_ou_admin(view_func):
 
 def estoque_ou_gerente(view_func):
     return grupo_requerido('Estoquista', 'Gerente')(view_func)
+
+def producao_ou_admin(view_func):
+    return grupo_requerido('Produção')(view_func)
+
+def operador_laser_ou_acima(view_func):
+    return grupo_requerido('Operador de Laser', 'Supervisor de Laser')(view_func)
+
+def supervisor_laser_ou_admin(view_func):
+    return grupo_requerido('Supervisor de Laser')(view_func)

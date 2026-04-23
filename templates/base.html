@@ -18,6 +18,8 @@
 
 {% if user.is_authenticated %}
 
+{% with grupos=user.groups.all %}
+
   <div id="sidebar-overlay"></div>
 
   {# ==================== SIDEBAR MOBILE ==================== #}
@@ -33,12 +35,12 @@
 
     <div class="mobile-sidebar-nav">
 
-      {# -- Geral [MOBILE] -- #}
       <a href="{% url 'core:dashboard' %}" class="mobile-nav-link">
         <i class="bi bi-speedometer2"></i> Dashboard
       </a>
 
       {# -- Cadastros [MOBILE] -- #}
+      {% if user.is_staff %}
       <div class="mobile-nav-section">Cadastros</div>
       <a href="{% url 'core:local_list' %}" class="mobile-nav-link">
         <i class="bi bi-building"></i> Locais
@@ -52,12 +54,15 @@
       <a href="{% url 'core:tag_list' %}" class="mobile-nav-link">
         <i class="bi bi-tag"></i> Tags de Fornecedores
       </a>
+      {% endif %}
 
       {# -- Estoque [MOBILE] -- #}
+      {% if user.is_staff or grupos|length %}
       <div class="mobile-nav-section">Estoque</div>
       <a href="{% url 'estoque:lista' %}" class="mobile-nav-link">
         <i class="bi bi-archive"></i> Consultar Estoque
       </a>
+      {% if user.is_staff %}
       <a href="{% url 'movimentacoes:entrada' %}" class="mobile-nav-link">
         <i class="bi bi-arrow-down-circle"></i> Entrada
       </a>
@@ -73,11 +78,16 @@
       <a href="{% url 'movimentacoes:ajuste' %}" class="mobile-nav-link">
         <i class="bi bi-sliders"></i> Ajuste de Estoque
       </a>
+      {% endif %}
+      {% if user.is_staff %}
       <a href="{% url 'movimentacoes:historico' %}" class="mobile-nav-link">
         <i class="bi bi-clock-history"></i> Histórico
       </a>
+      {% endif %}
+      {% endif %}
 
       {# -- Relatórios [MOBILE] -- #}
+      {% if user.is_staff %}
       <div class="mobile-nav-section">Relatórios</div>
       <a href="{% url 'relatorios:estoque_atual' %}" class="mobile-nav-link">
         <i class="bi bi-bar-chart"></i> Estoque Atual
@@ -85,8 +95,10 @@
       <a href="{% url 'relatorios:estoque_baixo' %}" class="mobile-nav-link">
         <i class="bi bi-exclamation-triangle"></i> Estoque Baixo
       </a>
+      {% endif %}
 
       {# -- Produção [MOBILE] -- #}
+      {% if user.is_staff or grupos|length %}
       <div class="mobile-nav-section">Produção</div>
       <a href="{% url 'producao_corte:list' %}" class="mobile-nav-link">
         <i class="bi bi-scissors"></i> Registros de Corte
@@ -94,8 +106,9 @@
       <a href="{% url 'producao_corte:create' %}" class="mobile-nav-link">
         <i class="bi bi-plus-circle"></i> Novo Corte
       </a>
+      {% endif %}
 
-      {# -- Administração [MOBILE] (só staff) -- #}
+      {# -- Administração [MOBILE] -- #}
       {% if user.is_staff %}
       <div class="mobile-nav-section">Administração</div>
       <a href="{% url 'admin:index' %}" class="mobile-nav-link">
@@ -123,13 +136,13 @@
 
     <div class="topbar-nav">
 
-      {# -- Dashboard [DESKTOP] -- #}
       <a href="{% url 'core:dashboard' %}"
         class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
         <i class="bi bi-speedometer2"></i> Dashboard
       </a>
 
       {# -- Cadastros [DESKTOP] -- #}
+      {% if user.is_staff %}
       <div class="dropdown">
         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
           <i class="bi bi-grid"></i> Cadastros
@@ -158,8 +171,10 @@
           </li>
         </ul>
       </div>
+      {% endif %}
 
       {# -- Estoque [DESKTOP] -- #}
+      {% if user.is_staff %}
       <div class="dropdown">
         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
           <i class="bi bi-archive"></i> Estoque
@@ -203,8 +218,10 @@
           </li>
         </ul>
       </div>
+      {% endif %}
 
       {# -- Relatórios [DESKTOP] -- #}
+      {% if user.is_staff %}
       <div class="dropdown">
         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
           <i class="bi bi-bar-chart"></i> Relatórios
@@ -222,8 +239,10 @@
           </li>
         </ul>
       </div>
+      {% endif %}
 
       {# -- Produção [DESKTOP] -- #}
+      {% if user.is_staff or grupos|length %}
       <div class="dropdown">
         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
           <i class="bi bi-scissors"></i> Produção
@@ -241,8 +260,9 @@
           </li>
         </ul>
       </div>
+      {% endif %}
 
-      {# -- Admin [DESKTOP] (só staff) -- #}
+      {# -- Admin [DESKTOP] -- #}
       {% if user.is_staff %}
       <a href="{% url 'admin:index' %}" class="nav-link">
         <i class="bi bi-gear"></i> Admin
@@ -266,7 +286,6 @@
   <div id="main-content">
     <div class="page-wrapper">
 
-      {# -- Mensagens Django -- #}
       {% if messages %}
         {% for message in messages %}
           <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -281,12 +300,12 @@
     </div>
   </div>
 
+{% endwith %}
+
 {% else %}
-  {# ==================== PÁGINAS SEM LOGIN ==================== #}
   {% block unauthenticated_content %}{% endblock %}
 {% endif %}
 
-{# ==================== SCRIPTS ==================== #}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="{% static 'js/base.js' %}"></script>
 <script src="{% static 'js/masks.js' %}"></script>

@@ -4,7 +4,6 @@
 
 {% block content %}
 
-{# ==================== CABEÇALHO ==================== #}
 <div class="mb-4">
   <h4 class="fw-bold mb-1">{{ titulo }}</h4>
   <p class="text-muted small mb-0">
@@ -16,15 +15,13 @@
   </p>
 </div>
 
-{# ==================== FORMULÁRIO ==================== #}
 <div class="row justify-content-center">
-  <div class="col-md-8 col-lg-7">
+  <div class="col-md-8 col-lg-6">
     <div class="card">
       <div class="card-body p-4">
-        <form method="post" id="produto-form" novalidate>
+        <form method="post" novalidate>
           {% csrf_token %}
 
-          {# -- Nome -- #}
           <div class="mb-3">
             <label class="form-label fw-semibold text-secondary small">NOME</label>
             {{ form.nome }}
@@ -33,7 +30,6 @@
             {% endif %}
           </div>
 
-          {# -- Código -- #}
           <div class="mb-3">
             <label class="form-label fw-semibold text-secondary small">
               CÓDIGO <span class="text-muted fw-normal">(opcional)</span>
@@ -44,99 +40,22 @@
             {% endif %}
           </div>
 
-          {# -- Categoria -- #}
           <div class="mb-3">
             <label class="form-label fw-semibold text-secondary small">CATEGORIA</label>
             {{ form.categoria }}
           </div>
 
-          {# -- Campos específicos da chapa -- #}
-          <div id="campos-chapa">
-            <div class="p-3 rounded-3 mb-3" style="background: #f8f9fa;">
-              <p class="fw-semibold text-secondary small mb-3">DADOS DA CHAPA</p>
-              <div class="mb-3">
-                <label class="form-label small text-secondary">COR</label>
-                {{ form.cor }}
-              </div>
-              <div class="row">
-                <div class="col-md-4 mb-2">
-                  <label class="form-label small text-secondary">LARGURA (mm)</label>
-                  {{ form.largura_mm }}
-                </div>
-                <div class="col-md-4 mb-2">
-                  <label class="form-label small text-secondary">COMPRIMENTO (mm)</label>
-                  {{ form.comprimento_mm }}
-                </div>
-                <div class="col-md-4 mb-2">
-                  <label class="form-label small text-secondary">ESPESSURA (mm)</label>
-                  {{ form.espessura_mm }}
-                  {% if form.espessura_mm.errors %}
-                    <div class="text-danger small mt-1">{{ form.espessura_mm.errors }}</div>
-                  {% endif %}
-                </div>
-              </div>
-            </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-secondary small">UNIDADE DE MEDIDA</label>
+            {{ form.unidade_medida }}
           </div>
 
-          {# -- Campos insumo e produto final -- #}
-          <div id="campos-basicos">
-            <div class="mb-3">
-              <label class="form-label fw-semibold text-secondary small">UNIDADE DE MEDIDA</label>
-              {{ form.unidade_medida }}
-            </div>
-            <div class="p-3 rounded-3 mb-3" style="background: #f8f9fa;">
-              <p class="fw-semibold text-secondary small mb-2">
-                DIMENSÕES <span class="fw-normal">(preencha apenas o que se aplica)</span>
-              </p>
-              <div class="row">
-                <div class="col-md-4 mb-2">
-                  <label class="form-label small text-secondary">LARGURA (cm)</label>
-                  {{ form.largura_cm }}
-                </div>
-                <div class="col-md-4 mb-2">
-                  <label class="form-label small text-secondary">COMPRIMENTO (cm)</label>
-                  {{ form.comprimento_cm }}
-                </div>
-                <div class="col-md-4 mb-2">
-                  <label class="form-label small text-secondary">ALTURA (cm)</label>
-                  {{ form.altura_cm }}
-                </div>
-                <div class="col-md-4 mb-2">
-                  <label class="form-label small text-secondary">DIÂMETRO (cm)</label>
-                  {{ form.diametro_cm }}
-                </div>
-                <div class="col-md-4 mb-2">
-                  <label class="form-label small text-secondary">PROFUNDIDADE (cm)</label>
-                  {{ form.profundidade_cm }}
-                </div>
-                <div class="col-md-4 mb-2">
-                  <label class="form-label small text-secondary">CURVATURA (cm)</label>
-                  {{ form.curvatura_cm }}
-                </div>
-
-                {# -- Espessura para produto final -- #}
-                <div class="col-md-4 mb-2" id="campo-espessura-pf">
-                  <label class="form-label small text-secondary">
-                    ESPESSURA (mm) <span class="text-danger">*</span>
-                  </label>
-                  <input type="number" name="espessura_mm" id="id_espessura_mm_pf"
-                    class="form-control" placeholder="Ex: 3" step="0.01"
-                    value="{{ form.espessura_mm.value|default:'' }}">
-                  {% if form.espessura_mm.errors %}
-                    <div class="text-danger small mt-1">{{ form.espessura_mm.errors }}</div>
-                  {% endif %}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {# -- Descrição -- #}
           <div class="mb-3">
             <label class="form-label fw-semibold text-secondary small">DESCRIÇÃO</label>
             {{ form.descricao }}
+            <div class="form-text">Use este campo para informar cor, dimensões, fornecedor preferencial, etc.</div>
           </div>
 
-          {# -- Ativo -- #}
           <div class="mb-4 d-flex align-items-center gap-2">
             {{ form.ativo }}
             <label class="form-check-label text-secondary small">Produto ativo no sistema</label>
@@ -144,7 +63,6 @@
 
           <hr class="my-3" style="border-color: #f0f2f5;">
 
-          {# -- Botões -- #}
           <div class="d-flex gap-2">
             <button type="submit" class="btn btn-primary px-4">
               <i class="bi bi-check-lg me-1"></i> Salvar
@@ -160,9 +78,4 @@
   </div>
 </div>
 
-{% endblock %}
-
-{# ==================== SCRIPTS ==================== #}
-{% block extra_js %}
-<script src="{% static 'js/produto_form.js' %}"></script>
 {% endblock %}

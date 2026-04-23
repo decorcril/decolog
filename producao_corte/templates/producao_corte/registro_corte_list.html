@@ -14,34 +14,26 @@
     {% for r in registros %}
     <div class="card border-0 shadow-sm mb-3">
       <div class="card-body py-3">
-        <div class="d-flex justify-content-between align-items-start mb-2">
-          <div>
-            <span class="fw-bold">{{ r.data|date:"d/m/Y" }}</span>
-            <span class="text-muted small ms-2">{{ r.operador.get_full_name|default:r.operador.username }}</span>
-          </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <span class="fw-bold">{{ r.data|date:"d/m/Y" }}</span>
+          <span class="text-muted small">{{ r.operador.get_full_name|default:r.operador.username }}</span>
         </div>
 
-        <div class="mb-2">
-          <span class="text-muted small fw-semibold d-block mb-1">MATERIAIS UTILIZADOS</span>
-          {% for item in r.entradas.all %}
-            <span class="badge bg-secondary me-1 mb-1">
-              {{ item.quantidade|floatformat:"-2" }}× {{ item.produto.nome }}
-            </span>
-          {% endfor %}
-        </div>
+        <p class="text-muted small fw-semibold mb-1">MATERIAIS UTILIZADOS</p>
+        {% for item in r.entradas.all %}
+          <p class="mb-1 small">{{ item.quantidade|floatformat:"-2" }}× {{ item.produto.nome }}</p>
+        {% endfor %}
 
-        <div>
-          <span class="text-muted small fw-semibold d-block mb-1">PRODUTOS CORTADOS</span>
-          {% for item in r.saidas.all %}
-            <span class="badge bg-success me-1 mb-1">
-              {{ item.quantidade|floatformat:"-2" }}× {{ item.produto.nome }}
-            </span>
-          {% endfor %}
-        </div>
+        <p class="text-muted small fw-semibold mt-3 mb-1">PRODUTOS CORTADOS</p>
+        {% for item in r.saidas.all %}
+          <p class="mb-1 small">{{ item.quantidade|floatformat:"-2" }}× {{ item.produto.nome }}</p>
+        {% endfor %}
 
         {% if r.observacao %}
-          <p class="text-muted small mt-2 mb-0">{{ r.observacao }}</p>
+          <p class="text-muted small mt-3 mb-0"><em>{{ r.observacao }}</em></p>
         {% endif %}
+
       </div>
     </div>
     {% endfor %}
