@@ -10,6 +10,28 @@
     <a href="{% url 'producao_corte:create' %}" class="btn btn-primary">+ Novo</a>
   </div>
 
+  {% if is_supervisor %}
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-3">
+      <form method="get" class="d-flex flex-wrap gap-2">
+        <select name="operador" class="form-select" style="max-width: 220px;" onchange="this.form.submit()">
+          <option value="">Todos os operadores</option>
+          {% for op in operadores %}
+            <option value="{{ op.id }}" {% if operador_id == op.id|stringformat:"s" %}selected{% endif %}>
+              {{ op.get_full_name|default:op.username }}
+            </option>
+          {% endfor %}
+        </select>
+        {% if operador_id %}
+          <a href="{% url 'producao_corte:list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-x-lg"></i>
+          </a>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
   {% if registros %}
     {% for r in registros %}
     <div class="card border-0 shadow-sm mb-3">
@@ -46,8 +68,10 @@
     {% endfor %}
   {% else %}
     <div class="text-center text-muted py-5">
-      <p>Nenhum registro ainda.</p>
-      <a href="{% url 'producao_corte:create' %}" class="btn btn-primary">Criar primeiro registro</a>
+      <p>Nenhum registro encontrado.</p>
+      {% if not operador_id %}
+        <a href="{% url 'producao_corte:create' %}" class="btn btn-primary">Criar primeiro registro</a>
+      {% endif %}
     </div>
   {% endif %}
 

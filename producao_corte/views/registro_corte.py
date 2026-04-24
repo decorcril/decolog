@@ -3,6 +3,7 @@ from django.contrib import messages
 from django.utils import timezone
 from django.db import transaction
 from django.db.models import Sum
+from django.contrib.auth.models import User
 from decimal import Decimal
 from datetime import date
 
@@ -16,7 +17,7 @@ from ..models import RegistroCorte, ItemCorte, ProdutoCortado
 @producao_ou_gerente
 def registro_corte_create(request):
     produtos_materiais = Produto.objects.filter(
-        categoria__in=['chapa', 'insumo'], ativo=True
+        categoria__in=['chapa'], ativo=True
     ).order_by('nome')
     produtos_finais = Produto.objects.filter(
         categoria='produto_final', ativo=True
@@ -36,7 +37,6 @@ def registro_corte_create(request):
             messages.error(request, 'A data não pode ser no futuro.')
             return redirect('producao_corte:create')
 
-        # Coleta chapas do POST
         chapas = []
         i = 0
         while f'entrada_produto_{i}' in request.POST:
@@ -46,13 +46,7 @@ def registro_corte_create(request):
                 chapas.append((i, prod_id, Decimal(qty)))
             i += 1
 
-        # Coleta produtos cortados por chapa
         produtos_por_chapa = {}
-        i = 0
-        while f'saida_chapa_{i}_produto_0' in request.POST or f'saida_produto_{i}' in request.POST:
-            break
-        
-        # Formato novo: saida_chapa_{chapa_idx}_produto_{prod_idx}
         for chapa_idx, _, _ in chapas:
             produtos_por_chapa[chapa_idx] = []
             j = 0
@@ -74,7 +68,6 @@ def registro_corte_create(request):
 
         try:
             with transaction.atomic():
-                # Valida estoque
                 for _, prod_id, quantidade in chapas:
                     produto = Produto.objects.get(pk=prod_id)
                     estoque_total = Estoque.objects.filter(
@@ -97,7 +90,6 @@ def registro_corte_create(request):
                     produto = Produto.objects.get(pk=prod_id)
                     restante = quantidade
 
-                    # Baixa no estoque via Movimentacao
                     for estoque in Estoque.objects.filter(
                         produto=produto, quantidade__gt=0
                     ).order_by('-quantidade'):
@@ -146,22 +138,32 @@ def registro_corte_create(request):
 @producao_ou_gerente
 def registro_corte_list(request):
     is_supervisor = (
-    request.user.is_staff or
-    request.user.groups.filter(
-        name__in=['Supervisor de Laser', 'Gerente']
-    ).exists()
-)
+        request.user.is_staff or
+        request.user.groups.filter(
+            name__in=['Supervisor de Laser', 'Gerente']
+        ).exists()
+    )
 
     if is_supervisor:
         registros = RegistroCorte.objects.all()
     else:
         registros = RegistroCorte.objects.filter(operador=request.user)
 
+    operador_id = request.GET.get('operador')
+    if is_supervisor and operador_id:
+        registros = registros.filter(operador__id=operador_id)
+
     registros = registros.prefetch_related(
         'itens__chapa', 'itens__produtos_cortados__produto'
     ).select_related('operador')
 
+    operadores = User.objects.filter(
+        registrocorte__isnull=False
+    ).distinct() if is_supervisor else None
+
     return render(request, 'producao_corte/registro_corte_list.html', {
         'registros': registros,
         'is_supervisor': is_supervisor,
+        'operadores': operadores,
+        'operador_id': operador_id,
     })
