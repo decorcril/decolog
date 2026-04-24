@@ -2,7 +2,7 @@ def perfis_usuario(request):
     if not request.user.is_authenticated:
         return {}
 
-    grupos = request.user.groups.values_list('name', flat=True)
+    grupos = list(request.user.groups.values_list('name', flat=True))
     is_gerente = request.user.is_staff or 'Gerente' in grupos
     is_supervisor_laser = request.user.is_staff or 'Supervisor de Laser' in grupos
     is_operador_laser = 'Operador laser' in grupos

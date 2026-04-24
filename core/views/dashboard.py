@@ -25,7 +25,7 @@ def dashboard(request):
     user = request.user
     is_gerente = user.is_staff or user.groups.filter(name='Gerente').exists()
     is_supervisor_laser = user.is_staff or user.groups.filter(name='Supervisor de Laser').exists()
-    is_operador_laser = user.groups.filter(name='Operador de Laser').exists()
+    is_operador_laser = user.groups.filter(name='Operador laser').exists()
     is_laser = is_supervisor_laser or is_operador_laser
 
     # ── Indicadores gerais ──
