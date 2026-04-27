@@ -35,7 +35,7 @@
         <div class="d-flex justify-content-between align-items-center mb-3">
           <span class="fw-semibold">Chapas e Produtos Cortados</span>
           <button type="button" class="btn btn-sm btn-primary" onclick="addChapa()">
-            + Adicionar Chapa
+            + Chapa
           </button>
         </div>
         <div id="chapas-container"></div>
@@ -73,7 +73,7 @@ const PRODUTOS_FINAIS = [
 let chapaCount = 0;
 
 function buildSelect(lista, name) {
-  let opts = '<option value="">— selecione —</option>';
+  let opts = '<option value="">selecione</option>';
   lista.forEach(p => {
     opts += `<option value="${p.id}">${p.nome}</option>`;
   });
