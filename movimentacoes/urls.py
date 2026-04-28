@@ -13,7 +13,7 @@ from movimentacoes.views import (
 )
 from movimentacoes.views.ordem_transferencia import ordem_imprimir
 from movimentacoes.views.transferencia import transferencia_imprimir
-
+from movimentacoes.views.ordem_saida import ordem_saida_criar, ordem_saida_list, ordem_saida_detalhe
 app_name = 'movimentacoes'
 
 urlpatterns = [
@@ -29,5 +29,7 @@ urlpatterns = [
     path('ordem/<int:pk>/cancelar/', ordem_cancelar, name='ordem_cancelar'),
     path('ordem/<int:pk>/imprimir/', ordem_imprimir, name='ordem_imprimir'),
     path('transferencia/<int:pk>/imprimir/', transferencia_imprimir, name='transferencia_imprimir'),
-
+    path('saida/lote/nova/', ordem_saida_criar, name='ordem_saida_criar'),
+    path('saida/lote/', ordem_saida_list, name='ordem_saida_list'),
+    path('saida/lote/<int:pk>/', ordem_saida_detalhe, name='ordem_saida_detalhe'),
 ]

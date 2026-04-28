@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Nova Saída em Lote — Decolog{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+
+<div class="mb-4">
+  <h4 class="page-title">Nova Saída em Lote</h4>
+  <p class="page-subtitle">Registre a saída de vários produtos de uma vez</p>
+</div>
+
+<form method="post" id="form-saida-lote" novalidate>
+  {% csrf_token %}
+
+  <div class="row g-3">
+
+    <div class="col-lg-5">
+      <div class="card">
+        <div class="card-body p-4">
+          <div class="card-section-title">Dados da Saída</div>
+
+          <div class="mb-3">
+            <label class="form-label">Local de Origem</label>
+            <select name="local_origem" id="id_local_origem" class="form-select" required>
+              <option value="">— selecione —</option>
+              {% for local in locais %}
+                <option value="{{ local.id }}">{{ local.nome }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-0">
+            <label class="form-label">Motivo</label>
+            <select name="motivo" id="id_motivo" class="form-select" required>
+              {% for value, label in motivo_choices %}
+                <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-7">
+      <div class="card mb-3">
+        <div class="card-body p-4">
+          <div class="card-section-title">Observação <span class="text-muted" style="text-transform:none;letter-spacing:0;font-weight:400;">(opcional)</span></div>
+          <textarea name="observacao" class="form-control" rows="2"
+                    placeholder="Ex: envio para loja, evento..."></textarea>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="card mt-3">
+    <div class="card-body p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="card-section-title mb-0">Produtos</div>
+        <button type="button" class="btn btn-sm btn-primary" onclick="addLinha()">+ Adicionar Produto</button>
+      </div>
+      <div id="produtos-container"></div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 mt-3 justify-content-end">
+    <a href="{% url 'movimentacoes:ordem_saida_list' %}" class="btn btn-outline-secondary px-4">Cancelar</a>
+    <button type="submit" class="btn btn-primary px-4">
+      <i class="bi bi-arrow-up-circle me-1"></i> Registrar Saída
+    </button>
+  </div>
+
+</form>
+
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script>
+const PRODUTOS = [
+  {% for p in produtos %}
+  { id: "{{ p.pk }}", nome: "{{ p.nome|escapejs }}", codigo: "{{ p.codigo|default:''|escapejs }}" },
+  {% endfor %}
+];
+
+let rowCount = 0;
+
+function addLinha() {
+  const container = document.getElementById('produtos-container');
+  const idx = rowCount++;
+
+  const div = document.createElement('div');
+  div.className = 'row g-2 mb-3 align-items-start';
+  div.innerHTML = `
+    <div class="col">
+      <select id="produto-select-${idx}" name="produto_id" required>
+        <option value="">Buscar por nome ou código...</option>
+        ${PRODUTOS.map(p => `<option value="${p.id}">${p.nome}${p.codigo ? ' — ' + p.codigo : ''}</option>`).join('')}
+      </select>
+      <div id="saldo-${idx}" class="mt-2" style="display:none;">
+        <div class="p-2 rounded" style="background:#f9fafb;border:1px solid #e8eaed;font-size:0.8rem;">
+          <span style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#6b7280;">Saldo Disponível</span>
+          <div id="saldo-lista-${idx}" class="mt-1"></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-3">
+      <input type="number" name="quantidade" class="form-control"
+             placeholder="Qtd" min="0.001" step="0.001" required>
+    </div>
+    <div class="col-auto">
+      <button type="button" class="btn btn-outline-danger btn-sm mt-1"
+              onclick="this.closest('.row').remove()">✕</button>
+    </div>
+  `;
+  container.appendChild(div);
+
+  // Inicializa Tom Select
+  const ts = new TomSelect(`#produto-select-${idx}`, {
+    placeholder: 'Buscar por nome ou código...',
+    searchField: ['text'],
+    maxOptions: 50,
+    render: {
+      option: (data) => `<div class="ts-option">${data.text}</div>`,
+      item: (data) => `<div>${data.text}</div>`,
+    },
+    onChange(value) {
+      if (!value) {
+        document.getElementById(`saldo-${idx}`).style.display = 'none';
+        return;
+      }
+      fetch(`/estoque/saldo/${value}/`)
+        .then(r => r.json())
+        .then(data => {
+          const lista = document.getElementById(`saldo-lista-${idx}`);
+          const box = document.getElementById(`saldo-${idx}`);
+          if (!data.saldos.length) {
+            lista.innerHTML = '<span class="text-muted">Sem estoque disponível.</span>';
+          } else {
+            lista.innerHTML = data.saldos.map(s =>
+              `<div class="d-flex justify-content-between">
+                <span class="text-muted">${s.local}</span>
+                <span class="fw-semibold">${s.quantidade}</span>
+              </div>`
+            ).join('');
+          }
+          box.style.display = 'block';
+        });
+    }
+  });
+}
+
+// Inicializa Tom Select nos selects fixos
+new TomSelect('#id_local_origem', { placeholder: 'Selecione um local...' });
+
+addLinha();
+</script>
+{% endblock %}

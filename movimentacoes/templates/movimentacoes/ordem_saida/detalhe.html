@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% load core_extras %}
+
+{% block title %}Saída {{ ordem.numero }} — Decolog{% endblock %}
+
+{% block content %}
+
+<div class="mb-4">
+  <h4 class="fw-bold mb-1">Saída {{ ordem.numero }}</h4>
+  <p class="text-muted small mb-0">
+    <a href="{% url 'movimentacoes:ordem_saida_list' %}" class="text-muted text-decoration-none">
+      <i class="bi bi-arrow-up-circle me-1"></i>Saídas em Lote
+    </a>
+    <i class="bi bi-chevron-right mx-1" style="font-size: 0.7rem;"></i>
+    {{ ordem.numero }}
+  </p>
+</div>
+
+<div class="row g-4">
+
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">DADOS DA SAÍDA</p>
+
+        <div class="text-muted small">
+          <div class="mb-2">
+            <span class="fw-semibold">Local de Origem:</span> {{ ordem.local_origem.nome }}
+          </div>
+          <div class="mb-2">
+            <span class="fw-semibold">Motivo:</span> {{ ordem.get_motivo_display }}
+          </div>
+          <div class="mb-2">
+            <span class="fw-semibold">Data:</span> {{ ordem.data_criacao|date:"d/m/Y H:i" }}
+          </div>
+          <div class="mb-2">
+            <span class="fw-semibold">Criado por:</span>
+            {{ ordem.criado_por.get_full_name|default:ordem.criado_por.username }}
+          </div>
+          {% if ordem.observacao %}
+          <div class="mb-2">
+            <span class="fw-semibold">Observação:</span> {{ ordem.observacao }}
+          </div>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">PRODUTOS</p>
+        <div class="table-responsive">
+          <table class="table mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Produto</th>
+                <th>Código</th>
+                <th class="text-end">Quantidade</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in itens %}
+              <tr>
+                <td class="fw-semibold">{{ item.produto.nome }}</td>
+                <td class="text-muted small" style="font-family: monospace;">
+                  {{ item.produto.codigo|default:"—" }}
+                </td>
+                <td class="text-end fw-semibold">
+                  {{ item.quantidade|floatformat:"-3" }} {{ item.produto|unidade_abrev }}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
