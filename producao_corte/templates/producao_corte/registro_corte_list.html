@@ -3,77 +3,96 @@
 {% block title %}Registros de Corte — Decolog{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-3 py-3" style="max-width: 900px;">
 
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h5 class="mb-0 fw-bold">Registros de Corte</h5>
-    <a href="{% url 'producao_corte:create' %}" class="btn btn-primary">+ Novo</a>
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">Registros de Corte</h4>
+    <p class="text-muted small mb-0">Histórico de cortes realizados</p>
   </div>
-
-  {% if is_supervisor %}
-  <div class="card border-0 shadow-sm mb-3">
-    <div class="card-body py-3">
-      <form method="get" class="d-flex flex-wrap gap-2">
-        <select name="operador" class="form-select" style="max-width: 220px;" onchange="this.form.submit()">
-          <option value="">Todos os operadores</option>
-          {% for op in operadores %}
-            <option value="{{ op.id }}" {% if operador_id == op.id|stringformat:"s" %}selected{% endif %}>
-              {{ op.get_full_name|default:op.username }}
-            </option>
-          {% endfor %}
-        </select>
-        {% if operador_id %}
-          <a href="{% url 'producao_corte:list' %}" class="btn btn-outline-secondary">
-            <i class="bi bi-x-lg"></i>
-          </a>
-        {% endif %}
-      </form>
-    </div>
-  </div>
-  {% endif %}
-
-  {% if registros %}
-    {% for r in registros %}
-    <div class="card border-0 shadow-sm mb-3">
-      <div class="card-body py-3 px-4">
-
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <span class="fw-bold">{{ r.data|date:"d/m/Y" }}</span>
-          <span class="text-muted small">{{ r.operador.get_full_name|default:r.operador.username }}</span>
-        </div>
-
-        {% for item in r.itens.all %}
-        <div class="mb-3">
-          <div class="fw-semibold small mb-1">
-            {{ item.quantidade_chapa|floatformat:"-2" }}× {{ item.chapa.nome }}
-          </div>
-          <div class="ps-3 border-start border-2 border-success-subtle">
-            {% for pc in item.produtos_cortados.all %}
-            <div class="small mb-1">
-              <span class="text-muted">•</span>
-              <span class="fw-semibold">{{ pc.quantidade|floatformat:"-2" }}×</span>
-              {{ pc.produto.nome }}
-            </div>
-            {% endfor %}
-          </div>
-        </div>
-        {% endfor %}
-
-        {% if r.observacao %}
-          <p class="text-muted small mt-2 mb-0 fst-italic">{{ r.observacao }}</p>
-        {% endif %}
-
-      </div>
-    </div>
-    {% endfor %}
-  {% else %}
-    <div class="text-center text-muted py-5">
-      <p>Nenhum registro encontrado.</p>
-      {% if not operador_id %}
-        <a href="{% url 'producao_corte:create' %}" class="btn btn-primary">Criar primeiro registro</a>
-      {% endif %}
-    </div>
-  {% endif %}
-
+  <a href="{% url 'producao_corte:create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i> Novo Registro
+  </a>
 </div>
+
+{% if is_supervisor %}
+<div class="d-flex gap-2 mb-4">
+  <form method="get" class="d-flex gap-2">
+    <select name="operador" class="form-select form-select-sm" style="max-width: 220px;" onchange="this.form.submit()">
+      <option value="">Todos os operadores</option>
+      {% for op in operadores %}
+        <option value="{{ op.id }}" {% if operador_id == op.id|stringformat:"s" %}selected{% endif %}>
+          {{ op.get_full_name|default:op.username }}
+        </option>
+      {% endfor %}
+    </select>
+    {% if operador_id %}
+      <a href="{% url 'producao_corte:list' %}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-x-lg"></i>
+      </a>
+    {% endif %}
+  </form>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Data</th>
+          <th>Operador</th>
+          <th class="text-center">Chapas Utilizadas</th>
+          <th>Observação</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in registros %}
+        <tr style="cursor:pointer;" data-bs-toggle="collapse"
+            data-bs-target="#detalhe-{{ r.pk }}" aria-expanded="false">
+          <td class="fw-semibold">{{ r.data|date:"d/m/Y" }}</td>
+          <td class="text-muted small">{{ r.operador.get_full_name|default:r.operador.username }}</td>
+          <td class="text-center text-muted small">{{ r.itens.count }}</td>
+          <td class="text-muted small fst-italic">{{ r.observacao|default:"—" }}</td>
+          <td class="text-end">
+            <i class="bi bi-chevron-down text-muted small"></i>
+          </td>
+        </tr>
+        <tr class="collapse" id="detalhe-{{ r.pk }}">
+          <td colspan="5" class="p-0">
+            <div class="px-4 py-3" style="background:#f9fafb;">
+              {% for item in r.itens.all %}
+              <div class="mb-2">
+                <span class="fw-semibold small">
+                  {{ item.quantidade_chapa|floatformat:"-2" }}× {{ item.chapa.nome }}
+                </span>
+                <div class="ps-3 border-start border-2 border-success-subtle mt-1">
+                  {% for pc in item.produtos_cortados.all %}
+                  <div class="small mb-1">
+                    <span class="text-muted">•</span>
+                    <span class="fw-semibold">{{ pc.quantidade|floatformat:"-2" }}×</span>
+                    {{ pc.produto.nome }}
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center text-muted py-4">
+            Nenhum registro encontrado.
+            {% if not operador_id %}
+              <a href="{% url 'producao_corte:create' %}" class="btn btn-primary btn-sm ms-2">Criar primeiro registro</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
 {% endblock %}
