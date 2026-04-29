@@ -145,62 +145,56 @@
 </div>
 {% endif %}
 
-{# ── Gráficos gerais (admin/gerente) ── #}
+{# ── Gráficos gerente ── #}
 {% if is_gerente %}
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">ENTRADAS VS VENDAS POR DIA</p>
+        <canvas id="graficoEntradasVendas" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">SAÍDAS POR MOTIVO</p>
+        <canvas id="graficoMotivos" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="row g-4 mb-4">
   <div class="col-lg-6">
     <div class="card">
       <div class="card-body p-4">
-        <p class="fw-semibold text-secondary small mb-3">EVOLUÇÃO — ENTRADAS E SAÍDAS</p>
-        <canvas id="graficoLinha" height="200"></canvas>
+        <p class="fw-semibold text-secondary small mb-3">TOP 10 PRODUTOS MAIS VENDIDOS</p>
+        <canvas id="graficoTopProdutos" height="250"></canvas>
       </div>
     </div>
   </div>
   <div class="col-lg-6">
     <div class="card">
       <div class="card-body p-4">
-        <p class="fw-semibold text-secondary small mb-3">COMPARATIVO — ENTRADAS E SAÍDAS</p>
-        <canvas id="graficoBarras" height="200"></canvas>
+        <p class="fw-semibold text-secondary small mb-3">CORTES POR OPERADOR</p>
+        <canvas id="graficoCortesOperador" height="250"></canvas>
       </div>
     </div>
   </div>
 </div>
 
-<div class="card mb-4">
-  <div class="card-body p-4">
-    <p class="fw-semibold text-secondary small mb-3">TRANSFERÊNCIAS ENTRE LOCAIS</p>
-    <canvas id="graficoTransferencias" height="100"></canvas>
-  </div>
-</div>
-
-<div class="card mb-4">
-  <div class="card-body p-4">
-    <p class="fw-semibold text-secondary small mb-3">EVOLUÇÃO DE TRANSFERÊNCIAS POR LOCAL</p>
-    <canvas id="graficoTransferenciasPorLocal" height="100"></canvas>
-  </div>
-</div>
-
-<div class="card mb-4">
-  <div class="card-body p-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <p class="fw-semibold text-secondary small mb-0">EVOLUÇÃO DE VENDAS</p>
-      <div class="d-flex gap-2">
-        <button class="btn btn-sm btn-primary" id="btn-por-loja">Por Loja</button>
-        <button class="btn btn-sm btn-outline-secondary" id="btn-por-produto">Por Produto</button>
-      </div>
-    </div>
-    <canvas id="graficoVendas" height="100"></canvas>
-  </div>
-</div>
 {% endif %}
 
-{# ── Cortes recentes (laser) ── #}
+{# ── Cortes recentes ── #}
 {% if cortes_recentes %}
 <div class="card mb-4">
   <div class="card-body p-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
       <p class="fw-semibold text-secondary small mb-0">
-        {% if is_supervisor_laser %}CORTES RECENTES{% else %}CORTES RECENTES{% endif %}
+        {% if is_supervisor_laser %}CORTES RECENTES{% else %}MEUS CORTES RECENTES{% endif %}
       </p>
       <a href="{% url 'producao_corte:list' %}" class="btn btn-sm btn-outline-secondary">
         Ver todos <i class="bi bi-arrow-right ms-1"></i>
@@ -226,7 +220,7 @@
 </div>
 {% endif %}
 
-{# ── Últimas movimentações (admin/gerente) ── #}
+{# ── Últimas movimentações ── #}
 {% if is_gerente %}
 <div class="card">
   <div class="card-body p-4">
@@ -286,12 +280,10 @@
   id="dashboard-data"
   data-labels='{{ dias_labels|safe }}'
   data-entradas='{{ entradas_data|safe }}'
-  data-saidas='{{ saidas_data|safe }}'
-  data-transferencias-count='{{ transferencias_count_data|safe }}'
-  data-transferencias-volume='{{ transferencias_volume_data|safe }}'
-  data-transferencias-por-local='{{ transferencias_por_local|safe }}'
-  data-saidas-por-local='{{ saidas_por_local|safe }}'
-  data-saidas-por-produto='{{ saidas_por_produto|safe }}'
+  data-vendas='{{ vendas_data|safe }}'
+  data-saidas-por-motivo='{{ saidas_por_motivo|safe }}'
+  data-top-produtos='{{ top_produtos|safe }}'
+  data-cortes-por-operador='{{ cortes_por_operador|safe }}'
   data-is-gerente='{% if is_gerente %}true{% else %}false{% endif %}'>
 </script>
 <script src="{% static 'js/dashboard.js' %}"></script>

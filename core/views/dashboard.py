@@ -57,54 +57,54 @@ def dashboard(request):
         for i in range(dias)
     ]
 
-    # ── Gráficos gerais ──
-    entradas = Movimentacao.objects.filter(
+    # ── Gráfico 1: Entradas vs Vendas por dia ──
+    entradas_qs = Movimentacao.objects.filter(
         tipo=Movimentacao.TIPO_ENTRADA, data_hora__gte=data_inicio
     ).annotate(dia=TruncDate('data_hora')).values('dia').annotate(
         total=Count('id')
     ).order_by('dia')
-    entradas_dict = {e['dia'].strftime('%d/%m'): e['total'] for e in entradas}
+    entradas_dict = {e['dia'].strftime('%d/%m'): e['total'] for e in entradas_qs}
     entradas_data = [entradas_dict.get(d, 0) for d in dias_labels]
 
-    saidas = Movimentacao.objects.filter(
-        tipo=Movimentacao.TIPO_SAIDA, data_hora__gte=data_inicio
+    vendas_qs = Movimentacao.objects.filter(
+        tipo=Movimentacao.TIPO_SAIDA, motivo='venda', data_hora__gte=data_inicio
     ).annotate(dia=TruncDate('data_hora')).values('dia').annotate(
         total=Count('id')
     ).order_by('dia')
-    saidas_dict = {s['dia'].strftime('%d/%m'): s['total'] for s in saidas}
-    saidas_data = [saidas_dict.get(d, 0) for d in dias_labels]
+    vendas_dict = {v['dia'].strftime('%d/%m'): v['total'] for v in vendas_qs}
+    vendas_data = [vendas_dict.get(d, 0) for d in dias_labels]
 
-    # ── Gráficos gerente ──
-    transferencias = Movimentacao.objects.filter(
-        tipo=Movimentacao.TIPO_TRANSFERENCIA, data_hora__gte=data_inicio
-    ).annotate(dia=TruncDate('data_hora')).values('dia').annotate(
-        total=Count('id'), volume=Sum('quantidade')
-    ).order_by('dia')
-    transferencias_count_dict = {t['dia'].strftime('%d/%m'): t['total'] for t in transferencias}
-    transferencias_volume_dict = {t['dia'].strftime('%d/%m'): float(t['volume'] or 0) for t in transferencias}
-    transferencias_count_data = [transferencias_count_dict.get(d, 0) for d in dias_labels]
-    transferencias_volume_data = [transferencias_volume_dict.get(d, 0) for d in dias_labels]
+    # ── Gráfico 2: Saídas por motivo no período ──
+    saidas_por_motivo = Movimentacao.objects.filter(
+        tipo=Movimentacao.TIPO_SAIDA, data_hora__gte=data_inicio
+    ).values('motivo').annotate(total=Count('id')).order_by('-total')
 
-    transferencias_por_local = {}
-    for local in Local.objects.filter(ativo=True):
-        saidas_local = Movimentacao.objects.filter(
-            tipo=Movimentacao.TIPO_TRANSFERENCIA, local=local, data_hora__gte=data_inicio
-        ).annotate(dia=TruncDate('data_hora')).values('dia').annotate(total=Count('id')).order_by('dia')
-        entradas_local = Movimentacao.objects.filter(
-            tipo=Movimentacao.TIPO_TRANSFERENCIA, local_destino=local, data_hora__gte=data_inicio
-        ).annotate(dia=TruncDate('data_hora')).values('dia').annotate(total=Count('id')).order_by('dia')
-        transferencias_por_local[local.nome] = {
-            'saidas': [{t['dia'].strftime('%d/%m'): t['total'] for t in saidas_local}.get(d, 0) for d in dias_labels],
-            'entradas': [{t['dia'].strftime('%d/%m'): t['total'] for t in entradas_local}.get(d, 0) for d in dias_labels],
-        }
+    motivo_labels = []
+    motivo_data = []
+    motivo_display = dict(Movimentacao.MOTIVO_CHOICES)
+    for s in saidas_por_motivo:
+        motivo_labels.append(motivo_display.get(s['motivo'], s['motivo'] or 'Sem motivo'))
+        motivo_data.append(s['total'])
 
-    saidas_por_local = Movimentacao.objects.filter(
+    # ── Gráfico 3: Top 10 produtos mais vendidos ──
+    top_produtos = Movimentacao.objects.filter(
         tipo=Movimentacao.TIPO_SAIDA, motivo='venda', data_hora__gte=data_inicio
-    ).values('local__nome').annotate(total=Sum('quantidade')).order_by('-total')
+    ).values('produto__nome').annotate(
+        total=Sum('quantidade')
+    ).order_by('-total')[:10]
 
-    saidas_por_produto = Movimentacao.objects.filter(
-        tipo=Movimentacao.TIPO_SAIDA, motivo='venda', data_hora__gte=data_inicio
-    ).values('produto__nome').annotate(total=Sum('quantidade')).order_by('-total')[:10]
+    # ── Gráfico 4: Cortes por operador ──
+    cortes_por_operador = RegistroCorte.objects.filter(
+        data__gte=data_inicio.date()
+    ).values(
+        'operador__first_name', 'operador__last_name', 'operador__username'
+    ).annotate(total=Count('id')).order_by('-total')
+
+    cortes_operador_labels = []
+    for c in cortes_por_operador:
+        nome = f"{c['operador__first_name']} {c['operador__last_name']}".strip()
+        cortes_operador_labels.append(nome or c['operador__username'])
+    cortes_operador_data = [c['total'] for c in cortes_por_operador]
 
     # ── Últimas movimentações ──
     ultimas_movimentacoes = Movimentacao.objects.select_related(
@@ -135,17 +135,18 @@ def dashboard(request):
         'meus_cortes_periodo': meus_cortes_periodo,
         'dias_labels': json.dumps(dias_labels),
         'entradas_data': json.dumps(entradas_data),
-        'saidas_data': json.dumps(saidas_data),
-        'transferencias_count_data': json.dumps(transferencias_count_data),
-        'transferencias_volume_data': json.dumps(transferencias_volume_data),
-        'transferencias_por_local': json.dumps(transferencias_por_local),
-        'saidas_por_local': json.dumps({
-            'labels': [s['local__nome'] for s in saidas_por_local],
-            'data': [float(s['total']) for s in saidas_por_local],
+        'vendas_data': json.dumps(vendas_data),
+        'saidas_por_motivo': json.dumps({
+            'labels': motivo_labels,
+            'data': motivo_data,
         }),
-        'saidas_por_produto': json.dumps({
-            'labels': [s['produto__nome'] for s in saidas_por_produto],
-            'data': [float(s['total']) for s in saidas_por_produto],
+        'top_produtos': json.dumps({
+            'labels': [p['produto__nome'] for p in top_produtos],
+            'data': [float(p['total']) for p in top_produtos],
+        }),
+        'cortes_por_operador': json.dumps({
+            'labels': cortes_operador_labels,
+            'data': cortes_operador_data,
         }),
         'ultimas_movimentacoes': ultimas_movimentacoes,
         'cortes_recentes': cortes_recentes,

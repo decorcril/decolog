@@ -1,242 +1,129 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-  // ══════════════════════════════════════════════════
-  // LEITURA DOS DADOS DO DJANGO
-  // Os dados são passados via atributos data-* no elemento
-  // <script id="dashboard-data"> no template dashboard.html
-  // Para adicionar novos dados:
-  //   1. Passe o dado no return render() da view
-  //   2. Adicione data-nome='{{ variavel|safe }}' no template
-  //   3. Leia aqui com JSON.parse(el.dataset.nome)
-  // ══════════════════════════════════════════════════
   const el = document.getElementById('dashboard-data');
+  if (!el) return;
 
-  const labels              = JSON.parse(el.dataset.labels);                    // Datas do período
-  const entradas            = JSON.parse(el.dataset.entradas);                  // Qtd entradas por dia
-  const saidas              = JSON.parse(el.dataset.saidas);                    // Qtd saídas por dia
-  const transferenciasCount = JSON.parse(el.dataset.transferenciasCount);       // Qtd transferências por dia
-  const transferenciasVolume= JSON.parse(el.dataset.transferenciasVolume);      // Volume transferido por dia
-  const transferenciasporLocal = JSON.parse(el.dataset.transferenciasPorLocal); // Transferências por local
-  const isGerente           = el.dataset.isGerente === 'true';                  // Se usuário é Gerente/Admin
+  const labels          = JSON.parse(el.dataset.labels);
+  const entradas        = JSON.parse(el.dataset.entradas);
+  const vendas          = JSON.parse(el.dataset.vendas);
+  const saidasPorMotivo = JSON.parse(el.dataset.saidasPorMotivo);
+  const topProdutos     = JSON.parse(el.dataset.topProdutos);
+  const cortesOperador  = JSON.parse(el.dataset.cortesPorOperador);
+  const isGerente       = el.dataset.isGerente === 'true';
 
+  if (!isGerente) return;
 
-  // ══════════════════════════════════════════════════
-  // OPÇÕES PADRÃO DOS GRÁFICOS
-  // Reutilizadas nos gráficos simples
-  // Para gráficos com dois eixos Y, crie options específicas
-  // ══════════════════════════════════════════════════
   const commonOptions = {
     responsive: true,
     plugins: { legend: { position: 'top' } },
     scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
   };
 
+  // ── Gráfico 1: Entradas vs Vendas por dia ──
+  const ctxEntradasVendas = document.getElementById('graficoEntradasVendas');
+  if (ctxEntradasVendas) {
+    new Chart(ctxEntradasVendas, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Entradas',
+            data: entradas,
+            borderColor: '#20c997',
+            backgroundColor: 'rgba(32,201,151,0.08)',
+            tension: 0.3,
+            fill: true,
+          },
+          {
+            label: 'Vendas',
+            data: vendas,
+            borderColor: '#dc3545',
+            backgroundColor: 'rgba(220,53,69,0.08)',
+            tension: 0.3,
+            fill: true,
+          }
+        ]
+      },
+      options: commonOptions
+    });
+  }
 
-  // ══════════════════════════════════════════════════
-  // GRÁFICO 1 — LINHA: Evolução de entradas e saídas
-  // Mostra a tendência ao longo do período selecionado
-  // Para adicionar nova série: copie um objeto do array datasets
-  // ══════════════════════════════════════════════════
-  new Chart(document.getElementById('graficoLinha'), {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        {
-          label: 'Entradas',
-          data: entradas,
-          borderColor: '#20c997',
-          backgroundColor: 'rgba(32,201,151,0.08)',
-          tension: 0.3,
-          fill: true,
-        },
-        {
-          label: 'Saídas',
-          data: saidas,
-          borderColor: '#dc3545',
-          backgroundColor: 'rgba(220,53,69,0.08)',
-          tension: 0.3,
-          fill: true,
+  // ── Gráfico 2: Saídas por motivo (rosca) ──
+  const ctxMotivos = document.getElementById('graficoMotivos');
+  if (ctxMotivos) {
+    const coresMotivos = [
+      'rgba(220,53,69,0.8)',
+      'rgba(32,201,151,0.8)',
+      'rgba(77,163,255,0.8)',
+      'rgba(253,126,20,0.8)',
+      'rgba(111,66,193,0.8)',
+      'rgba(232,62,140,0.8)',
+      'rgba(255,193,7,0.8)',
+      'rgba(13,202,240,0.8)',
+    ];
+    new Chart(ctxMotivos, {
+      type: 'doughnut',
+      data: {
+        labels: saidasPorMotivo.labels,
+        datasets: [{
+          data: saidasPorMotivo.data,
+          backgroundColor: coresMotivos.slice(0, saidasPorMotivo.labels.length),
+          borderWidth: 2,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 11 } } }
         }
-      ]
-    },
-    options: commonOptions
-  });
+      }
+    });
+  }
 
+  // ── Gráfico 3: Top 10 produtos mais vendidos (barras horizontais) ──
+  const ctxTopProdutos = document.getElementById('graficoTopProdutos');
+  if (ctxTopProdutos) {
+    new Chart(ctxTopProdutos, {
+      type: 'bar',
+      data: {
+        labels: topProdutos.labels,
+        datasets: [{
+          label: 'Quantidade Vendida',
+          data: topProdutos.data,
+          backgroundColor: 'rgba(77,163,255,0.7)',
+          borderRadius: 6,
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true } }
+      }
+    });
+  }
 
-  // ══════════════════════════════════════════════════
-  // GRÁFICO 2 — BARRAS: Comparativo de entradas e saídas
-  // Facilita comparar volumes em cada dia
-  // ══════════════════════════════════════════════════
-  new Chart(document.getElementById('graficoBarras'), {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        {
-          label: 'Entradas',
-          data: entradas,
+  // ── Gráfico 4: Cortes por operador (barras) ──
+  const ctxCortesOperador = document.getElementById('graficoCortesOperador');
+  if (ctxCortesOperador) {
+    new Chart(ctxCortesOperador, {
+      type: 'bar',
+      data: {
+        labels: cortesOperador.labels,
+        datasets: [{
+          label: 'Registros de Corte',
+          data: cortesOperador.data,
           backgroundColor: 'rgba(32,201,151,0.7)',
           borderRadius: 6,
-        },
-        {
-          label: 'Saídas',
-          data: saidas,
-          backgroundColor: 'rgba(220,53,69,0.7)',
-          borderRadius: 6,
-        }
-      ]
-    },
-    options: commonOptions
-  });
-
-
-  // ══════════════════════════════════════════════════
-  // GRÁFICOS EXCLUSIVOS PARA GERENTE / ADMIN
-  // Controlado pelo data-is-gerente no template
-  // ══════════════════════════════════════════════════
-  if (isGerente) {
-
-    // ── GRÁFICO 3 — BARRAS: Transferências (quantidade e volume) ──
-    // Dois eixos Y: esquerdo para quantidade, direito para volume
-    if (document.getElementById('graficoTransferencias')) {
-      new Chart(document.getElementById('graficoTransferencias'), {
-        type: 'bar',
-        data: {
-          labels,
-          datasets: [
-            {
-              label: 'Nº de Transferências',
-              data: transferenciasCount,
-              backgroundColor: 'rgba(77,163,255,0.7)',
-              borderRadius: 6,
-              yAxisID: 'y',      // Eixo esquerdo
-            },
-            {
-              label: 'Volume Transferido',
-              data: transferenciasVolume,
-              backgroundColor: 'rgba(108,117,125,0.4)',
-              borderRadius: 6,
-              yAxisID: 'y1',     // Eixo direito
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { position: 'top' } },
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: { stepSize: 1 },
-              title: { display: true, text: 'Transferências' }
-            },
-            y1: {
-              beginAtZero: true,
-              position: 'right',
-              grid: { drawOnChartArea: false }, // Não sobrepõe a grade do eixo esquerdo
-              title: { display: true, text: 'Volume' }
-            }
-          }
-        }
-      });
-    }
-
-    // ── GRÁFICO 4 — LINHA: Evolução de transferências por local ──
-    // Linha sólida = saídas do local | Linha tracejada = entradas no local
-    // Cada local recebe uma cor diferente da paleta abaixo
-    if (document.getElementById('graficoTransferenciasPorLocal')) {
-
-      // Paleta de cores — adicione mais se tiver muitos locais
-      const cores = [
-        '#4da3ff', '#20c997', '#dc3545', '#fd7e14',
-        '#6f42c1', '#e83e8c', '#ffc107', '#0dcaf0'
-      ];
-
-      const datasets = [];
-      let i = 0;
-
-      for (const [nome, dados] of Object.entries(transferenciasporLocal)) {
-        const cor = cores[i % cores.length];
-
-        // Linha sólida = saídas (o local enviou)
-        datasets.push({
-          label: `${nome} (saída)`,
-          data: dados.saidas,
-          borderColor: cor,
-          backgroundColor: cor + '20',
-          tension: 0.3,
-          fill: false,
-          borderDash: [],
-        });
-
-        // Linha tracejada = entradas (o local recebeu)
-        datasets.push({
-          label: `${nome} (entrada)`,
-          data: dados.entradas,
-          borderColor: cor,
-          backgroundColor: cor + '10',
-          tension: 0.3,
-          fill: false,
-          borderDash: [5, 5],
-        });
-
-        i++;
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
       }
+    });
+  }
 
-      new Chart(document.getElementById('graficoTransferenciasPorLocal'), {
-        type: 'line',
-        data: { labels, datasets },
-        options: commonOptions
-      });
-    }
-
-    // ── GRÁFICO 5 — BARRAS: Vendas por loja ou por produto ──
-    // Seletor alterna entre as duas visões sem recarregar a página
-    if (document.getElementById('graficoVendas')) {
-
-      const saidasPorLocal   = JSON.parse(el.dataset.saidasPorLocal);
-      const saidasPorProduto = JSON.parse(el.dataset.saidasPorProduto);
-
-      const graficoVendas = new Chart(document.getElementById('graficoVendas'), {
-        type: 'bar',
-        data: {
-          labels: saidasPorLocal.labels,
-          datasets: [{
-            label: 'Vendas por Loja',
-            data: saidasPorLocal.data,
-            backgroundColor: 'rgba(36,34,177,0.7)',
-            borderRadius: 6,
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { display: false } },
-          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-        }
-      });
-
-      // Alterna para visão por loja
-      document.getElementById('btn-por-loja').addEventListener('click', () => {
-        graficoVendas.data.labels = saidasPorLocal.labels;
-        graficoVendas.data.datasets[0].data = saidasPorLocal.data;
-        graficoVendas.data.datasets[0].label = 'Vendas por Loja';
-        graficoVendas.update();
-        document.getElementById('btn-por-loja').className = 'btn btn-sm btn-primary';
-        document.getElementById('btn-por-produto').className = 'btn btn-sm btn-outline-secondary';
-      });
-
-      // Alterna para visão por produto
-      document.getElementById('btn-por-produto').addEventListener('click', () => {
-        graficoVendas.data.labels = saidasPorProduto.labels;
-        graficoVendas.data.datasets[0].data = saidasPorProduto.data;
-        graficoVendas.data.datasets[0].label = 'Vendas por Produto';
-        graficoVendas.update();
-        document.getElementById('btn-por-produto').className = 'btn btn-sm btn-primary';
-        document.getElementById('btn-por-loja').className = 'btn btn-sm btn-outline-secondary';
-      });
-
-    }
-
-  } // fim if isGerente
-
-}); // fim DOMContentLoaded
+});
