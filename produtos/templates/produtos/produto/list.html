@@ -5,7 +5,6 @@
 
 {% block content %}
 
-{# ==================== CABEÇALHO ==================== #}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
     <h4 class="fw-bold mb-1">Produtos</h4>
@@ -16,7 +15,6 @@
   </a>
 </div>
 
-{# ==================== FILTROS ==================== #}
 <div class="d-flex flex-wrap gap-2 mb-4">
   <form method="get" class="d-flex gap-2 flex-wrap">
     <input type="text" name="q" value="{{ q }}" class="form-control"
@@ -38,26 +36,21 @@
   </form>
 </div>
 
-{# ==================== LISTA DE PRODUTOS ==================== #}
 <div class="row g-3">
   {% for produto in produtos %}
   <div class="col-sm-6 col-lg-4">
     <div class="card h-100">
       <div class="card-body p-4">
 
-        {# -- Ícone e badges -- #}
         <div class="d-flex justify-content-between align-items-start mb-3">
           <div class="rounded-3 p-2 {% if produto.is_chapa %}bg-info bg-opacity-10{% elif produto.is_insumo %}bg-warning bg-opacity-10{% else %}bg-primary bg-opacity-10{% endif %}">
             <i class="bi fs-5 {% if produto.is_chapa %}bi-grid text-info{% elif produto.is_insumo %}bi-box text-warning{% else %}bi-box-seam text-primary{% endif %}"></i>
           </div>
-          <div class="d-flex flex-column align-items-end gap-1">
-            <span class="badge {% if produto.is_chapa %}bg-info bg-opacity-10 text-info{% elif produto.is_insumo %}bg-warning bg-opacity-10 text-warning{% else %}bg-primary bg-opacity-10 text-primary{% endif %}">
-              {{ produto.get_categoria_display }}
-            </span>
-          </div>
+          <span class="badge {% if produto.is_chapa %}bg-info bg-opacity-10 text-info{% elif produto.is_insumo %}bg-warning bg-opacity-10 text-warning{% else %}bg-primary bg-opacity-10 text-primary{% endif %}">
+            {{ produto.get_categoria_display }}
+          </span>
         </div>
 
-        {# -- Nome e código -- #}
         <h6 class="fw-bold mb-0">
           {% if produto.descricao %}
             <span data-bs-toggle="tooltip" data-bs-placement="top" title="{{ produto.descricao }}">{{ produto.nome }}</span>
@@ -71,18 +64,7 @@
           <div class="mb-2"></div>
         {% endif %}
 
-        {# -- Detalhes: cor, medidas, estoque -- #}
         <div class="text-muted small mb-3">
-          {% if produto.cor %}
-            <div><span class="fw-semibold">Cor:</span> {{ produto.get_cor_display }}</div>
-          {% endif %}
-          {% with dims=produto.dimensoes_display %}
-            {% if dims %}
-              <div><span class="fw-semibold">Medidas:</span> {{ dims }}</div>
-            {% endif %}
-          {% endwith %}
-
-          {# -- Estoque atual por local -- #}
           <div>
             <span class="fw-semibold">Estoque:</span>
             {% if produto.saldos_por_local %}
@@ -95,10 +77,8 @@
               <span class="text-muted">Sem estoque</span>
             {% endif %}
           </div>
-
         </div>
 
-        {# -- Ações -- #}
         <div class="d-flex gap-2">
           <a href="{% url 'produtos:editar' produto.pk %}" class="btn btn-sm btn-outline-secondary w-50">
             <i class="bi bi-pencil me-1"></i> Editar
@@ -112,7 +92,6 @@
     </div>
   </div>
 
-  {# -- Estado vazio -- #}
   {% empty %}
   <div class="col-12">
     <div class="card">
@@ -134,5 +113,43 @@
   </div>
   {% endfor %}
 </div>
+
+{% if page_obj.has_other_pages %}
+<div class="d-flex justify-content-between align-items-center mt-4">
+  <span class="text-muted small">
+    Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+    — {{ page_obj.paginator.count }} produto(s)
+  </span>
+  <nav>
+    <ul class="pagination pagination-sm mb-0">
+      {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page=1&q={{ q }}&categoria={{ categoria }}">«</a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ q }}&categoria={{ categoria }}">‹</a>
+      </li>
+      {% endif %}
+      {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ num }}&q={{ q }}&categoria={{ categoria }}">{{ num }}</a>
+          </li>
+        {% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ q }}&categoria={{ categoria }}">›</a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&q={{ q }}&categoria={{ categoria }}">»</a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+</div>
+{% endif %}
 
 {% endblock %}
