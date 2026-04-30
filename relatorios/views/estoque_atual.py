@@ -37,7 +37,7 @@ def estoque_atual(request):
 
     # Pagina por local
     locais_lista = list(locais_dict.items())
-    paginator = Paginator(locais_lista, 3)  # 3 locais por página
+    paginator = Paginator(locais_lista, 2)  # 3 locais por página
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
