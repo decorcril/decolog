@@ -3,17 +3,17 @@ from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 from django.db import transaction
-from movimentacoes.models import OrdemSaida, ItemOrdemSaida
+from movimentacoes.models import OrdemSaida, ItemOrdemSaida, Movimentacao
 from produtos.models import Produto
 from estoque.models import Estoque
+from core.models import Local
 from core.mixins import estoquista_ou_admin
 
 
 @estoquista_ou_admin
 def ordem_saida_criar(request):
-    from core.models import Local
-
     locais = Local.objects.filter(ativo=True).order_by('nome')
     produtos = Produto.objects.filter(ativo=True).order_by('nome')
     motivo_choices = OrdemSaida.MOTIVO_CHOICES
@@ -62,8 +62,6 @@ def ordem_saida_criar(request):
                     saldo = Estoque.get_or_create_saldo(produto, local_origem)
                     saldo.subtrair(quantidade)
 
-                    # Registra movimentação
-                    from movimentacoes.models import Movimentacao
                     Movimentacao.objects.create(
                         produto=produto,
                         local=local_origem,
@@ -98,12 +96,20 @@ def ordem_saida_criar(request):
 @estoquista_ou_admin
 def ordem_saida_list(request):
     motivo = request.GET.get('motivo', '')
-    ordens = OrdemSaida.objects.select_related('local_origem', 'criado_por')
+    ordens = OrdemSaida.objects.select_related(
+        'local_origem', 'criado_por'
+    ).order_by('-data_criacao')
+
     if motivo:
         ordens = ordens.filter(motivo=motivo)
 
+    paginator = Paginator(ordens, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
     return render(request, 'movimentacoes/ordem_saida/list.html', {
-        'ordens': ordens,
+        'ordens': page_obj,
+        'page_obj': page_obj,
         'motivo': motivo,
         'motivo_choices': OrdemSaida.MOTIVO_CHOICES,
     })
