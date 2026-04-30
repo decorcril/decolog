@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
+from django.core.paginator import Paginator
 from movimentacoes.models import Movimentacao, OrdemTransferencia
 from core.models import Local, Fornecedor
 from produtos.models import Produto
@@ -37,6 +38,10 @@ def historico_list(request):
     if data_fim:
         movimentacoes = movimentacoes.filter(data_hora__date__lte=data_fim)
 
+    paginator_mov = Paginator(movimentacoes, 25)
+    page_mov = request.GET.get('page_mov')
+    page_obj_mov = paginator_mov.get_page(page_mov)
+
     # ── Ordens de transferência ──
     ordens = OrdemTransferencia.objects.select_related(
         'local_origem', 'local_destino', 'criado_por'
@@ -50,16 +55,20 @@ def historico_list(request):
         ordens = ordens.filter(data_envio__date__gte=data_inicio)
     if data_fim:
         ordens = ordens.filter(data_envio__date__lte=data_fim)
-
-    # Filtra ordens por produto se houver busca
     if q:
         ordens = ordens.filter(
             itens__produto__nome__icontains=q
         ).distinct()
 
+    paginator_ord = Paginator(ordens, 10)
+    page_ord = request.GET.get('page_ord')
+    page_obj_ord = paginator_ord.get_page(page_ord)
+
     return render(request, 'movimentacoes/historico/list.html', {
-        'movimentacoes': movimentacoes,
-        'ordens': ordens,
+        'movimentacoes': page_obj_mov,
+        'ordens': page_obj_ord,
+        'page_obj_mov': page_obj_mov,
+        'page_obj_ord': page_obj_ord,
         'locais': Local.objects.filter(ativo=True),
         'fornecedores': Fornecedor.objects.filter(ativo=True),
         'tipo_choices': Movimentacao.TIPO_CHOICES,
