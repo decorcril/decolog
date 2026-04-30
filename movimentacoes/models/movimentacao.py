@@ -6,7 +6,6 @@ from django.core.exceptions import ValidationError
 
 class Movimentacao(models.Model):
 
-    # ── Tipos de movimentação ──
     TIPO_ENTRADA = 'entrada'
     TIPO_SAIDA = 'saida'
     TIPO_TRANSFERENCIA = 'transferencia'
@@ -19,7 +18,6 @@ class Movimentacao(models.Model):
         (TIPO_AJUSTE, 'Ajuste'),
     ]
 
-    # ── Motivos ──
     MOTIVO_CHOICES = [
         ('compra', 'Compra'),
         ('venda', 'Venda'),
@@ -34,7 +32,6 @@ class Movimentacao(models.Model):
         ('outro', 'Outro'),
     ]
 
-    # ── Campos ──
     produto = models.ForeignKey(
         'produtos.Produto',
         on_delete=models.PROTECT,
@@ -71,6 +68,13 @@ class Movimentacao(models.Model):
         on_delete=models.SET_NULL,
         null=True, blank=True,
         verbose_name='Fornecedor'
+    )
+    registro_corte = models.ForeignKey(
+        'producao_corte.RegistroCorte',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='movimentacoes',
+        verbose_name='Registro de Corte'
     )
     nota_fiscal = models.CharField(
         max_length=50, blank=True,

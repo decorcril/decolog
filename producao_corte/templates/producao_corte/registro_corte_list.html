@@ -41,7 +41,7 @@
         <tr>
           <th>Data</th>
           <th>Operador</th>
-          <th class="text-center">Chapas Utilizadas</th>
+          <th class="text-center">Total de Chapas Utilizadas</th>
           <th>Observação</th>
           <th></th>
         </tr>
@@ -52,10 +52,19 @@
             data-bs-target="#detalhe-{{ r.pk }}" aria-expanded="false">
           <td class="fw-semibold">{{ r.data|date:"d/m/Y" }}</td>
           <td class="text-muted small">{{ r.operador.get_full_name|default:r.operador.username }}</td>
-          <td class="text-center text-muted small">{{ r.itens.count }}</td>
+          <td class="text-center text-muted small">{{ r.total_chapas|floatformat:"-2" }}</td>
           <td class="text-muted small fst-italic">{{ r.observacao|default:"—" }}</td>
           <td class="text-end">
-            <i class="bi bi-chevron-down text-muted small"></i>
+            <div class="d-flex gap-1 justify-content-end align-items-center">
+              {% if is_supervisor %}
+              <a href="{% url 'producao_corte:delete' r.pk %}"
+                 class="btn btn-sm btn-outline-danger"
+                 onclick="event.stopPropagation()">
+                <i class="bi bi-trash"></i>
+              </a>
+              {% endif %}
+              <i class="bi bi-chevron-down text-muted small"></i>
+            </div>
           </td>
         </tr>
         <tr class="collapse" id="detalhe-{{ r.pk }}">
@@ -102,7 +111,6 @@
     </span>
     <nav>
       <ul class="pagination pagination-sm mb-0">
-
         {% if page_obj.has_previous %}
         <li class="page-item">
           <a class="page-link" href="?page=1{% if operador_id %}&operador={{ operador_id }}{% endif %}">«</a>
@@ -111,19 +119,15 @@
           <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if operador_id %}&operador={{ operador_id }}{% endif %}">‹</a>
         </li>
         {% endif %}
-
         {% for num in page_obj.paginator.page_range %}
           {% if page_obj.number == num %}
-            <li class="page-item active">
-              <span class="page-link">{{ num }}</span>
-            </li>
+            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
           {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
             <li class="page-item">
               <a class="page-link" href="?page={{ num }}{% if operador_id %}&operador={{ operador_id }}{% endif %}">{{ num }}</a>
             </li>
           {% endif %}
         {% endfor %}
-
         {% if page_obj.has_next %}
         <li class="page-item">
           <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if operador_id %}&operador={{ operador_id }}{% endif %}">›</a>
@@ -132,7 +136,6 @@
           <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if operador_id %}&operador={{ operador_id }}{% endif %}">»</a>
         </li>
         {% endif %}
-
       </ul>
     </nav>
   </div>

@@ -1,19 +1,18 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.utils import timezone
 from django.db import transaction
 from django.db.models import Sum
 from django.contrib.auth.models import User
+from django.core.paginator import Paginator
 from decimal import Decimal
 from datetime import date
 
 from produtos.models import Produto
 from movimentacoes.models import Movimentacao
 from estoque.models import Estoque
-from core.mixins import operador_laser_ou_acima, producao_ou_gerente
+from core.mixins import producao_ou_gerente
 from ..models import RegistroCorte, ItemCorte, ProdutoCortado
-
-from django.core.paginator import Paginator
 
 
 @producao_ou_gerente
@@ -106,6 +105,7 @@ def registro_corte_create(request):
                             quantidade=abate,
                             observacao=f'Corte em {data_parsed.strftime("%d/%m/%Y")}',
                             usuario=request.user,
+                            registro_corte=registro,
                         )
                         restante -= abate
 
@@ -129,12 +129,11 @@ def registro_corte_create(request):
             messages.error(request, str(e))
             return redirect('producao_corte:create')
 
-    context = {
+    return render(request, 'producao_corte/registro_corte_form.html', {
         'produtos_materiais': produtos_materiais,
         'produtos_finais': produtos_finais,
         'hoje': timezone.localdate().isoformat(),
-    }
-    return render(request, 'producao_corte/registro_corte_form.html', context)
+    })
 
 
 @producao_ou_gerente
@@ -156,10 +155,12 @@ def registro_corte_list(request):
         registros = registros.filter(operador__id=operador_id)
 
     registros = registros.prefetch_related(
-        'itens__chapa', 'itens__produtos_cortados__produto'
-    ).select_related('operador').order_by('-data', '-criado_em')
+    'itens__chapa', 'itens__produtos_cortados__produto'
+    ).select_related('operador').annotate(
+        total_chapas=Sum('itens__quantidade_chapa')
+    ).order_by('-data', '-criado_em')
 
-    paginator = Paginator(registros, 20)  # 20 por página
+    paginator = Paginator(registros, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
@@ -173,4 +174,33 @@ def registro_corte_list(request):
         'operadores': operadores,
         'operador_id': operador_id,
         'page_obj': page_obj,
+    })
+
+
+@producao_ou_gerente
+def registro_corte_delete(request, pk):
+    registro = get_object_or_404(RegistroCorte, pk=pk)
+
+    if request.method == 'POST':
+        try:
+            with transaction.atomic():
+                for mov in registro.movimentacoes.all():
+                    Movimentacao.objects.create(
+                        produto=mov.produto,
+                        local=mov.local,
+                        tipo='entrada',
+                        motivo='uso_interno',
+                        quantidade=mov.quantidade,
+                        observacao=f'Estorno do corte em {registro.data.strftime("%d/%m/%Y")}',
+                        usuario=request.user,
+                    )
+                registro.delete()
+                messages.success(request, 'Registro excluído e estoque estornado com sucesso!')
+        except Exception as e:
+            messages.error(request, f'Erro ao excluir: {e}')
+
+        return redirect('producao_corte:list')
+
+    return render(request, 'producao_corte/registro_corte_confirm_delete.html', {
+        'registro': registro,
     })
