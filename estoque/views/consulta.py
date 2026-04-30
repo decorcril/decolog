@@ -2,6 +2,7 @@ from django.db.models import Q
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.core.paginator import Paginator
 from core.models import Local
 from produtos.models import Produto
 from estoque.models import Estoque
@@ -13,9 +14,6 @@ def estoque_list(request):
     local_id = request.GET.get('local', '')
     categoria = request.GET.get('categoria', '')
 
-    from estoque.models import Estoque
-    from produtos.models import Produto
-
     produtos = Produto.objects.filter(ativo=True)
 
     if q:
@@ -25,7 +23,6 @@ def estoque_list(request):
     if categoria:
         produtos = produtos.filter(categoria=categoria)
 
-    # Adiciona saldos por local em cada produto
     resultado = []
     for produto in produtos:
         saldos = Estoque.objects.filter(
@@ -39,11 +36,14 @@ def estoque_list(request):
             produto.saldos_por_local = saldos
             resultado.append(produto)
 
-    locais = Local.objects.filter(ativo=True)
+    paginator = Paginator(resultado, 24)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
 
     return render(request, 'estoque/consulta/list.html', {
-        'produtos': resultado,
-        'locais': locais,
+        'produtos': page_obj,
+        'page_obj': page_obj,
+        'locais': Local.objects.filter(ativo=True),
         'q': q,
         'local_id': local_id,
         'categoria': categoria,
@@ -53,18 +53,17 @@ def estoque_list(request):
 
 @login_required
 def saldo_por_produto(request, produto_id):
-    from estoque.models import Estoque
     estoques = Estoque.objects.filter(
         produto_id=produto_id,
         quantidade__gt=0
     ).select_related('local')
 
     dados = [
-    {
-        'local': e.local.nome,
-        'local_id': e.local.id,
-        'quantidade': int(e.quantidade) if e.quantidade == e.quantidade.to_integral_value() else str(e.quantidade),
-    }
-    for e in estoques
+        {
+            'local': e.local.nome,
+            'local_id': e.local.id,
+            'quantidade': int(e.quantidade) if e.quantidade == e.quantidade.to_integral_value() else str(e.quantidade),
+        }
+        for e in estoques
     ]
     return JsonResponse({'saldos': dados})
