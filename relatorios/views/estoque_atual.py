@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
+from django.core.paginator import Paginator
 from core.mixins import estoque_ou_gerente
 from estoque.models import Estoque
 from core.models import Local
@@ -34,8 +35,15 @@ def estoque_atual(request):
             locais_dict[nome_local] = []
         locais_dict[nome_local].append(e)
 
+    # Pagina por local
+    locais_lista = list(locais_dict.items())
+    paginator = Paginator(locais_lista, 3)  # 3 locais por página
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
     return render(request, 'relatorios/estoque_atual.html', {
-        'locais_dict': locais_dict,
+        'locais_page': page_obj,
+        'page_obj': page_obj,
         'locais': Local.objects.filter(ativo=True),
         'q': q,
         'local_id': local_id,
