@@ -13,6 +13,8 @@ from estoque.models import Estoque
 from core.mixins import operador_laser_ou_acima, producao_ou_gerente
 from ..models import RegistroCorte, ItemCorte, ProdutoCortado
 
+from django.core.paginator import Paginator
+
 
 @producao_ou_gerente
 def registro_corte_create(request):
@@ -155,15 +157,20 @@ def registro_corte_list(request):
 
     registros = registros.prefetch_related(
         'itens__chapa', 'itens__produtos_cortados__produto'
-    ).select_related('operador')
+    ).select_related('operador').order_by('-data', '-criado_em')
+
+    paginator = Paginator(registros, 20)  # 20 por página
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
 
     operadores = User.objects.filter(
         registrocorte__isnull=False
     ).distinct() if is_supervisor else None
 
     return render(request, 'producao_corte/registro_corte_list.html', {
-        'registros': registros,
+        'registros': page_obj,
         'is_supervisor': is_supervisor,
         'operadores': operadores,
         'operador_id': operador_id,
+        'page_obj': page_obj,
     })
