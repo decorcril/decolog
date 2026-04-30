@@ -5,7 +5,6 @@
 
 {% block content %}
 
-{# ==================== CABEÇALHO ==================== #}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
     <h4 class="fw-bold mb-1">Ordens de Transferência</h4>
@@ -16,7 +15,6 @@
   </a>
 </div>
 
-{# ==================== FILTRO DE STATUS ==================== #}
 <div class="d-flex gap-2 mb-4">
   <a href="{% url 'movimentacoes:ordem_list' %}"
     class="btn btn-sm {% if not status %}btn-primary{% else %}btn-outline-secondary{% endif %}">
@@ -30,7 +28,6 @@
   {% endfor %}
 </div>
 
-{# ==================== LISTA ==================== #}
 <div class="card">
   <div class="table-responsive">
     <table class="table mb-0">
@@ -78,6 +75,45 @@
       </tbody>
     </table>
   </div>
+
+  {% if page_obj.has_other_pages %}
+  <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top">
+    <span class="text-muted small">
+      Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+      — {{ page_obj.paginator.count }} ordem(ns)
+    </span>
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?page=1&status={{ status }}">«</a>
+        </li>
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.previous_page_number }}&status={{ status }}">‹</a>
+        </li>
+        {% endif %}
+        {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+          {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ num }}&status={{ status }}">{{ num }}</a>
+            </li>
+          {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.next_page_number }}&status={{ status }}">›</a>
+        </li>
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&status={{ status }}">»</a>
+        </li>
+        {% endif %}
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+
 </div>
 
 {% endblock %}

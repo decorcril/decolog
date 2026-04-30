@@ -4,6 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 from django.db import transaction
 from movimentacoes.models import OrdemTransferencia, ItemOrdemTransferencia
 from movimentacoes.forms import OrdemTransferenciaForm
@@ -20,7 +21,6 @@ def ordem_criar(request):
         origem = form.cleaned_data['local_origem']
         destino = form.cleaned_data['local_destino']
 
-        # Coleta os itens do POST
         produto_ids = request.POST.getlist('produto_id')
         quantidades = request.POST.getlist('quantidade')
 
@@ -51,8 +51,6 @@ def ordem_criar(request):
                     if quantidade <= 0:
                         continue
 
-                    # Baixa do estoque de origem
-                    # Lança ValidationError se saldo insuficiente
                     saldo = Estoque.get_or_create_saldo(produto, origem)
                     saldo.subtrair(quantidade)
 
@@ -81,12 +79,18 @@ def ordem_list(request):
     status = request.GET.get('status', '')
     ordens = OrdemTransferencia.objects.select_related(
         'local_origem', 'local_destino', 'criado_por'
-    )
+    ).order_by('-data_envio')
+
     if status:
         ordens = ordens.filter(status=status)
 
+    paginator = Paginator(ordens, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
     return render(request, 'movimentacoes/ordem_transferencia/list.html', {
-        'ordens': ordens,
+        'ordens': page_obj,
+        'page_obj': page_obj,
         'status': status,
         'status_choices': OrdemTransferencia.STATUS_CHOICES,
     })
