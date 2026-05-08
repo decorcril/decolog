@@ -3,8 +3,15 @@ from produtos.models import Produto
 from core.models import Local, Fornecedor
 
 
+class ProdutoChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        if obj.descricao:
+            return f'{obj.nome} — {obj.descricao}'
+        return obj.nome
+
+
 class EntradaForm(forms.Form):
-    produto = forms.ModelChoiceField(
+    produto = ProdutoChoiceField(
         queryset=Produto.objects.filter(ativo=True),
         widget=forms.Select(attrs={'class': 'form-select'}),
         label='Produto'

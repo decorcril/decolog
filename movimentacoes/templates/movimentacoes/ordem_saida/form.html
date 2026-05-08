@@ -81,7 +81,7 @@
 <script>
 const PRODUTOS = [
   {% for p in produtos %}
-  { id: "{{ p.pk }}", nome: "{{ p.nome|escapejs }}", codigo: "{{ p.codigo|default:''|escapejs }}" },
+  { id: "{{ p.pk }}", nome: "{{ p.nome|escapejs }}", descricao: "{{ p.descricao|default:''|escapejs }}" },
   {% endfor %}
 ];
 
@@ -97,7 +97,7 @@ function addLinha() {
     <div class="col">
       <select id="produto-select-${idx}" name="produto_id" required>
         <option value="">Buscar por nome ou código...</option>
-        ${PRODUTOS.map(p => `<option value="${p.id}">${p.nome}${p.codigo ? ' — ' + p.codigo : ''}</option>`).join('')}
+        ${PRODUTOS.map(p => `<option value="${p.id}">${p.nome}${p.descricao ? ' — ' + p.descricao : ''}</option>`).join('')}
       </select>
       <div id="saldo-${idx}" class="mt-2" style="display:none;">
         <div class="p-2 rounded" style="background:#f9fafb;border:1px solid #e8eaed;font-size:0.8rem;">

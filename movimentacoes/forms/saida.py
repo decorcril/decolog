@@ -4,19 +4,26 @@ from core.models import Local
 from estoque.models import Estoque
 
 
+class ProdutoChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        if obj.descricao:
+            return f'{obj.nome} — {obj.descricao}'
+        return obj.nome
+
+
 class SaidaForm(forms.Form):
     MOTIVO_CHOICES = [
-    ('venda', 'Venda'),
-    ('perda', 'Perda / Avaria'),
-    ('uso_interno', 'Uso Interno'),
-    ('troca', 'Troca'),
-    ('publicidade', 'Publicidade'),
-    ('reposicao', 'Reposição'),
-    ('manutencao', 'Manutenção'),
-    ('outro', 'Outro'),
-]
+        ('venda', 'Venda'),
+        ('perda', 'Perda / Avaria'),
+        ('uso_interno', 'Uso Interno'),
+        ('troca', 'Troca'),
+        ('publicidade', 'Publicidade'),
+        ('reposicao', 'Reposição'),
+        ('manutencao', 'Manutenção'),
+        ('outro', 'Outro'),
+    ]
 
-    produto = forms.ModelChoiceField(
+    produto = ProdutoChoiceField(
         queryset=Produto.objects.filter(ativo=True),
         widget=forms.Select(attrs={'class': 'form-select'}),
         label='Produto'

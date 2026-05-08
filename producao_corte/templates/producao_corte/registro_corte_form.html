@@ -61,15 +61,14 @@
 <script>
 const MATERIAIS = [
   {% for p in produtos_materiais %}
-  { id: {{ p.pk }}, nome: "{{ p.nome }}" },
+  { id: {{ p.pk }}, nome: "{{ p.nome }}{% if p.descricao %} — {{ p.descricao|escapejs }}{% endif %}" },
   {% endfor %}
 ];
 const PRODUTOS_FINAIS = [
   {% for p in produtos_finais %}
-  { id: {{ p.pk }}, nome: "{{ p.nome }}" },
+  { id: {{ p.pk }}, nome: "{{ p.nome }}{% if p.descricao %} — {{ p.descricao|escapejs }}{% endif %}" },
   {% endfor %}
 ];
-
 let chapaCount = 0;
 
 function buildSelect(lista, name) {

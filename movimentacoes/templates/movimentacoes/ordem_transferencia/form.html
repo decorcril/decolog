@@ -83,7 +83,7 @@
                     data-nome="{{ produto.nome }}"
                     data-codigo="{{ produto.codigo|default:'' }}"
                     data-unidade="{{ produto|unidade_abrev }}">
-                    {{ produto.nome }}{% if produto.codigo %} ({{ produto.codigo }}){% endif %}
+                    {{ produto.nome }}{% if produto.descricao %} ({{ produto.descricao }}){% endif %}
                   </option>
                 {% endfor %}
               </select>
