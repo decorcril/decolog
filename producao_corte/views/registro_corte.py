@@ -7,6 +7,7 @@ from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from decimal import Decimal
 from datetime import date
+import json
 
 from produtos.models import Produto
 from movimentacoes.models import Movimentacao
@@ -130,9 +131,15 @@ def registro_corte_create(request):
             return redirect('producao_corte:create')
 
     return render(request, 'producao_corte/registro_corte_form.html', {
-        'produtos_materiais': produtos_materiais,
-        'produtos_finais': produtos_finais,
         'hoje': timezone.localdate().isoformat(),
+        'materiais_json': json.dumps([
+            {'id': str(p.pk), 'nome': p.nome}
+            for p in produtos_materiais
+        ], ensure_ascii=False),
+        'produtos_json': json.dumps([
+            {'id': str(p.pk), 'nome': p.nome}
+            for p in produtos_finais
+        ], ensure_ascii=False),
     })
 
 
@@ -155,7 +162,7 @@ def registro_corte_list(request):
         registros = registros.filter(operador__id=operador_id)
 
     registros = registros.prefetch_related(
-    'itens__chapa', 'itens__produtos_cortados__produto'
+        'itens__chapa', 'itens__produtos_cortados__produto'
     ).select_related('operador').annotate(
         total_chapas=Sum('itens__quantidade_chapa')
     ).order_by('-data', '-criado_em')

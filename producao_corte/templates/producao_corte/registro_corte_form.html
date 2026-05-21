@@ -1,6 +1,11 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Novo Registro de Corte — Decolog{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+{% endblock %}
 
 {% block content %}
 <div class="container-fluid px-3 py-3" style="max-width: 800px;">
@@ -19,6 +24,10 @@
     {% endfor %}
   {% endif %}
 
+  <script id="corte-data" type="application/json">
+  {"materiais": {{ materiais_json|safe }}, "produtos": {{ produtos_json|safe }}}
+  </script>
+
   <form method="post" id="form-corte">
     {% csrf_token %}
 
@@ -34,7 +43,7 @@
       <div class="card-body py-3">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <span class="fw-semibold">Chapas e Produtos Cortados</span>
-          <button type="button" class="btn btn-sm btn-primary" onclick="addChapa()">
+          <button type="button" id="btn-add-chapa" class="btn btn-sm btn-primary">
             + Chapa
           </button>
         </div>
@@ -57,83 +66,9 @@
     </button>
   </form>
 </div>
+{% endblock %}
 
-<script>
-const MATERIAIS = [
-  {% for p in produtos_materiais %}
-  { id: {{ p.pk }}, nome: "{{ p.nome }}{% if p.descricao %} — {{ p.descricao|escapejs }}{% endif %}" },
-  {% endfor %}
-];
-const PRODUTOS_FINAIS = [
-  {% for p in produtos_finais %}
-  { id: {{ p.pk }}, nome: "{{ p.nome }}{% if p.descricao %} — {{ p.descricao|escapejs }}{% endif %}" },
-  {% endfor %}
-];
-let chapaCount = 0;
-
-function buildSelect(lista, name) {
-  let opts = '<option value="">selecione</option>';
-  lista.forEach(p => {
-    opts += `<option value="${p.id}">${p.nome}</option>`;
-  });
-  return `<select name="${name}" class="form-select" required>${opts}</select>`;
-}
-
-function addChapa() {
-  const ci = chapaCount++;
-  const chapaDiv = document.createElement('div');
-  chapaDiv.className = 'chapa-block mb-3 border rounded-3 p-3';
-  chapaDiv.dataset.chapaIdx = ci;
-
-  chapaDiv.innerHTML = `
-    <div class="d-flex align-items-center gap-2 mb-3">
-      <span class="text-muted fw-semibold small text-uppercase">Chapa</span>
-      <div class="col">
-        ${buildSelect(MATERIAIS, `entrada_produto_${ci}`)}
-      </div>
-      <div style="width:90px">
-        <input type="number" name="entrada_quantidade_${ci}"
-               class="form-control" placeholder="Qtd" min="1" step="1" required>
-      </div>
-      <button type="button" class="btn btn-outline-danger btn-sm"
-              onclick="this.closest('.chapa-block').remove()">✕</button>
-    </div>
-
-    <div class="ps-3 border-start border-2 border-success-subtle">
-      <p class="text-muted small fw-semibold mb-2">PRODUTOS CORTADOS DESTA CHAPA</p>
-      <div class="saidas-list" data-chapa-idx="${ci}" data-prod-count="0"></div>
-      <button type="button" class="btn btn-sm btn-outline-success mt-1"
-              onclick="addProduto(this, ${ci})">+ produto</button>
-    </div>
-  `;
-
-  document.getElementById('chapas-container').appendChild(chapaDiv);
-  addProduto(chapaDiv.querySelector('.btn-outline-success'), ci);
-}
-
-function addProduto(btn, chapaIdx) {
-  const lista = btn.previousElementSibling;
-  const pi = parseInt(lista.dataset.prodCount);
-  lista.dataset.prodCount = pi + 1;
-
-  const div = document.createElement('div');
-  div.className = 'row g-2 mb-2 align-items-center';
-  div.innerHTML = `
-    <div class="col">
-      ${buildSelect(PRODUTOS_FINAIS, `saida_chapa_${chapaIdx}_produto_${pi}`)}
-    </div>
-    <div class="col-3">
-      <input type="number" name="saida_chapa_${chapaIdx}_quantidade_${pi}"
-             class="form-control" placeholder="Qtd" min="1" step="1" required>
-    </div>
-    <div class="col-auto">
-      <button type="button" class="btn btn-outline-danger btn-sm"
-              onclick="this.closest('.row').remove()">✕</button>
-    </div>
-  `;
-  lista.appendChild(div);
-}
-
-addChapa();
-</script>
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script src="{% static 'js/registro_corte_form.js' %}"></script>
 {% endblock %}
