@@ -1,3 +1,16 @@
+from functools import reduce
+import operator
+
+from django.db.models import Q
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.shortcuts import render
+from django.core.paginator import Paginator
+from core.models import Local
+from produtos.models import Produto
+from estoque.models import Estoque
+
+
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
@@ -17,9 +30,10 @@ def estoque_list(request):
     produtos = Produto.objects.filter(ativo=True)
 
     if q:
-        produtos = produtos.filter(
-            Q(nome__icontains=q) | Q(codigo__icontains=q)
-        )
+        termos = q.split()
+        queries = [Q(nome__icontains=t) | Q(codigo__icontains=t) for t in termos]
+        produtos = produtos.filter(reduce(operator.and_, queries))
+
     if categoria:
         produtos = produtos.filter(categoria=categoria)
 

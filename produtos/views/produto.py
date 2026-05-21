@@ -4,24 +4,46 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.db.models.deletion import ProtectedError
-from core.mixins import estoquista_ou_admin
+from core.mixins import estoquista_ou_admin, supervisor_laser_ou_admin
 from produtos.models import Produto
 from produtos.forms import ProdutoForm
 from estoque.models import Estoque
 
 
+def pode_gerir_produtos(user):
+    """Verifica se o usuário pode criar/editar/deletar produtos."""
+    return (
+        user.is_staff or
+        user.groups.filter(name__in=['Estoquista', 'Gerente', 'Supervisor de Laser']).exists()
+    )
+
+
+def is_supervisor_laser(user):
+    return not user.is_staff and user.groups.filter(name='Supervisor de Laser').exists() and \
+           not user.groups.filter(name__in=['Estoquista', 'Gerente']).exists()
+
+
 @login_required
 def produto_list(request):
+    from functools import reduce
+    import operator
+
     q = request.GET.get('q', '')
     categoria = request.GET.get('categoria', '')
 
     produtos = Produto.objects.all()
 
+    # Supervisor laser só vê produtos finais
+    if is_supervisor_laser(request.user):
+        produtos = produtos.filter(categoria='produto_final')
+        categoria = 'produto_final'
+
     if q:
-        produtos = produtos.filter(
-            Q(nome__icontains=q) | Q(codigo__icontains=q)
-        )
-    if categoria:
+        termos = q.split()
+        queries = [Q(nome__icontains=t) | Q(codigo__icontains=t) for t in termos]
+        produtos = produtos.filter(reduce(operator.and_, queries))
+
+    if categoria and not is_supervisor_laser(request.user):
         produtos = produtos.filter(categoria=categoria)
 
     produtos = produtos.order_by('nome')
@@ -41,39 +63,84 @@ def produto_list(request):
         'q': q,
         'categoria': categoria,
         'categoria_choices': Produto.CATEGORIA_CHOICES,
+        'is_supervisor_laser': is_supervisor_laser(request.user),
+        'pode_gerir': pode_gerir_produtos(request.user),
     })
 
-
-@estoquista_ou_admin
+@login_required
 def produto_create(request):
+    if not pode_gerir_produtos(request.user):
+        messages.error(request, 'Você não tem permissão para cadastrar produtos.')
+        return redirect('produtos:lista')
+
     form = ProdutoForm(request.POST or None)
+
+    # Supervisor laser só pode criar produto final
+    if is_supervisor_laser(request.user):
+        form.fields['categoria'].initial = 'produto_final'
+        form.fields['categoria'].widget.attrs['disabled'] = True
+
     if request.method == 'POST' and form.is_valid():
-        form.save()
+        produto = form.save(commit=False)
+        if is_supervisor_laser(request.user):
+            produto.categoria = 'produto_final'
+        produto.save()
         messages.success(request, 'Produto cadastrado com sucesso!')
         return redirect('produtos:lista')
+
     return render(request, 'produtos/produto/form.html', {
         'form': form,
         'titulo': 'Novo Produto',
+        'is_supervisor_laser': is_supervisor_laser(request.user),
     })
 
 
-@estoquista_ou_admin
+@login_required
 def produto_update(request, pk):
+    if not pode_gerir_produtos(request.user):
+        messages.error(request, 'Você não tem permissão para editar produtos.')
+        return redirect('produtos:lista')
+
     produto = get_object_or_404(Produto, pk=pk)
+
+    # Supervisor laser só pode editar produto final
+    if is_supervisor_laser(request.user) and produto.categoria != 'produto_final':
+        messages.error(request, 'Você só pode editar produtos finais.')
+        return redirect('produtos:lista')
+
     form = ProdutoForm(request.POST or None, instance=produto)
+
+    if is_supervisor_laser(request.user):
+        form.fields['categoria'].widget.attrs['disabled'] = True
+
     if request.method == 'POST' and form.is_valid():
-        form.save()
+        produto = form.save(commit=False)
+        if is_supervisor_laser(request.user):
+            produto.categoria = 'produto_final'
+        produto.save()
         messages.success(request, 'Produto atualizado com sucesso!')
         return redirect('produtos:lista')
+
     return render(request, 'produtos/produto/form.html', {
         'form': form,
         'titulo': 'Editar Produto',
+        'is_supervisor_laser': is_supervisor_laser(request.user),
     })
 
 
-@estoquista_ou_admin
+@login_required
 def produto_delete(request, pk):
+    if not pode_gerir_produtos(request.user):
+        messages.error(request, 'Você não tem permissão para excluir produtos.')
+        return redirect('produtos:lista')
+
     produto = get_object_or_404(Produto, pk=pk)
+
+    # Supervisor laser só pode deletar produto final
+    if is_supervisor_laser(request.user) and produto.categoria != 'produto_final':
+        messages.error(request, 'Você só pode excluir produtos finais.')
+        return redirect('produtos:lista')
+
     if request.method == 'POST':
         try:
             produto.delete()
@@ -86,4 +153,5 @@ def produto_delete(request, pk):
                 f'Desative o produto em vez de excluí-lo.'
             )
         return redirect('produtos:lista')
+
     return render(request, 'produtos/produto/confirm_delete.html', {'produto': produto})

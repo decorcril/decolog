@@ -37,7 +37,7 @@
         <i class="bi bi-speedometer2"></i> Dashboard
       </a>
 
-      {# -- Cadastros [MOBILE] -- #}
+      {# -- Cadastros [MOBILE] gerente -- #}
       {% if is_gerente %}
       <div class="mobile-nav-section">Cadastros</div>
       <a href="{% url 'core:local_list' %}" class="mobile-nav-link">
@@ -51,6 +51,14 @@
       </a>
       <a href="{% url 'core:tag_list' %}" class="mobile-nav-link">
         <i class="bi bi-tag"></i> Tags de Fornecedores
+      </a>
+      {% endif %}
+
+      {# -- Cadastros [MOBILE] supervisor laser -- #}
+      {% if is_supervisor_laser and not is_gerente %}
+      <div class="mobile-nav-section">Cadastros</div>
+      <a href="{% url 'produtos:lista' %}" class="mobile-nav-link">
+        <i class="bi bi-box-seam"></i> Produtos Finais
       </a>
       {% endif %}
 
@@ -140,7 +148,7 @@
         <i class="bi bi-speedometer2"></i> Dashboard
       </a>
 
-      {# -- Cadastros [DESKTOP] -- #}
+      {# -- Cadastros [DESKTOP] gerente -- #}
       {% if is_gerente %}
       <div class="dropdown">
         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
@@ -166,6 +174,22 @@
           <li>
             <a class="dropdown-item" href="{% url 'core:tag_list' %}">
               <i class="bi bi-tag"></i> Tags de Fornecedores
+            </a>
+          </li>
+        </ul>
+      </div>
+      {% endif %}
+
+      {# -- Cadastros [DESKTOP] supervisor laser -- #}
+      {% if is_supervisor_laser and not is_gerente %}
+      <div class="dropdown">
+        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+          <i class="bi bi-grid"></i> Cadastros
+        </a>
+        <ul class="dropdown-menu">
+          <li>
+            <a class="dropdown-item" href="{% url 'produtos:lista' %}">
+              <i class="bi bi-box-seam"></i> Produtos Finais
             </a>
           </li>
         </ul>

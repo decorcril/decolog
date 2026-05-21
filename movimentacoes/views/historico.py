@@ -9,6 +9,9 @@ from produtos.models import Produto
 
 @login_required
 def historico_list(request):
+    from functools import reduce
+    import operator
+
     q = request.GET.get('q', '')
     tipo = request.GET.get('tipo', '')
     local_id = request.GET.get('local', '')
@@ -22,9 +25,13 @@ def historico_list(request):
     ).order_by('-data_hora')
 
     if q:
-        movimentacoes = movimentacoes.filter(
-            Q(produto__nome__icontains=q) | Q(produto__codigo__icontains=q)
-        )
+        termos = q.split()
+        queries = [
+            Q(produto__nome__icontains=t) | Q(produto__codigo__icontains=t)
+            for t in termos
+        ]
+        movimentacoes = movimentacoes.filter(reduce(operator.and_, queries))
+
     if tipo:
         movimentacoes = movimentacoes.filter(tipo=tipo)
     if local_id:
@@ -56,9 +63,12 @@ def historico_list(request):
     if data_fim:
         ordens = ordens.filter(data_envio__date__lte=data_fim)
     if q:
-        ordens = ordens.filter(
-            itens__produto__nome__icontains=q
-        ).distinct()
+        termos = q.split()
+        queries = [
+            Q(itens__produto__nome__icontains=t)
+            for t in termos
+        ]
+        ordens = ordens.filter(reduce(operator.and_, queries)).distinct()
 
     paginator_ord = Paginator(ordens, 10)
     page_ord = request.GET.get('page_ord')
