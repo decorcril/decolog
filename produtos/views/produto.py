@@ -40,7 +40,7 @@ def produto_list(request):
 
     if q:
         termos = q.split()
-        queries = [Q(nome__icontains=t) | Q(codigo__icontains=t) for t in termos]
+        queries = [Q(nome__icontains=t) | Q(codigo__istartswith=t) for t in termos]
         produtos = produtos.filter(reduce(operator.and_, queries))
 
     if categoria and not is_supervisor_laser(request.user):
