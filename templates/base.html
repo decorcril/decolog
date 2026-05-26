@@ -38,7 +38,7 @@
       </a>
 
       {# -- Cadastros [MOBILE] gerente -- #}
-      {% if is_gerente %}
+      {% if is_gerente or is_estoquista %}
       <div class="mobile-nav-section">Cadastros</div>
       <a href="{% url 'core:local_list' %}" class="mobile-nav-link">
         <i class="bi bi-building"></i> Locais
@@ -195,7 +195,7 @@
       </a>
 
       {# -- Cadastros [DESKTOP] gerente -- #}
-      {% if is_gerente %}
+      {% if is_gerente or is_estoquista %}
       <div class="dropdown">
         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
           <i class="bi bi-grid"></i> Cadastros
