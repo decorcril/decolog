@@ -62,13 +62,12 @@
       </a>
       {% endif %}
 
-      {# -- Estoque [MOBILE] -- #}
-      {% if is_gerente or is_laser %}
+      {# -- Estoque [MOBILE] gerente -- #}
+      {% if is_gerente %}
       <div class="mobile-nav-section">Estoque</div>
       <a href="{% url 'estoque:lista' %}" class="mobile-nav-link">
         <i class="bi bi-archive"></i> Consultar Estoque
       </a>
-      {% if is_gerente %}
       <a href="{% url 'movimentacoes:entrada' %}" class="mobile-nav-link">
         <i class="bi bi-arrow-down-circle"></i> Entrada
       </a>
@@ -91,10 +90,57 @@
         <i class="bi bi-clock-history"></i> Histórico
       </a>
       {% endif %}
+
+      {# -- Estoque [MOBILE] estoquista -- #}
+      {% if is_estoquista and not is_gerente %}
+      <div class="mobile-nav-section">Estoque</div>
+      <a href="{% url 'estoque:lista' %}" class="mobile-nav-link">
+        <i class="bi bi-archive"></i> Consultar Estoque
+      </a>
+      <a href="{% url 'movimentacoes:entrada' %}" class="mobile-nav-link">
+        <i class="bi bi-arrow-down-circle"></i> Entrada
+      </a>
+      <a href="{% url 'movimentacoes:saida' %}" class="mobile-nav-link">
+        <i class="bi bi-arrow-up-circle"></i> Saída Unitária
+      </a>
+      <a href="{% url 'movimentacoes:ordem_saida_criar' %}" class="mobile-nav-link">
+        <i class="bi bi-arrow-up-circle"></i> Saída em Lote
+      </a>
+      <a href="{% url 'movimentacoes:transferencia' %}" class="mobile-nav-link">
+        <i class="bi bi-arrow-left-right"></i> Transferência Unitária
+      </a>
+      <a href="{% url 'movimentacoes:ordem_list' %}" class="mobile-nav-link">
+        <i class="bi bi-arrow-left-right"></i> Transferência em Lote
+      </a>
+      <a href="{% url 'movimentacoes:ajuste' %}" class="mobile-nav-link">
+        <i class="bi bi-sliders"></i> Ajuste de Estoque
+      </a>
+      <a href="{% url 'movimentacoes:historico' %}" class="mobile-nav-link">
+        <i class="bi bi-clock-history"></i> Histórico
+      </a>
       {% endif %}
 
-      {# -- Relatórios [MOBILE] -- #}
+      {# -- Estoque [MOBILE] laser -- #}
+      {% if is_laser and not is_gerente and not is_estoquista %}
+      <div class="mobile-nav-section">Estoque</div>
+      <a href="{% url 'estoque:lista' %}" class="mobile-nav-link">
+        <i class="bi bi-archive"></i> Consultar Estoque
+      </a>
+      {% endif %}
+
+      {# -- Relatórios [MOBILE] gerente -- #}
       {% if is_gerente %}
+      <div class="mobile-nav-section">Relatórios</div>
+      <a href="{% url 'relatorios:estoque_atual' %}" class="mobile-nav-link">
+        <i class="bi bi-bar-chart"></i> Estoque Atual
+      </a>
+      <a href="{% url 'relatorios:estoque_baixo' %}" class="mobile-nav-link">
+        <i class="bi bi-exclamation-triangle"></i> Estoque Baixo
+      </a>
+      {% endif %}
+
+      {# -- Relatórios [MOBILE] estoquista -- #}
+      {% if is_estoquista and not is_gerente %}
       <div class="mobile-nav-section">Relatórios</div>
       <a href="{% url 'relatorios:estoque_atual' %}" class="mobile-nav-link">
         <i class="bi bi-bar-chart"></i> Estoque Atual
@@ -196,7 +242,7 @@
       </div>
       {% endif %}
 
-      {# -- Estoque [DESKTOP] -- #}
+      {# -- Estoque [DESKTOP] gerente -- #}
       {% if is_gerente %}
       <div class="dropdown">
         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
@@ -248,8 +294,81 @@
       </div>
       {% endif %}
 
-      {# -- Relatórios [DESKTOP] -- #}
+      {# -- Estoque [DESKTOP] estoquista -- #}
+      {% if is_estoquista and not is_gerente %}
+      <div class="dropdown">
+        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+          <i class="bi bi-archive"></i> Estoque
+        </a>
+        <ul class="dropdown-menu">
+          <li>
+            <a class="dropdown-item" href="{% url 'estoque:lista' %}">
+              <i class="bi bi-archive"></i> Consultar Estoque
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" href="{% url 'movimentacoes:entrada' %}">
+              <i class="bi bi-arrow-down-circle"></i> Entrada
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" href="{% url 'movimentacoes:saida' %}">
+              <i class="bi bi-arrow-up-circle"></i> Saída Unitária
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" href="{% url 'movimentacoes:ordem_saida_list' %}">
+              <i class="bi bi-arrow-up-circle"></i> Saída em Lote
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" href="{% url 'movimentacoes:transferencia' %}">
+              <i class="bi bi-arrow-left-right"></i> Transferência Unitária
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" href="{% url 'movimentacoes:ordem_list' %}">
+              <i class="bi bi-arrow-left-right"></i> Transferência em Lote
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" href="{% url 'movimentacoes:ajuste' %}">
+              <i class="bi bi-sliders"></i> Ajuste de Estoque
+            </a>
+          </li>
+          <li><hr class="dropdown-divider" style="border-color: rgba(255,255,255,0.08);"></li>
+          <li>
+            <a class="dropdown-item" href="{% url 'movimentacoes:historico' %}">
+              <i class="bi bi-clock-history"></i> Histórico
+            </a>
+          </li>
+        </ul>
+      </div>
+      {% endif %}
+
+      {# -- Relatórios [DESKTOP] gerente -- #}
       {% if is_gerente %}
+      <div class="dropdown">
+        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+          <i class="bi bi-bar-chart"></i> Relatórios
+        </a>
+        <ul class="dropdown-menu">
+          <li>
+            <a class="dropdown-item" href="{% url 'relatorios:estoque_atual' %}">
+              <i class="bi bi-bar-chart"></i> Estoque Atual
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" href="{% url 'relatorios:estoque_baixo' %}">
+              <i class="bi bi-exclamation-triangle"></i> Estoque Baixo
+            </a>
+          </li>
+        </ul>
+      </div>
+      {% endif %}
+
+      {# -- Relatórios [DESKTOP] estoquista -- #}
+      {% if is_estoquista and not is_gerente %}
       <div class="dropdown">
         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
           <i class="bi bi-bar-chart"></i> Relatórios
