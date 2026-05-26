@@ -4,7 +4,7 @@ from django.db.models import Sum, Count, F
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 from datetime import timedelta
-from movimentacoes.models import Movimentacao
+from movimentacoes.models import Movimentacao, OrdemTransferencia
 from estoque.models import Estoque
 from produtos.models import Produto
 from core.models import Local
@@ -24,6 +24,7 @@ def dashboard(request):
 
     user = request.user
     is_gerente = user.is_staff or user.groups.filter(name='Gerente').exists()
+    is_estoquista = user.groups.filter(name='Estoquista').exists()
     is_supervisor_laser = user.is_staff or user.groups.filter(name='Supervisor de Laser').exists()
     is_operador_laser = user.groups.filter(name='Operador laser').exists()
     is_laser = is_supervisor_laser or is_operador_laser
@@ -38,6 +39,11 @@ def dashboard(request):
         estoque_minimo__gt=0,
         quantidade__gt=F('estoque_minimo'),
         quantidade__lte=F('estoque_minimo') * 2
+    ).count()
+
+    # ── Indicadores estoquista ──
+    total_em_transito = OrdemTransferencia.objects.filter(
+        status='em_transito'
     ).count()
 
     # ── Indicadores laser ──
@@ -57,7 +63,7 @@ def dashboard(request):
         for i in range(dias)
     ]
 
-    # ── Gráfico 1: Entradas vs Vendas por dia ──
+    # ── Gráfico 1: Entradas vs Saídas por dia ──
     entradas_qs = Movimentacao.objects.filter(
         tipo=Movimentacao.TIPO_ENTRADA, data_hora__gte=data_inicio
     ).annotate(dia=TruncDate('data_hora')).values('dia').annotate(
@@ -106,6 +112,12 @@ def dashboard(request):
         cortes_operador_labels.append(nome or c['operador__username'])
     cortes_operador_data = [c['total'] for c in cortes_por_operador]
 
+    # ── Estoque baixo para estoquista ──
+    estoque_baixo = Estoque.objects.filter(
+        estoque_minimo__gt=0,
+        quantidade__lte=F('estoque_minimo') * 2
+    ).select_related('produto', 'local').order_by('quantidade')[:5]
+
     # ── Últimas movimentações ──
     ultimas_movimentacoes = Movimentacao.objects.select_related(
         'produto', 'local', 'usuario'
@@ -130,9 +142,11 @@ def dashboard(request):
         'total_itens_estoque': total_itens_estoque,
         'total_criticos': total_criticos,
         'total_alerta': total_alerta,
+        'total_em_transito': total_em_transito,
         'total_chapas_estoque': total_chapas_estoque,
         'total_cortes_periodo': total_cortes_periodo,
         'meus_cortes_periodo': meus_cortes_periodo,
+        'estoque_baixo': estoque_baixo,
         'dias_labels': json.dumps(dias_labels),
         'entradas_data': json.dumps(entradas_data),
         'vendas_data': json.dumps(vendas_data),
@@ -152,6 +166,7 @@ def dashboard(request):
         'cortes_recentes': cortes_recentes,
         'periodo': periodo,
         'is_gerente': is_gerente,
+        'is_estoquista': is_estoquista,
         'is_supervisor_laser': is_supervisor_laser,
         'is_operador_laser': is_operador_laser,
         'is_laser': is_laser,
