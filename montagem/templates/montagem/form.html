@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Registrar Produção — Decolog{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+
+<div class="mb-4">
+  <h4 class="page-title">Registrar Produção</h4>
+  <p class="page-subtitle">Registre os produtos montados na fábrica</p>
+</div>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="row g-3 justify-content-center">
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-body p-4">
+
+          <div class="card-section-title">Produto Montado</div>
+
+          <div class="mb-3">
+            <label class="form-label">Produto</label>
+            <select name="produto" id="id_produto" class="form-select" required>
+              <option value="">— selecione —</option>
+              {% for p in produtos_finais %}
+                <option value="{{ p.pk }}">{{ p.nome }}{% if p.codigo %} ({{ p.codigo }}){% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Quantidade</label>
+            <input type="number" name="quantidade" class="form-control"
+                   placeholder="0" step="1" min="1" required>
+          </div>
+
+          <div class="mb-0">
+            <label class="form-label">
+              Observação <span class="text-muted fw-normal" style="text-transform:none;letter-spacing:0;">(opcional)</span>
+            </label>
+            <textarea name="observacao" class="form-control" rows="3"
+                      placeholder="Ex: Número do Pedido personalizado, Pedido urgente, Número do Pedido..."></textarea>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 mt-3 justify-content-end">
+        <a href="{% url 'montagem:list' %}" class="btn btn-outline-secondary px-4">
+          Ver histórico
+        </a>
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="bi bi-check-lg me-1"></i> Registrar Produção
+        </button>
+      </div>
+
+    </div>
+  </div>
+</form>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script src="{% static 'js/tom_select_init.js' %}"></script>
+{% endblock %}

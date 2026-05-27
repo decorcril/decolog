@@ -13,4 +13,5 @@ urlpatterns = [
     path('movimentacoes/', include('movimentacoes.urls')),
     path('relatorios/', include('relatorios.urls')),
     path('producao/', include('producao_corte.urls')),
+    path('montagem/', include('montagem.urls')),
 ]

@@ -6,24 +6,27 @@ document.addEventListener('DOMContentLoaded', () => {
   const PRODUTOS_FINAIS = data.produtos;
   let chapaCount = 0;
 
-  function buildOptions(lista) {
-    let opts = '<option value="">— selecione —</option>';
-    lista.forEach(p => {
-      opts += `<option value="${p.id}">${p.nome}</option>`;
-    });
-    return opts;
-  }
+  function initTomSelect(el, lista) {
+    const options = lista.map(p => ({
+      value: p.id,
+      text: p.nome,
+      codigo: p.codigo || '',
+    }));
 
-  function initTomSelect(el) {
     return new TomSelect(el, {
+      options: options,
       placeholder: 'Buscar...',
-      searchField: ['text'],
+      searchField: ['text', 'codigo'],
       maxOptions: 50,
       render: {
         option: (data) => `<div class="ts-option">${data.text}</div>`,
         item: (data) => `<div>${data.text}</div>`,
       }
     });
+  }
+
+  function buildSelect(name, required = true) {
+    return `<select name="${name}" ${required ? 'required' : ''}></select>`;
   }
 
   function addChapa() {
@@ -36,9 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="d-flex align-items-center gap-2 mb-3">
         <span class="text-muted fw-semibold small text-uppercase">Chapa</span>
         <div class="col">
-          <select id="chapa-select-${ci}" name="entrada_produto_${ci}" required>
-            ${buildOptions(MATERIAIS)}
-          </select>
+          <select id="chapa-select-${ci}" name="entrada_produto_${ci}" required></select>
         </div>
         <div style="width:90px">
           <input type="number" name="entrada_quantidade_${ci}"
@@ -57,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
 
     document.getElementById('chapas-container').appendChild(chapaDiv);
-    initTomSelect(document.getElementById(`chapa-select-${ci}`));
+    initTomSelect(document.getElementById(`chapa-select-${ci}`), MATERIAIS);
     addProduto(chapaDiv.querySelector('.btn-outline-success'), ci);
   }
 
@@ -72,9 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     div.innerHTML = `
       <div class="col">
-        <select id="${selectId}" name="saida_chapa_${chapaIdx}_produto_${pi}" required>
-          ${buildOptions(PRODUTOS_FINAIS)}
-        </select>
+        <select id="${selectId}" name="saida_chapa_${chapaIdx}_produto_${pi}" required></select>
       </div>
       <div class="col-3">
         <input type="number" name="saida_chapa_${chapaIdx}_quantidade_${pi}"
@@ -86,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     `;
     lista.appendChild(div);
-    initTomSelect(document.getElementById(selectId));
+    initTomSelect(document.getElementById(selectId), PRODUTOS_FINAIS);
   }
 
   window.addProduto = addProduto;

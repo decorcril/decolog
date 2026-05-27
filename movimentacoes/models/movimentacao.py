@@ -23,6 +23,7 @@ class Movimentacao(models.Model):
         ('venda', 'Venda'),
         ('perda', 'Perda / Avaria'),
         ('uso_interno', 'Uso Interno'),
+        ('producao', 'Produção'),
         ('troca', 'Troca'),
         ('publicidade', 'Publicidade'),
         ('reposicao', 'Reposição'),

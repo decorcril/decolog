@@ -76,12 +76,14 @@
   </div>
 
 </form>
+{% endblock %}
 
+{% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
 const PRODUTOS = [
   {% for p in produtos %}
-  { id: "{{ p.pk }}", nome: "{{ p.nome|escapejs }}", descricao: "{{ p.descricao|default:''|escapejs }}" },
+  { id: "{{ p.pk }}", nome: "{{ p.nome|escapejs }}", codigo: "{{ p.codigo|default:''|escapejs }}" },
   {% endfor %}
 ];
 
@@ -95,10 +97,7 @@ function addLinha() {
   div.className = 'row g-2 mb-3 align-items-start';
   div.innerHTML = `
     <div class="col">
-      <select id="produto-select-${idx}" name="produto_id" required>
-        <option value="">Buscar por nome ou código...</option>
-        ${PRODUTOS.map(p => `<option value="${p.id}">${p.nome}${p.descricao ? ' — ' + p.descricao : ''}</option>`).join('')}
-      </select>
+      <select id="produto-select-${idx}" name="produto_id" required></select>
       <div id="saldo-${idx}" class="mt-2" style="display:none;">
         <div class="p-2 rounded" style="background:#f9fafb;border:1px solid #e8eaed;font-size:0.8rem;">
           <span style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#6b7280;">Saldo Disponível</span>
@@ -117,10 +116,16 @@ function addLinha() {
   `;
   container.appendChild(div);
 
-  // Inicializa Tom Select
-  const ts = new TomSelect(`#produto-select-${idx}`, {
+  const options = PRODUTOS.map(p => ({
+    value: p.id,
+    text: `${p.nome}${p.codigo ? ' (' + p.codigo + ')' : ''}`,
+    codigo: p.codigo,
+  }));
+
+  new TomSelect(`#produto-select-${idx}`, {
+    options: options,
     placeholder: 'Buscar por nome ou código...',
-    searchField: ['text'],
+    searchField: ['text', 'codigo'],
     maxOptions: 50,
     render: {
       option: (data) => `<div class="ts-option">${data.text}</div>`,
@@ -151,9 +156,6 @@ function addLinha() {
     }
   });
 }
-
-// Inicializa Tom Select nos selects fixos
-new TomSelect('#id_local_origem', { placeholder: 'Selecione um local...' });
 
 addLinha();
 </script>

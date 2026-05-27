@@ -1,0 +1,1 @@
+from .producao import registrar_producao, producao_list

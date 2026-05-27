@@ -1,30 +1,31 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-  // ══════════════════════════════════════════════════
-  // ESTADO — lista de produtos adicionados em memória
-  // Cada item: { id, nome, codigo, unidade, quantidade }
-  // ══════════════════════════════════════════════════
   let produtos = [];
 
-  // ══════════════════════════════════════════════════
-  // TOM SELECT — campo de busca de produto
-  // Busca por nome e código, carrega saldo ao selecionar
-  // ══════════════════════════════════════════════════
   const selectProdutoEl = document.getElementById('select-produto');
+
+  // Lê as opções direto do select HTML e monta o array com codigo
+  const opcoes = Array.from(selectProdutoEl.options)
+    .filter(o => o.value)
+    .map(o => ({
+      value: o.value,
+      text: o.text,
+      codigo: o.dataset.codigo || '',
+      nome: o.dataset.nome || o.text,
+      unidade: o.dataset.unidade || '',
+    }));
+
   const tomSelect = new TomSelect(selectProdutoEl, {
+    options: opcoes,
     placeholder: 'Buscar por nome ou código...',
     allowEmptyOption: true,
     maxOptions: 100,
-    searchField: ['text'],
-
-    // Renderiza cada opção no dropdown
+    searchField: ['text', 'codigo'],
     render: {
       option: function(data, escape) {
         return `<div class="py-1">${escape(data.text)}</div>`;
       }
     },
-
-    // Ao selecionar um produto, carrega o saldo disponível via API
     onChange: function(value) {
       const saldoInfo = document.getElementById('saldo-ordem-info');
       const saldoLista = document.getElementById('saldo-ordem-lista');
@@ -53,16 +54,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ══════════════════════════════════════════════════
-  // ADICIONAR PRODUTO
-  // Valida, adiciona à lista e atualiza a interface
-  // ══════════════════════════════════════════════════
   document.getElementById('btn-adicionar').addEventListener('click', () => {
     const produtoId = tomSelect.getValue();
     const quantidade = parseFloat(document.getElementById('input-quantidade').value);
-    const option = selectProdutoEl.querySelector(`option[value="${produtoId}"]`);
+    const opt = opcoes.find(o => o.value === produtoId);
 
-    // Validações
     if (!produtoId) { mostrarErro('Selecione um produto.'); return; }
     if (!quantidade || quantidade <= 0) { mostrarErro('Informe uma quantidade válida.'); return; }
     if (produtos.find(p => p.id === produtoId)) {
@@ -70,30 +66,22 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Adiciona à lista
     produtos.push({
       id: produtoId,
-      nome: option.dataset.nome,
-      codigo: option.dataset.codigo,
-      unidade: option.dataset.unidade,
+      nome: opt.nome,
+      codigo: opt.codigo,
+      unidade: opt.unidade,
       quantidade,
     });
 
-    // Limpa os campos
     tomSelect.setValue('');
     document.getElementById('input-quantidade').value = '';
     document.getElementById('saldo-ordem-info') && (document.getElementById('saldo-ordem-info').style.display = 'none');
     esconderErro();
-
-    // Atualiza a interface
     renderizarCards();
     atualizarInputsHidden();
   });
 
-  // ══════════════════════════════════════════════════
-  // REMOVER PRODUTO
-  // Remove da lista ao clicar no botão de lixeira do card
-  // ══════════════════════════════════════════════════
   document.addEventListener('click', (e) => {
     if (e.target.closest('.btn-remover-card')) {
       const id = e.target.closest('.btn-remover-card').dataset.id;
@@ -103,11 +91,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ══════════════════════════════════════════════════
-  // RENDERIZAR CARDS
-  // Mostra os produtos adicionados como cards
-  // Linha sólida = produto normal | tracejada = sem estoque
-  // ══════════════════════════════════════════════════
   function renderizarCards() {
     const lista = document.getElementById('lista-produtos');
     const msgVazio = document.getElementById('msg-vazio');
@@ -147,10 +130,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ══════════════════════════════════════════════════
-  // INPUTS HIDDEN
-  // Sincroniza a lista com inputs ocultos para envio do form
-  // ══════════════════════════════════════════════════
   function atualizarInputsHidden() {
     const container = document.getElementById('inputs-hidden');
     container.innerHTML = '';
@@ -160,10 +139,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ══════════════════════════════════════════════════
-  // VALIDAÇÃO AO SUBMETER
-  // Impede envio se nenhum produto foi adicionado
-  // ══════════════════════════════════════════════════
   document.getElementById('form-ordem').addEventListener('submit', (e) => {
     if (produtos.length === 0) {
       e.preventDefault();
@@ -172,9 +147,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ══════════════════════════════════════════════════
-  // HELPERS
-  // ══════════════════════════════════════════════════
   function mostrarErro(msg) {
     const el = document.getElementById('alerta-erro');
     el.textContent = msg;

@@ -27,18 +27,14 @@ def grupo_requerido(*grupos):
 def admin_required(view_func):
     return grupo_requerido()(view_func)
 
-
 def gerente_ou_admin(view_func):
     return grupo_requerido('Gerente')(view_func)
-
 
 def estoquista_ou_admin(view_func):
     return grupo_requerido('Estoquista')(view_func)
 
-
 def logistica_ou_admin(view_func):
     return grupo_requerido('Logística')(view_func)
-
 
 def estoque_ou_gerente(view_func):
     return grupo_requerido('Estoquista', 'Gerente')(view_func)
@@ -54,3 +50,6 @@ def supervisor_laser_ou_admin(view_func):
 
 def producao_ou_gerente(view_func):
     return grupo_requerido('Operador laser', 'Supervisor de Laser', 'Gerente')(view_func)
+
+def montagem_ou_gerente(view_func):
+    return grupo_requerido('Operador de Montagem', 'Gerente')(view_func)

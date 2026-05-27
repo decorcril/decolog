@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'movimentacoes',
     'relatorios',
     'producao_corte',
+    'montagem'
 ]
 
 MIDDLEWARE = [

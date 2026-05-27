@@ -37,7 +37,7 @@
         <i class="bi bi-speedometer2"></i> Dashboard
       </a>
 
-      {# -- Cadastros [MOBILE] gerente -- #}
+      {# -- Cadastros [MOBILE] gerente e estoquista -- #}
       {% if is_gerente or is_estoquista %}
       <div class="mobile-nav-section">Cadastros</div>
       <a href="{% url 'core:local_list' %}" class="mobile-nav-link">
@@ -161,6 +161,17 @@
       </a>
       {% endif %}
 
+      {# -- Montagem [MOBILE] -- #}
+      {% if is_montagem or is_gerente %}
+      <div class="mobile-nav-section">Montagem</div>
+      <a href="{% url 'montagem:registrar' %}" class="mobile-nav-link">
+        <i class="bi bi-tools"></i> Registrar Produção
+      </a>
+      <a href="{% url 'montagem:list' %}" class="mobile-nav-link">
+        <i class="bi bi-list-ul"></i> Histórico
+      </a>
+      {% endif %}
+
       {# -- Administração [MOBILE] -- #}
       {% if user.is_staff %}
       <div class="mobile-nav-section">Administração</div>
@@ -194,7 +205,7 @@
         <i class="bi bi-speedometer2"></i> Dashboard
       </a>
 
-      {# -- Cadastros [DESKTOP] gerente -- #}
+      {# -- Cadastros [DESKTOP] gerente e estoquista -- #}
       {% if is_gerente or is_estoquista %}
       <div class="dropdown">
         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
@@ -403,6 +414,27 @@
           <li>
             <a class="dropdown-item" href="{% url 'producao_corte:create' %}">
               <i class="bi bi-plus-circle"></i> Novo Registro
+            </a>
+          </li>
+        </ul>
+      </div>
+      {% endif %}
+
+      {# -- Montagem [DESKTOP] -- #}
+      {% if is_montagem or is_gerente %}
+      <div class="dropdown">
+        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+          <i class="bi bi-tools"></i> Montagem
+        </a>
+        <ul class="dropdown-menu">
+          <li>
+            <a class="dropdown-item" href="{% url 'montagem:registrar' %}">
+              <i class="bi bi-plus-circle"></i> Registrar Produção
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" href="{% url 'montagem:list' %}">
+              <i class="bi bi-list-ul"></i> Histórico
             </a>
           </li>
         </ul>

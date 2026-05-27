@@ -6,8 +6,8 @@ from estoque.models import Estoque
 
 class ProdutoChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
-        if obj.descricao:
-            return f'{obj.nome} — {obj.descricao}'
+        if obj.codigo:
+            return f'{obj.nome} ({obj.codigo})'
         return obj.nome
 
 

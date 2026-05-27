@@ -131,15 +131,15 @@ def registro_corte_create(request):
             return redirect('producao_corte:create')
 
     return render(request, 'producao_corte/registro_corte_form.html', {
-        'hoje': timezone.localdate().isoformat(),
-        'materiais_json': json.dumps([
-            {'id': str(p.pk), 'nome': p.nome}
-            for p in produtos_materiais
-        ], ensure_ascii=False),
-        'produtos_json': json.dumps([
-            {'id': str(p.pk), 'nome': p.nome}
-            for p in produtos_finais
-        ], ensure_ascii=False),
+    'hoje': timezone.localdate().isoformat(),
+    'materiais_json': json.dumps([
+        {'id': str(p.pk), 'nome': p.nome, 'codigo': p.codigo or ''}
+        for p in produtos_materiais
+    ], ensure_ascii=False),
+    'produtos_json': json.dumps([
+        {'id': str(p.pk), 'nome': p.nome, 'codigo': p.codigo or ''}
+        for p in produtos_finais
+    ], ensure_ascii=False),
     })
 
 
