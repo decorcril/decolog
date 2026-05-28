@@ -4,6 +4,9 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.db.models.deletion import ProtectedError
+from django.urls import reverse
+from functools import reduce
+import operator
 from core.mixins import estoquista_ou_admin, supervisor_laser_ou_admin
 from produtos.models import Produto
 from produtos.forms import ProdutoForm
@@ -11,7 +14,6 @@ from estoque.models import Estoque
 
 
 def pode_gerir_produtos(user):
-    """Verifica se o usuário pode criar/editar/deletar produtos."""
     return (
         user.is_staff or
         user.groups.filter(name__in=['Estoquista', 'Gerente', 'Supervisor de Laser']).exists()
@@ -23,17 +25,25 @@ def is_supervisor_laser(user):
            not user.groups.filter(name__in=['Estoquista', 'Gerente']).exists()
 
 
+def _url_lista_com_filtros(q='', categoria=''):
+    url = reverse('produtos:lista')
+    params = []
+    if q:
+        params.append(f'q={q}')
+    if categoria:
+        params.append(f'categoria={categoria}')
+    if params:
+        url += '?' + '&'.join(params)
+    return url
+
+
 @login_required
 def produto_list(request):
-    from functools import reduce
-    import operator
-
     q = request.GET.get('q', '')
     categoria = request.GET.get('categoria', '')
 
     produtos = Produto.objects.all()
 
-    # Supervisor laser só vê produtos finais
     if is_supervisor_laser(request.user):
         produtos = produtos.filter(categoria='produto_final')
         categoria = 'produto_final'
@@ -67,6 +77,7 @@ def produto_list(request):
         'pode_gerir': pode_gerir_produtos(request.user),
     })
 
+
 @login_required
 def produto_create(request):
     if not pode_gerir_produtos(request.user):
@@ -75,7 +86,6 @@ def produto_create(request):
 
     form = ProdutoForm(request.POST or None)
 
-    # Supervisor laser só pode criar produto final
     if is_supervisor_laser(request.user):
         form.fields['categoria'].initial = 'produto_final'
         form.fields['categoria'].widget.attrs['disabled'] = True
@@ -103,10 +113,12 @@ def produto_update(request, pk):
 
     produto = get_object_or_404(Produto, pk=pk)
 
-    # Supervisor laser só pode editar produto final
     if is_supervisor_laser(request.user) and produto.categoria != 'produto_final':
         messages.error(request, 'Você só pode editar produtos finais.')
         return redirect('produtos:lista')
+
+    q = request.GET.get('q', '')
+    categoria = request.GET.get('categoria', '')
 
     form = ProdutoForm(request.POST or None, instance=produto)
 
@@ -119,12 +131,14 @@ def produto_update(request, pk):
             produto.categoria = 'produto_final'
         produto.save()
         messages.success(request, 'Produto atualizado com sucesso!')
-        return redirect('produtos:lista')
+        return redirect(_url_lista_com_filtros(q, categoria))
 
     return render(request, 'produtos/produto/form.html', {
         'form': form,
         'titulo': 'Editar Produto',
         'is_supervisor_laser': is_supervisor_laser(request.user),
+        'q': q,
+        'categoria': categoria,
     })
 
 
@@ -136,10 +150,12 @@ def produto_delete(request, pk):
 
     produto = get_object_or_404(Produto, pk=pk)
 
-    # Supervisor laser só pode deletar produto final
     if is_supervisor_laser(request.user) and produto.categoria != 'produto_final':
         messages.error(request, 'Você só pode excluir produtos finais.')
         return redirect('produtos:lista')
+
+    q = request.GET.get('q', '')
+    categoria = request.GET.get('categoria', '')
 
     if request.method == 'POST':
         try:
@@ -152,6 +168,10 @@ def produto_delete(request, pk):
                 f'movimentações ou estoque vinculado. '
                 f'Desative o produto em vez de excluí-lo.'
             )
-        return redirect('produtos:lista')
+        return redirect(_url_lista_com_filtros(q, categoria))
 
-    return render(request, 'produtos/produto/confirm_delete.html', {'produto': produto})
+    return render(request, 'produtos/produto/confirm_delete.html', {
+        'produto': produto,
+        'q': q,
+        'categoria': categoria,
+    })
