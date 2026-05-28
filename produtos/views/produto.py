@@ -25,13 +25,15 @@ def is_supervisor_laser(user):
            not user.groups.filter(name__in=['Estoquista', 'Gerente']).exists()
 
 
-def _url_lista_com_filtros(q='', categoria=''):
+def _url_lista_com_filtros(q='', categoria='', page=''):
     url = reverse('produtos:lista')
     params = []
     if q:
         params.append(f'q={q}')
     if categoria:
         params.append(f'categoria={categoria}')
+    if page and page != '1':
+        params.append(f'page={page}')
     if params:
         url += '?' + '&'.join(params)
     return url
@@ -102,6 +104,9 @@ def produto_create(request):
         'form': form,
         'titulo': 'Novo Produto',
         'is_supervisor_laser': is_supervisor_laser(request.user),
+        'q': '',
+        'categoria': '',
+        'page': '',
     })
 
 
@@ -119,6 +124,7 @@ def produto_update(request, pk):
 
     q = request.GET.get('q', '')
     categoria = request.GET.get('categoria', '')
+    page = request.GET.get('page', '')
 
     form = ProdutoForm(request.POST or None, instance=produto)
 
@@ -131,7 +137,7 @@ def produto_update(request, pk):
             produto.categoria = 'produto_final'
         produto.save()
         messages.success(request, 'Produto atualizado com sucesso!')
-        return redirect(_url_lista_com_filtros(q, categoria))
+        return redirect(_url_lista_com_filtros(q, categoria, page))
 
     return render(request, 'produtos/produto/form.html', {
         'form': form,
@@ -139,6 +145,7 @@ def produto_update(request, pk):
         'is_supervisor_laser': is_supervisor_laser(request.user),
         'q': q,
         'categoria': categoria,
+        'page': page,
     })
 
 
@@ -156,6 +163,7 @@ def produto_delete(request, pk):
 
     q = request.GET.get('q', '')
     categoria = request.GET.get('categoria', '')
+    page = request.GET.get('page', '')
 
     if request.method == 'POST':
         try:
@@ -168,10 +176,11 @@ def produto_delete(request, pk):
                 f'movimentações ou estoque vinculado. '
                 f'Desative o produto em vez de excluí-lo.'
             )
-        return redirect(_url_lista_com_filtros(q, categoria))
+        return redirect(_url_lista_com_filtros(q, categoria, page))
 
     return render(request, 'produtos/produto/confirm_delete.html', {
         'produto': produto,
         'q': q,
         'categoria': categoria,
+        'page': page,
     })
