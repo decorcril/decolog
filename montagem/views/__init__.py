@@ -1,1 +1,1 @@
-from .producao import registrar_producao, producao_list
+from .producao import registrar_producao, producao_list, producao_detail

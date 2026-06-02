@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load core_extras %}
 
 {% block title %}Histórico de Produção — Decolog{% endblock %}
 
@@ -31,81 +32,91 @@
   </div>
 </div>
 
-<div class="card">
-  <div class="table-responsive">
-    <table class="table mb-0">
-      <thead class="table-light">
-        <tr>
-          <th>Data</th>
-          <th>Produto</th>
-          <th class="text-center">Quantidade</th>
-          <th class="text-center">Local</th>
-          <th>Observação</th>
-          <th class="text-center">Operador</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for mov in movimentacoes %}
-        <tr>
-          <td class="text-muted small">{{ mov.data_hora|date:"d/m/Y H:i" }}</td>
-          <td>
-            <span class="fw-semibold">{{ mov.produto.nome }}</span>
-            {% if mov.produto.codigo %}
-              <br><span class="text-muted small" style="font-family:monospace;">{{ mov.produto.codigo }}</span>
-            {% endif %}
-          </td>
-          <td class="text-center fw-semibold">{{ mov.quantidade|floatformat:"-3" }}</td>
-          <td class="text-center text-muted small">{{ mov.local.nome }}</td>
-          <td class="text-muted small">{{ mov.observacao|default:"—" }}</td>
-          <td class="text-center text-muted small">{{ mov.usuario.get_full_name|default:mov.usuario.username }}</td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="6" class="text-center text-muted py-4">Nenhum registro encontrado.</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+<div class="row g-3">
+  {% for mov in movimentacoes %}
+  <div class="col-sm-6 col-lg-4">
+    <a href="{% url 'montagem:detail' mov.pk %}?q={{ q }}&page={{ page_obj.number }}"
+       class="text-decoration-none">
+      <div class="card h-100 card-hover">
+        <div class="card-body p-4">
 
-  {% if page_obj.has_other_pages %}
-  <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top">
-    <span class="text-muted small">
-      Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
-      — {{ page_obj.paginator.count }} registro(s)
-    </span>
-    <nav>
-      <ul class="pagination pagination-sm mb-0">
-        {% if page_obj.has_previous %}
-        <li class="page-item">
-          <a class="page-link" href="?page=1&q={{ q }}">«</a>
-        </li>
-        <li class="page-item">
-          <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ q }}">‹</a>
-        </li>
-        {% endif %}
-        {% for num in page_obj.paginator.page_range %}
-          {% if page_obj.number == num %}
-            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-          {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-            <li class="page-item">
-              <a class="page-link" href="?page={{ num }}&q={{ q }}">{{ num }}</a>
-            </li>
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <span class="text-muted small">{{ mov.data_hora|date:"d/m/Y H:i" }}</span>
+            <span class="badge bg-success bg-opacity-10 text-success">Produção</span>
+          </div>
+
+          <h6 class="fw-bold mb-0 text-dark">{{ mov.produto.nome }}</h6>
+          {% if mov.produto.codigo %}
+            <p class="text-muted small mb-2 mt-1" style="font-family:monospace;">{{ mov.produto.codigo }}</p>
+          {% else %}
+            <div class="mb-2"></div>
           {% endif %}
-        {% endfor %}
-        {% if page_obj.has_next %}
-        <li class="page-item">
-          <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ q }}">›</a>
-        </li>
-        <li class="page-item">
-          <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&q={{ q }}">»</a>
-        </li>
-        {% endif %}
-      </ul>
-    </nav>
-  </div>
-  {% endif %}
 
+          <div class="d-flex justify-content-between align-items-center mt-3">
+            <span class="fw-bold" style="color:#2422b1;">
+              {{ mov.quantidade|floatformat:"-3" }} {{ mov.produto|unidade_abrev }}
+            </span>
+            <span class="text-muted small">{{ mov.usuario.get_full_name|default:mov.usuario.username }}</span>
+          </div>
+
+          {% if mov.observacao %}
+          <div class="mt-2 text-muted small fst-italic text-truncate">
+            {{ mov.observacao }}
+          </div>
+          {% endif %}
+
+        </div>
+      </div>
+    </a>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body text-center py-5">
+        <i class="bi bi-tools fs-1 text-muted opacity-50"></i>
+        <p class="text-muted mt-3 mb-0">Nenhum registro encontrado.</p>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
 </div>
+
+{% if page_obj.has_other_pages %}
+<div class="d-flex justify-content-between align-items-center mt-4">
+  <span class="text-muted small">
+    Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+    — {{ page_obj.paginator.count }} registro(s)
+  </span>
+  <nav>
+    <ul class="pagination pagination-sm mb-0">
+      {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page=1&q={{ q }}">«</a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ q }}">‹</a>
+      </li>
+      {% endif %}
+      {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ num }}&q={{ q }}">{{ num }}</a>
+          </li>
+        {% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ q }}">›</a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&q={{ q }}">»</a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+</div>
+{% endif %}
 
 {% endblock %}
