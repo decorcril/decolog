@@ -211,3 +211,27 @@ def registro_corte_delete(request, pk):
     return render(request, 'producao_corte/registro_corte_confirm_delete.html', {
         'registro': registro,
     })
+
+@producao_ou_gerente
+def registro_corte_detail(request, pk):
+    registro = get_object_or_404(
+        RegistroCorte.objects.prefetch_related(
+            'itens__chapa', 'itens__produtos_cortados__produto'
+        ).select_related('operador'),
+        pk=pk
+    )
+    is_supervisor = (
+        request.user.is_staff or
+        request.user.groups.filter(
+            name__in=['Supervisor de Laser', 'Gerente']
+        ).exists()
+    )
+    operador_id = request.GET.get('operador', '')
+    page = request.GET.get('page', '')
+
+    return render(request, 'producao_corte/registro_corte_detail.html', {
+        'registro': registro,
+        'is_supervisor': is_supervisor,
+        'operador_id': operador_id,
+        'page': page,
+    })

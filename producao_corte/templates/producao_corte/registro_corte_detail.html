@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+
+{% block title %}Registro de Corte — Decolog{% endblock %}
+
+{% block content %}
+
+<div class="mb-4">
+  <p class="text-muted small mb-1">
+    <a href="{% url 'producao_corte:list' %}?page={{ page }}{% if operador_id %}&operador={{ operador_id }}{% endif %}"
+       class="text-muted text-decoration-none">
+      <i class="bi bi-scissors me-1"></i>Registros de Corte
+    </a>
+    <i class="bi bi-chevron-right mx-1" style="font-size: 0.7rem;"></i>
+    {{ registro.data|date:"d/m/Y" }}
+  </p>
+  <div class="d-flex justify-content-between align-items-start">
+    <h4 class="fw-bold mb-0">Registro de Corte</h4>
+    {% if is_supervisor %}
+    <a href="{% url 'producao_corte:delete' registro.pk %}?page={{ page }}{% if operador_id %}&operador={{ operador_id }}{% endif %}"
+       class="btn btn-sm btn-outline-danger">
+      <i class="bi bi-trash me-1"></i> Excluir
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-3">
+
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">INFORMAÇÕES</p>
+
+        <div class="mb-3">
+          <span class="text-muted small">Data</span>
+          <div class="fw-semibold">{{ registro.data|date:"d/m/Y" }}</div>
+        </div>
+
+        <div class="mb-3">
+          <span class="text-muted small">Operador</span>
+          <div class="fw-semibold">{{ registro.operador.get_full_name|default:registro.operador.username }}</div>
+        </div>
+
+        <div class="mb-3">
+          <span class="text-muted small">Registrado em</span>
+          <div class="fw-semibold">{{ registro.criado_em|date:"d/m/Y H:i" }}</div>
+        </div>
+
+        {% if registro.observacao %}
+        <div>
+          <span class="text-muted small">Observação</span>
+          <div class="fw-semibold">{{ registro.observacao }}</div>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">CHAPAS E PRODUTOS CORTADOS</p>
+
+        {% for item in registro.itens.all %}
+        <div class="mb-4">
+          <div class="fw-semibold mb-2">
+            <i class="bi bi-layers me-1 text-info"></i>
+            {{ item.quantidade_chapa|floatformat:"-2" }}× {{ item.chapa.nome }}
+          </div>
+          <div class="ps-3 border-start border-2 border-success-subtle">
+            {% for pc in item.produtos_cortados.all %}
+            <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light">
+              <span class="small">{{ pc.produto.nome }}</span>
+              <span class="fw-semibold small">{{ pc.quantidade|floatformat:"-2" }}×</span>
+            </div>
+            {% empty %}
+            <span class="text-muted small">Nenhum produto cortado.</span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+
+      </div>
+    </div>
+
+    <div class="mt-3">
+      <a href="{% url 'producao_corte:list' %}?page={{ page }}{% if operador_id %}&operador={{ operador_id }}{% endif %}"
+         class="btn btn-outline-secondary px-4">
+        ← Voltar
+      </a>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

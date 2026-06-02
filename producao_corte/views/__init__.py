@@ -1,1 +1,1 @@
-from .registro_corte import registro_corte_create, registro_corte_list, registro_corte_delete
+from .registro_corte import registro_corte_create, registro_corte_list, registro_corte_delete, registro_corte_detail
