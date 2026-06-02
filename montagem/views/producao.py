@@ -54,6 +54,8 @@ def registrar_producao(request):
 @montagem_ou_gerente
 def producao_list(request):
     q = request.GET.get('q', '')
+    data_inicio = request.GET.get('data_inicio', '')
+    data_fim = request.GET.get('data_fim', '')
 
     movimentacoes = Movimentacao.objects.filter(
         motivo='producao'
@@ -64,6 +66,11 @@ def producao_list(request):
         queries = [Q(produto__nome__icontains=t) | Q(produto__codigo__icontains=t) for t in termos]
         movimentacoes = movimentacoes.filter(reduce(operator.and_, queries))
 
+    if data_inicio:
+        movimentacoes = movimentacoes.filter(data_hora__date__gte=data_inicio)
+    if data_fim:
+        movimentacoes = movimentacoes.filter(data_hora__date__lte=data_fim)
+
     paginator = Paginator(movimentacoes, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -72,8 +79,9 @@ def producao_list(request):
         'movimentacoes': page_obj,
         'page_obj': page_obj,
         'q': q,
+        'data_inicio': data_inicio,
+        'data_fim': data_fim,
     })
-
 
 @montagem_ou_gerente
 def producao_detail(request, pk):

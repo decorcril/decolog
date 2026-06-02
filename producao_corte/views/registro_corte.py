@@ -157,9 +157,17 @@ def registro_corte_list(request):
     else:
         registros = RegistroCorte.objects.filter(operador=request.user)
 
-    operador_id = request.GET.get('operador')
+    operador_id = request.GET.get('operador', '')
+    data_inicio = request.GET.get('data_inicio', '')
+    data_fim = request.GET.get('data_fim', '')
+
     if is_supervisor and operador_id:
         registros = registros.filter(operador__id=operador_id)
+
+    if data_inicio:
+        registros = registros.filter(data__gte=data_inicio)
+    if data_fim:
+        registros = registros.filter(data__lte=data_fim)
 
     registros = registros.prefetch_related(
         'itens__chapa', 'itens__produtos_cortados__produto'
@@ -180,9 +188,10 @@ def registro_corte_list(request):
         'is_supervisor': is_supervisor,
         'operadores': operadores,
         'operador_id': operador_id,
+        'data_inicio': data_inicio,
+        'data_fim': data_fim,
         'page_obj': page_obj,
     })
-
 
 @producao_ou_gerente
 def registro_corte_delete(request, pk):
