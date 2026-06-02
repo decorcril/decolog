@@ -39,61 +39,36 @@
 <div class="row g-3">
   {% for produto in produtos %}
   <div class="col-sm-6 col-lg-4">
-    <div class="card h-100">
-      <div class="card-body p-4">
+    <a href="{% url 'produtos:detalhe' produto.pk %}?q={{ q }}&categoria={{ categoria }}&page={{ page_obj.number }}"
+       class="text-decoration-none">
+      <div class="card h-100 card-hover">
+        <div class="card-body p-4">
 
-        <div class="d-flex justify-content-between align-items-start mb-3">
-          <div class="rounded-3 p-2 {% if produto.is_chapa %}bg-info bg-opacity-10{% elif produto.is_insumo %}bg-warning bg-opacity-10{% else %}bg-primary bg-opacity-10{% endif %}">
-            <i class="bi fs-5 {% if produto.is_chapa %}bi-grid text-info{% elif produto.is_insumo %}bi-box text-warning{% else %}bi-box-seam text-primary{% endif %}"></i>
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <div class="rounded-3 p-2 {% if produto.is_chapa %}bg-info bg-opacity-10{% elif produto.is_insumo %}bg-warning bg-opacity-10{% else %}bg-primary bg-opacity-10{% endif %}">
+              <i class="bi fs-5 {% if produto.is_chapa %}bi-grid text-info{% elif produto.is_insumo %}bi-box text-warning{% else %}bi-box-seam text-primary{% endif %}"></i>
+            </div>
+            <span class="badge {% if produto.is_chapa %}bg-info bg-opacity-10 text-info{% elif produto.is_insumo %}bg-warning bg-opacity-10 text-warning{% else %}bg-primary bg-opacity-10 text-primary{% endif %}">
+              {{ produto.get_categoria_display }}
+            </span>
           </div>
-          <span class="badge {% if produto.is_chapa %}bg-info bg-opacity-10 text-info{% elif produto.is_insumo %}bg-warning bg-opacity-10 text-warning{% else %}bg-primary bg-opacity-10 text-primary{% endif %}">
-            {{ produto.get_categoria_display }}
-          </span>
-        </div>
 
-        <h6 class="fw-bold mb-0">
-          {% if produto.descricao %}
-            <span data-bs-toggle="tooltip" data-bs-placement="top" title="{{ produto.descricao }}">{{ produto.nome }}</span>
+          <h6 class="fw-bold mb-0 text-dark">{{ produto.nome }}</h6>
+          {% if produto.codigo %}
+            <p class="text-muted small mb-2 mt-1" style="font-family: monospace;">{{ produto.codigo }}</p>
           {% else %}
-            {{ produto.nome }}
+            <div class="mb-2"></div>
           {% endif %}
-        </h6>
-        {% if produto.codigo %}
-          <p class="text-muted small mb-2 mt-1" style="font-family: monospace;">{{ produto.codigo }}</p>
-        {% else %}
-          <div class="mb-2"></div>
-        {% endif %}
 
-        <div class="text-muted small mb-3">
-          <div>
-            <span class="fw-semibold">Estoque:</span>
-            {% if produto.saldos_por_local %}
-              {% for saldo in produto.saldos_por_local %}
-                <span class="text-muted">{{ saldo.local.nome }}:</span>
-                <span class="fw-semibold">{{ saldo.quantidade|floatformat:"-3" }} {{ produto|unidade_abrev }}</span>
-                {% if not forloop.last %} · {% endif %}
-              {% endfor %}
-            {% else %}
-              <span class="text-muted">Sem estoque</span>
-            {% endif %}
+          <div class="text-muted small">
+            <i class="bi bi-building me-1"></i>
+            {{ produto.saldos_por_local|length }} local{% if produto.saldos_por_local|length != 1 %}is{% endif %} com estoque
           </div>
-        </div>
 
-        <div class="d-flex gap-2">
-          <a href="{% url 'produtos:editar' produto.pk %}?q={{ q }}&categoria={{ categoria }}&page={{ page_obj.number }}"
-            class="btn btn-sm btn-outline-secondary w-50">
-            <i class="bi bi-pencil me-1"></i> Editar
-              </a>
-              <a href="{% url 'produtos:excluir' produto.pk %}?q={{ q }}&categoria={{ categoria }}&page={{ page_obj.number }}"
-            class="btn btn-sm btn-outline-danger w-50">
-            <i class="bi bi-trash me-1"></i> Excluir
-          </a>
         </div>
-
       </div>
-    </div>
+    </a>
   </div>
-
   {% empty %}
   <div class="col-12">
     <div class="card">

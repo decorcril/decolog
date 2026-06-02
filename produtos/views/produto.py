@@ -184,3 +184,23 @@ def produto_delete(request, pk):
         'categoria': categoria,
         'page': page,
     })
+    
+@login_required
+def produto_detail(request, pk):
+    produto = get_object_or_404(Produto, pk=pk)
+    saldos = Estoque.objects.filter(
+        produto=produto, quantidade__gt=0
+    ).select_related('local')
+
+    q = request.GET.get('q', '')
+    categoria = request.GET.get('categoria', '')
+    page = request.GET.get('page', '')
+
+    return render(request, 'produtos/produto/detail.html', {
+        'produto': produto,
+        'saldos': saldos,
+        'pode_gerir': pode_gerir_produtos(request.user),
+        'q': q,
+        'categoria': categoria,
+        'page': page,
+    })

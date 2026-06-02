@@ -1,1 +1,1 @@
-from .produto import produto_list, produto_create, produto_update, produto_delete
+from .produto import produto_list, produto_create, produto_update, produto_delete, produto_detail
