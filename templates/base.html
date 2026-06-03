@@ -152,23 +152,23 @@
 
       {# -- Produção [MOBILE] -- #}
       {% if is_laser or is_gerente %}
-      <div class="mobile-nav-section">Produção</div>
-      <a href="{% url 'producao_corte:list' %}" class="mobile-nav-link">
-        <i class="bi bi-scissors"></i> Registros de Corte
-      </a>
+      <div class="mobile-nav-section">Corte a Laser</div>
       <a href="{% url 'producao_corte:create' %}" class="mobile-nav-link">
-        <i class="bi bi-plus-circle"></i> Novo Registro
+        <i class="bi bi-plus-circle"></i> Registrar Corte
+      </a>
+      <a href="{% url 'producao_corte:list' %}" class="mobile-nav-link">
+        <i class="bi bi-list-ul"></i> Histórico de Cortes
       </a>
       {% endif %}
 
       {# -- Montagem [MOBILE] -- #}
       {% if is_montagem or is_gerente %}
-      <div class="mobile-nav-section">Montagem</div>
+      <div class="mobile-nav-section">Produção</div>
       <a href="{% url 'montagem:registrar' %}" class="mobile-nav-link">
         <i class="bi bi-tools"></i> Registrar Produção
       </a>
       <a href="{% url 'montagem:list' %}" class="mobile-nav-link">
-        <i class="bi bi-list-ul"></i> Histórico
+        <i class="bi bi-list-ul"></i> Histórico de Produção
       </a>
       {% endif %}
 
@@ -403,17 +403,18 @@
       {% if is_laser or is_gerente %}
       <div class="dropdown">
         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-          <i class="bi bi-scissors"></i> Produção
+          <i class="bi bi-scissors"></i> Corte a Laser
         </a>
         <ul class="dropdown-menu">
           <li>
-            <a class="dropdown-item" href="{% url 'producao_corte:list' %}">
-              <i class="bi bi-list-ul"></i> Registros de Corte
+
+<a class="dropdown-item" href="{% url 'producao_corte:create' %}">
+              <i class="bi bi-plus-circle"></i> Registrar Corte
             </a>
           </li>
           <li>
-            <a class="dropdown-item" href="{% url 'producao_corte:create' %}">
-              <i class="bi bi-plus-circle"></i> Novo Registro
+            <a class="dropdown-item" href="{% url 'producao_corte:list' %}">
+              <i class="bi bi-list-ul"></i> Histórico de Corte
             </a>
           </li>
         </ul>
@@ -424,7 +425,7 @@
       {% if is_montagem or is_gerente %}
       <div class="dropdown">
         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-          <i class="bi bi-tools"></i> Montagem
+          <i class="bi bi-tools"></i> Produção
         </a>
         <ul class="dropdown-menu">
           <li>
@@ -434,7 +435,7 @@
           </li>
           <li>
             <a class="dropdown-item" href="{% url 'montagem:list' %}">
-              <i class="bi bi-list-ul"></i> Histórico
+              <i class="bi bi-list-ul"></i> Histórico de Produção
             </a>
           </li>
         </ul>
