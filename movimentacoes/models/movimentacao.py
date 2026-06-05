@@ -110,14 +110,15 @@ class Movimentacao(models.Model):
             if self.local.is_loja and self.produto.is_materia_prima:
                 raise ValidationError('Loja não pode receber matéria-prima.')
 
-        if self.tipo == self.TIPO_TRANSFERENCIA:
-            if not self.local_destino:
-                raise ValidationError('Transferência requer local de destino.')
-            if self.local == self.local_destino:
-                raise ValidationError('Origem e destino não podem ser iguais.')
-
-        if self.quantidade is not None and self.quantidade <= 0:
-            raise ValidationError('Quantidade deve ser maior que zero.')
+        if self.quantidade is not None:
+            if self.tipo == self.TIPO_AJUSTE:
+                if self.quantidade < 0:
+                    raise ValidationError('Quantidade não pode ser negativa.')
+            else:
+                if self.quantidade <= 0:
+                    raise ValidationError('Quantidade deve ser maior que zero.')
+                if self.quantidade is not None and self.quantidade <= 0:
+                    raise ValidationError('Quantidade deve ser maior que zero.')
 
     @transaction.atomic
     def save(self, *args, **kwargs):
