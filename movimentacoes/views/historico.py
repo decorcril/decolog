@@ -1,17 +1,17 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.db.models import Q
 from django.core.paginator import Paginator
+from functools import reduce
+import operator
 from movimentacoes.models import Movimentacao, OrdemTransferencia
 from core.models import Local, Fornecedor
-from produtos.models import Produto
+from core.mixins import gerente_ou_admin
 
 
 @login_required
 def historico_list(request):
-    from functools import reduce
-    import operator
-
     q = request.GET.get('q', '')
     tipo = request.GET.get('tipo', '')
     local_id = request.GET.get('local', '')
@@ -19,7 +19,6 @@ def historico_list(request):
     data_inicio = request.GET.get('data_inicio', '')
     data_fim = request.GET.get('data_fim', '')
 
-    # ── Movimentações simples ──
     movimentacoes = Movimentacao.objects.select_related(
         'produto', 'local', 'local_destino', 'fornecedor', 'usuario'
     ).order_by('-data_hora')
@@ -49,7 +48,6 @@ def historico_list(request):
     page_mov = request.GET.get('page_mov')
     page_obj_mov = paginator_mov.get_page(page_mov)
 
-    # ── Ordens de transferência ──
     ordens = OrdemTransferencia.objects.select_related(
         'local_origem', 'local_destino', 'criado_por'
     ).order_by('-data_envio')
@@ -64,10 +62,7 @@ def historico_list(request):
         ordens = ordens.filter(data_envio__date__lte=data_fim)
     if q:
         termos = q.split()
-        queries = [
-            Q(itens__produto__nome__icontains=t)
-            for t in termos
-        ]
+        queries = [Q(itens__produto__nome__icontains=t) for t in termos]
         ordens = ordens.filter(reduce(operator.and_, queries)).distinct()
 
     paginator_ord = Paginator(ordens, 10)
@@ -88,4 +83,24 @@ def historico_list(request):
         'fornecedor_id': fornecedor_id,
         'data_inicio': data_inicio,
         'data_fim': data_fim,
+    })
+
+
+@gerente_ou_admin
+def movimentacao_editar_motivo(request, pk):
+    mov = get_object_or_404(Movimentacao, pk=pk)
+
+    if request.method == 'POST':
+        novo_motivo = request.POST.get('motivo', '')
+        motivos_validos = [m[0] for m in Movimentacao.MOTIVO_CHOICES]
+        if novo_motivo not in motivos_validos:
+            messages.error(request, 'Motivo inválido.')
+        else:
+            Movimentacao.objects.filter(pk=pk).update(motivo=novo_motivo)
+            messages.success(request, 'Motivo atualizado com sucesso!')
+        return redirect('movimentacoes:historico')
+
+    return render(request, 'movimentacoes/historico/editar_motivo.html', {
+        'mov': mov,
+        'motivo_choices': Movimentacao.MOTIVO_CHOICES,
     })

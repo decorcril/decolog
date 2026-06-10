@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block title %}Editar Motivo — Decolog{% endblock %}
+
+{% block content %}
+
+<div class="mb-4">
+  <p class="text-muted small mb-1">
+    <a href="{% url 'movimentacoes:historico' %}" class="text-muted text-decoration-none">
+      <i class="bi bi-clock-history me-1"></i>Histórico
+    </a>
+    <i class="bi bi-chevron-right mx-1" style="font-size: 0.7rem;"></i>
+    Editar Motivo
+  </p>
+  <h4 class="fw-bold mb-0">Editar Motivo da Movimentação</h4>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-body p-4">
+
+        <div class="alert alert-warning py-2 small mb-4">
+          <i class="bi bi-exclamation-triangle me-1"></i>
+          Apenas o motivo será alterado — o estoque <strong>não será afetado</strong>.
+        </div>
+
+        <div class="mb-3">
+          <span class="text-muted small">Produto</span>
+          <div class="fw-semibold">{{ mov.produto.nome }}</div>
+        </div>
+        <div class="mb-3">
+          <span class="text-muted small">Data</span>
+          <div class="fw-semibold">{{ mov.data_hora|date:"d/m/Y H:i" }}</div>
+        </div>
+        <div class="mb-4">
+          <span class="text-muted small">Motivo atual</span>
+          <div class="fw-semibold">{{ mov.get_motivo_display|default:"—" }}</div>
+        </div>
+
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Novo Motivo</label>
+            <select name="motivo" class="form-select" required>
+              {% for value, label in motivo_choices %}
+                <option value="{{ value }}" {% if mov.motivo == value %}selected{% endif %}>
+                  {{ label }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-check-lg me-1"></i> Salvar
+            </button>
+            <a href="{% url 'movimentacoes:historico' %}" class="btn btn-outline-secondary px-4">
+              Cancelar
+            </a>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

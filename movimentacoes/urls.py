@@ -11,6 +11,7 @@ from movimentacoes.views import (
     ordem_confirmar,
     ordem_cancelar,
 )
+from movimentacoes.views.historico import movimentacao_editar_motivo
 from movimentacoes.views.ordem_transferencia import ordem_imprimir
 from movimentacoes.views.transferencia import transferencia_imprimir
 from movimentacoes.views.ordem_saida import ordem_saida_criar, ordem_saida_list, ordem_saida_detalhe
@@ -32,4 +33,5 @@ urlpatterns = [
     path('saida/lote/nova/', ordem_saida_criar, name='ordem_saida_criar'),
     path('saida/lote/', ordem_saida_list, name='ordem_saida_list'),
     path('saida/lote/<int:pk>/', ordem_saida_detalhe, name='ordem_saida_detalhe'),
+    path('historico/<int:pk>/editar-motivo/', movimentacao_editar_motivo, name='editar_motivo'),
 ]
