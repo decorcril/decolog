@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ titulo }} — Decolog{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@23/build/css/intlTelInput.css">
+{% endblock %}
+
+{% block content %}
+
+<div class="mb-4">
+  <h4 class="fw-bold mb-1">{{ titulo }}</h4>
+  <p class="text-muted small mb-0">
+    <a href="{% url 'clientes:list' %}" class="text-muted text-decoration-none">
+      <i class="bi bi-people me-1"></i>Clientes
+    </a>
+    <i class="bi bi-chevron-right mx-1" style="font-size: 0.7rem;"></i>
+    {{ titulo }}
+  </p>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      {# Identificação #}
+      <div class="card mb-4">
+        <div class="card-body p-4">
+          <p class="fw-semibold text-secondary small mb-3">IDENTIFICAÇÃO</p>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold text-secondary small">TIPO DE PESSOA</label>
+              {{ form.tipo_pessoa }}
+            </div>
+            <div class="col-md-8">
+              <label class="form-label fw-semibold text-secondary small">NOME / RAZÃO SOCIAL</label>
+              {{ form.nome }}
+              {% if form.nome.errors %}<div class="text-danger small mt-1">{{ form.nome.errors }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-secondary small">NOME FANTASIA</label>
+              {{ form.nome_fantasia }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-secondary small" id="label_documento">CPF / CNPJ</label>
+              {{ form.documento }}
+              {% if form.documento.errors %}<div class="text-danger small mt-1">{{ form.documento.errors }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-secondary small">INSCRIÇÃO ESTADUAL</label>
+              {{ form.inscricao_estadual }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-secondary small">INSCRIÇÃO MUNICIPAL</label>
+              {{ form.inscricao_municipal }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# Contato #}
+      <div class="card mb-4">
+        <div class="card-body p-4">
+          <p class="fw-semibold text-secondary small mb-3">CONTATO</p>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-secondary small">E-MAIL</label>
+              {{ form.email }}
+              {% if form.email.errors %}<div class="text-danger small mt-1">{{ form.email.errors }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-secondary small">PESSOA DE CONTATO</label>
+              {{ form.contato }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-secondary small">TELEFONE</label>
+              {{ form.telefone }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-secondary small">WHATSAPP</label>
+              {{ form.whatsapp }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# Endereço #}
+      <div class="card mb-4">
+        <div class="card-body p-4">
+          <p class="fw-semibold text-secondary small mb-3">ENDEREÇO</p>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold text-secondary small">PAÍS</label>
+              {{ form.pais }}
+            </div>
+
+            {# Campos BR #}
+            <div id="campos_br" class="col-12 row g-3 m-0 p-0">
+              <div class="col-md-3">
+                <label class="form-label fw-semibold text-secondary small">CEP</label>
+                {{ form.cep }}
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-semibold text-secondary small">ESTADO</label>
+                {{ form.estado }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold text-secondary small">CIDADE</label>
+                {{ form.cidade }}
+              </div>
+              <div class="col-md-8">
+                <label class="form-label fw-semibold text-secondary small">LOGRADOURO</label>
+                {{ form.logradouro }}
+              </div>
+              <div class="col-md-2">
+                <label class="form-label fw-semibold text-secondary small">NÚMERO</label>
+                {{ form.numero }}
+              </div>
+              <div class="col-md-2">
+                <label class="form-label fw-semibold text-secondary small">COMPLEMENTO</label>
+                {{ form.complemento }}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold text-secondary small">BAIRRO</label>
+                {{ form.bairro }}
+              </div>
+            </div>
+
+            {# Campos internacionais #}
+            <div id="campos_intl" class="col-12 row g-3 m-0 p-0" style="display:none!important">
+              <div class="col-md-4">
+                <label class="form-label fw-semibold text-secondary small">CÓDIGO POSTAL / ZIP</label>
+                {{ form.codigo_postal }}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold text-secondary small">ESTADO / PROVINCE / REGION</label>
+                {{ form.regiao }}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold text-secondary small">CIDADE / CITY</label>
+                {{ form.cidade }}
+              </div>
+              <div class="col-md-8">
+                <label class="form-label fw-semibold text-secondary small">LOGRADOURO / STREET</label>
+                {{ form.logradouro }}
+              </div>
+              <div class="col-md-2">
+                <label class="form-label fw-semibold text-secondary small">NÚMERO</label>
+                {{ form.numero }}
+              </div>
+              <div class="col-md-2">
+                <label class="form-label fw-semibold text-secondary small">COMPLEMENTO / SUITE</label>
+                {{ form.complemento }}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      {# Configurações #}
+      <div class="card mb-4">
+        <div class="card-body p-4">
+          <p class="fw-semibold text-secondary small mb-3">CONFIGURAÇÕES</p>
+          <div class="d-flex flex-column gap-2">
+            <div class="d-flex align-items-center gap-2">
+              {{ form.ativo }}
+              <label class="form-check-label text-secondary small">Cliente ativo no sistema</label>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              {{ form.is_fornecedor }}
+              <label class="form-check-label text-secondary small">Este cadastro também é fornecedor</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="bi bi-check-lg me-1"></i> Salvar
+        </button>
+        <a href="{% if cliente %}{% url 'clientes:detail' cliente.pk %}{% else %}{% url 'clientes:list' %}{% endif %}"
+           class="btn btn-outline-secondary px-4">Cancelar</a>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/intl-tel-input@23/build/js/intlTelInput.min.js"></script>
+<script src="{% static 'js/cliente_form.js' %}"></script>
+{% endblock %}

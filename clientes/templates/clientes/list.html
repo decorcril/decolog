@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Clientes — Decolog{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">Clientes</h4>
+    <p class="text-muted small mb-0">{{ clientes.paginator.count }} cliente{{ clientes.paginator.count|pluralize }} encontrado{{ clientes.paginator.count|pluralize }}</p>
+  </div>
+  <a href="{% url 'clientes:create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i> Novo Cliente
+  </a>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body p-3">
+    <form method="get" class="row g-2 align-items-center">
+      <div class="col-md-6">
+        <input type="text" name="q" value="{{ q }}" class="form-control"
+               placeholder="Buscar por nome, fantasia, CNPJ ou código...">
+      </div>
+      <div class="col-md-3">
+        <select name="ativo" class="form-select">
+          <option value="todos" {% if ativo == 'todos' %}selected{% endif %}>Todos</option>
+          <option value="true" {% if ativo == 'true' %}selected{% endif %}>Ativos</option>
+          <option value="false" {% if ativo == 'false' %}selected{% endif %}>Inativos</option>
+        </select>
+      </div>
+      <div class="col-md-3 d-flex gap-2">
+        <button type="submit" class="btn btn-primary w-100">
+          <i class="bi bi-search me-1"></i> Buscar
+        </button>
+        <a href="{% url 'clientes:list' %}" class="btn btn-outline-secondary">
+          <i class="bi bi-x-lg"></i>
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="row g-3">
+  {% for cliente in clientes %}
+  <div class="col-md-6 col-lg-4">
+    <a href="{% url 'clientes:detail' cliente.pk %}" class="text-decoration-none">
+      <div class="card h-100 card-hover">
+        <div class="card-body p-4">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <span class="text-muted small fw-semibold">#{{ cliente.codigo|stringformat:"04d" }}</span>
+            <div class="d-flex gap-1">
+              <span class="badge bg-secondary bg-opacity-10 text-secondary">{{ cliente.get_tipo_pessoa_display }}</span>
+              {% if not cliente.ativo %}
+                <span class="badge bg-danger bg-opacity-10 text-danger">Inativo</span>
+              {% endif %}
+              {% if cliente.is_fornecedor %}
+                <span class="badge bg-info bg-opacity-10 text-info">Fornecedor</span>
+              {% endif %}
+            </div>
+          </div>
+          <p class="fw-semibold mb-1">{{ cliente.nome }}</p>
+          {% if cliente.nome_fantasia %}
+            <p class="text-muted small mb-1">{{ cliente.nome_fantasia }}</p>
+          {% endif %}
+          <p class="text-muted small mb-0">{{ cliente.documento }}</p>
+          {% if cliente.cidade %}
+            <p class="text-muted small mb-0">
+              <i class="bi bi-geo-alt me-1"></i>
+              {{ cliente.cidade }}{% if cliente.estado %}/{{ cliente.estado }}{% endif %}
+              {% if not cliente.is_brasil %} — {{ cliente.pais.name }}{% endif %}
+            </p>
+          {% endif %}
+        </div>
+      </div>
+    </a>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body p-4 text-center text-muted">
+        <i class="bi bi-people fs-3 mb-2 d-block"></i>
+        Nenhum cliente encontrado.
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if clientes.has_other_pages %}
+<div class="d-flex justify-content-between align-items-center mt-4">
+  <span class="text-muted small">
+    Página {{ clientes.number }} de {{ clientes.paginator.num_pages }}
+    — {{ clientes.paginator.count }} cliente(s)
+  </span>
+  <nav>
+    <ul class="pagination pagination-sm mb-0">
+      {% if clientes.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page=1&q={{ q }}&ativo={{ ativo }}">«</a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="?page={{ clientes.previous_page_number }}&q={{ q }}&ativo={{ ativo }}">‹</a>
+      </li>
+      {% endif %}
+      {% for num in clientes.paginator.page_range %}
+        {% if clientes.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > clientes.number|add:'-3' and num < clientes.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ num }}&q={{ q }}&ativo={{ ativo }}">{{ num }}</a>
+          </li>
+        {% endif %}
+      {% endfor %}
+      {% if clientes.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ clientes.next_page_number }}&q={{ q }}&ativo={{ ativo }}">›</a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="?page={{ clientes.paginator.num_pages }}&q={{ q }}&ativo={{ ativo }}">»</a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+</div>
+{% endif %}
+
+{% endblock %}

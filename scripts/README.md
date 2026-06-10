@@ -8,3 +8,8 @@ Uso: `python scripts/exportar_decolog.py`
 Popula registros de corte fictícios para testes.
 Usar apenas em ambiente de desenvolvimento!
 Uso: `python scripts/popular_registros_corte.py`
+
+## seed_clientes
+Popula ergistro de clientes ficticios para teste
+Usar apenas em desenvolvimento!!!
+Uso: `python scripts/seed_clientes.py`

@@ -53,3 +53,6 @@ def producao_ou_gerente(view_func):
 
 def montagem_ou_gerente(view_func):
     return grupo_requerido('Operador de Montagem', 'Gerente')(view_func)
+
+def vendedor_ou_gerente(view_func):
+    return grupo_requerido('Vendedor', 'Gerente')(view_func)

@@ -1,0 +1,1 @@
+from .cliente import cliente_list, cliente_create, cliente_edit, cliente_detail

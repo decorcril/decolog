@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ cliente.nome }} — Decolog{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-start mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">{{ cliente.nome }}</h4>
+    <p class="text-muted small mb-0">
+      <a href="{% url 'clientes:list' %}" class="text-muted text-decoration-none">
+        <i class="bi bi-people me-1"></i>Clientes
+      </a>
+      <i class="bi bi-chevron-right mx-1" style="font-size: 0.7rem;"></i>
+      #{{ cliente.codigo|stringformat:"04d" }} — {{ cliente.nome }}
+    </p>
+  </div>
+  {% if user.is_staff or is_gerente or cliente.criado_por == user %}
+    <a href="{% url 'clientes:edit' cliente.pk %}" class="btn btn-primary">
+      <i class="bi bi-pencil me-1"></i> Editar
+    </a>
+  {% endif %}
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+
+    {# Identificação #}
+    <div class="card mb-4">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">IDENTIFICAÇÃO</p>
+        <div class="row g-3">
+          <div class="col-md-3">
+            <p class="text-muted small mb-1">CÓDIGO</p>
+            <p class="fw-semibold mb-0">#{{ cliente.codigo|stringformat:"04d" }}</p>
+          </div>
+          <div class="col-md-3">
+            <p class="text-muted small mb-1">TIPO</p>
+            <p class="fw-semibold mb-0">{{ cliente.get_tipo_pessoa_display }}</p>
+          </div>
+          <div class="col-md-6">
+            <p class="text-muted small mb-1">{% if cliente.tipo_pessoa == 'PF' %}CPF{% else %}CNPJ{% endif %}</p>
+            <p class="fw-semibold mb-0">{{ cliente.documento|default:"—" }}</p>
+          </div>
+          {% if cliente.nome_fantasia %}
+          <div class="col-md-6">
+            <p class="text-muted small mb-1">NOME FANTASIA</p>
+            <p class="fw-semibold mb-0">{{ cliente.nome_fantasia }}</p>
+          </div>
+          {% endif %}
+          {% if cliente.inscricao_estadual %}
+          <div class="col-md-6">
+            <p class="text-muted small mb-1">INSCRIÇÃO ESTADUAL</p>
+            <p class="fw-semibold mb-0">{{ cliente.inscricao_estadual }}</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# Contato #}
+    <div class="card mb-4">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">CONTATO</p>
+        <div class="row g-3">
+          {% if cliente.email %}
+          <div class="col-md-6">
+            <p class="text-muted small mb-1">E-MAIL</p>
+            <p class="fw-semibold mb-0">
+              <a href="mailto:{{ cliente.email }}" class="text-decoration-none">{{ cliente.email }}</a>
+            </p>
+          </div>
+          {% endif %}
+          {% if cliente.telefone %}
+          <div class="col-md-3">
+            <p class="text-muted small mb-1">TELEFONE</p>
+            <p class="fw-semibold mb-0">{{ cliente.telefone }}</p>
+          </div>
+          {% endif %}
+          {% if cliente.whatsapp %}
+          <div class="col-md-3">
+            <p class="text-muted small mb-1">WHATSAPP</p>
+            <p class="fw-semibold mb-0">
+              <a href="https://wa.me/{{ cliente.whatsapp|cut:' '|cut:'('|cut:')'|cut:'-' }}"
+                 target="_blank" class="text-decoration-none text-success">
+                <i class="bi bi-whatsapp me-1"></i>{{ cliente.whatsapp }}
+              </a>
+            </p>
+          </div>
+          {% endif %}
+          {% if cliente.contato %}
+          <div class="col-md-6">
+            <p class="text-muted small mb-1">PESSOA DE CONTATO</p>
+            <p class="fw-semibold mb-0">{{ cliente.contato }}</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# Endereço #}
+    <div class="card mb-4">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">ENDEREÇO</p>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <p class="text-muted small mb-1">PAÍS</p>
+            <p class="fw-semibold mb-0">{{ cliente.pais.name }}</p>
+          </div>
+          {% if cliente.is_brasil %}
+            {% if cliente.cep %}
+            <div class="col-md-4">
+              <p class="text-muted small mb-1">CEP</p>
+              <p class="fw-semibold mb-0">{{ cliente.cep }}</p>
+            </div>
+            {% endif %}
+            {% if cliente.estado %}
+            <div class="col-md-4">
+              <p class="text-muted small mb-1">ESTADO</p>
+              <p class="fw-semibold mb-0">{{ cliente.estado }}</p>
+            </div>
+            {% endif %}
+          {% else %}
+            {% if cliente.codigo_postal %}
+            <div class="col-md-4">
+              <p class="text-muted small mb-1">CÓDIGO POSTAL</p>
+              <p class="fw-semibold mb-0">{{ cliente.codigo_postal }}</p>
+            </div>
+            {% endif %}
+            {% if cliente.regiao %}
+            <div class="col-md-4">
+              <p class="text-muted small mb-1">ESTADO / REGION</p>
+              <p class="fw-semibold mb-0">{{ cliente.regiao }}</p>
+            </div>
+            {% endif %}
+          {% endif %}
+          {% if cliente.cidade %}
+          <div class="col-md-4">
+            <p class="text-muted small mb-1">CIDADE</p>
+            <p class="fw-semibold mb-0">{{ cliente.cidade }}</p>
+          </div>
+          {% endif %}
+          {% if cliente.logradouro %}
+          <div class="col-12">
+            <p class="text-muted small mb-1">ENDEREÇO</p>
+            <p class="fw-semibold mb-0">
+              {{ cliente.logradouro }}{% if cliente.numero %}, {{ cliente.numero }}{% endif %}
+              {% if cliente.complemento %} — {{ cliente.complemento }}{% endif %}
+              {% if cliente.bairro %} — {{ cliente.bairro }}{% endif %}
+            </p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  {# Sidebar #}
+  <div class="col-lg-4">
+    <div class="card mb-4">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">STATUS</p>
+        <div class="d-flex flex-column gap-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Situação</span>
+            {% if cliente.ativo %}
+              <span class="badge bg-success bg-opacity-10 text-success">Ativo</span>
+            {% else %}
+              <span class="badge bg-danger bg-opacity-10 text-danger">Inativo</span>
+            {% endif %}
+          </div>
+          {% if cliente.is_fornecedor %}
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Fornecedor</span>
+            <span class="badge bg-info bg-opacity-10 text-info">Sim</span>
+          </div>
+          {% endif %}
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Cadastrado em</span>
+            <span class="small fw-semibold">{{ cliente.criado_em|date:"d/m/Y" }}</span>
+          </div>
+          {% if cliente.criado_por %}
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Cadastrado por</span>
+            <span class="small fw-semibold">{{ cliente.criado_por.get_full_name|default:cliente.criado_por.username }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
