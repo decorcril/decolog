@@ -48,7 +48,7 @@
       <div class="card h-100 card-hover">
         <div class="card-body p-4">
           <div class="d-flex justify-content-between align-items-start mb-2">
-            <span class="text-muted small fw-semibold">#{{ cliente.codigo|stringformat:"04d" }}</span>
+            <span class="text-muted small fw-semibold">Código Cliente: {{ cliente.codigo |stringformat:"04d" }}</span>
             <div class="d-flex gap-1">
               <span class="badge bg-secondary bg-opacity-10 text-secondary">{{ cliente.get_tipo_pessoa_display }}</span>
               {% if not cliente.ativo %}

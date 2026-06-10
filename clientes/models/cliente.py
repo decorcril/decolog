@@ -76,5 +76,5 @@ class Cliente(models.Model):
     def save(self, *args, **kwargs):
         if not self.codigo:
             ultimo = Cliente.objects.order_by('-codigo').first()
-            self.codigo = (ultimo.codigo + 1) if ultimo else 1
+            self.codigo = (ultimo.codigo + 1) if ultimo else 1000
         super().save(*args, **kwargs)

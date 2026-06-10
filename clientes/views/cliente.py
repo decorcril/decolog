@@ -1,14 +1,17 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
-from django.db.models import Q
-from ..models import Cliente
-from ..forms import ClienteForm
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
+from django.db.models import Q, CharField
+from django.db.models.functions import Cast
+
+from clientes.models import Cliente
+from clientes.forms import ClienteForm
 from core.mixins import vendedor_ou_gerente
 
-@login_required
+
+@vendedor_ou_gerente
 def cliente_list(request):
     q = request.GET.get('q', '')
     ativo = request.GET.get('ativo', 'true')
@@ -16,11 +19,13 @@ def cliente_list(request):
     clientes = Cliente.objects.all()
 
     if q:
-        clientes = clientes.filter(
+        clientes = clientes.annotate(
+            codigo_str=Cast('codigo', output_field=CharField())
+        ).filter(
             Q(nome__icontains=q) |
             Q(nome_fantasia__icontains=q) |
             Q(documento__icontains=q) |
-            Q(codigo__icontains=q)
+            Q(codigo_str__icontains=q)
         )
 
     if ativo == 'true':
@@ -39,7 +44,7 @@ def cliente_list(request):
     })
 
 
-@login_required
+@vendedor_ou_gerente
 def cliente_create(request):
     if request.method == 'POST':
         form = ClienteForm(request.POST)
@@ -62,12 +67,9 @@ def cliente_create(request):
 def cliente_edit(request, pk):
     cliente = get_object_or_404(Cliente, pk=pk)
 
-    # Gerente pode editar qualquer cliente
-    # Vendedor só pode editar o que ele mesmo criou
     if not request.user.is_staff:
         grupos = request.user.groups.values_list('name', flat=True)
-        is_gerente = 'Gerente' in grupos
-        if not is_gerente and cliente.criado_por != request.user:
+        if 'Gerente' not in grupos and cliente.criado_por != request.user:
             raise PermissionDenied
 
     if request.method == 'POST':
@@ -86,7 +88,7 @@ def cliente_edit(request, pk):
     })
 
 
-@login_required
+@vendedor_ou_gerente
 def cliente_detail(request, pk):
     cliente = get_object_or_404(Cliente, pk=pk)
     return render(request, 'clientes/detail.html', {'cliente': cliente})
