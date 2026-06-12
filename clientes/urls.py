@@ -8,4 +8,5 @@ urlpatterns = [
     path('novo/', views.cliente_create, name='create'),
     path('<int:pk>/', views.cliente_detail, name='detail'),
     path('<int:pk>/editar/', views.cliente_edit, name='edit'),
+    path('<int:pk>/anonimizar/', views.cliente_anonimizar, name='anonimizar'),
 ]

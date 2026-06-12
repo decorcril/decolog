@@ -8,7 +8,7 @@ from django.db.models.functions import Cast
 
 from clientes.models import Cliente
 from clientes.forms import ClienteForm
-from core.mixins import vendedor_ou_gerente
+from core.mixins import gerente_ou_admin, vendedor_ou_gerente
 
 
 @vendedor_ou_gerente
@@ -92,3 +92,33 @@ def cliente_edit(request, pk):
 def cliente_detail(request, pk):
     cliente = get_object_or_404(Cliente, pk=pk)
     return render(request, 'clientes/detail.html', {'cliente': cliente})
+
+@gerente_ou_admin
+def cliente_anonimizar(request, pk):
+    cliente = get_object_or_404(Cliente, pk=pk)
+
+    if request.method == 'POST':
+        cliente.nome = f'Cliente Anonimizado {cliente.codigo}'
+        cliente.nome_fantasia = ''
+        cliente.documento = ''
+        cliente.inscricao_estadual = ''
+        cliente.inscricao_municipal = ''
+        cliente.email = ''
+        cliente.telefone = ''
+        cliente.whatsapp = ''
+        cliente.contato = ''
+        cliente.cep = ''
+        cliente.logradouro = ''
+        cliente.numero = ''
+        cliente.complemento = ''
+        cliente.bairro = ''
+        cliente.cidade = ''
+        cliente.estado = ''
+        cliente.codigo_postal = ''
+        cliente.regiao = ''
+        cliente.ativo = False
+        cliente.save()
+        messages.success(request, f'Dados pessoais do cliente {cliente.codigo} foram anonimizados.')
+        return redirect('clientes:list')
+
+    return render(request, 'clientes/anonimizar_confirm.html', {'cliente': cliente})

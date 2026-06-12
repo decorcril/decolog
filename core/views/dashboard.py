@@ -9,6 +9,7 @@ from estoque.models import Estoque
 from produtos.models import Produto
 from core.models import Local
 from producao_corte.models import RegistroCorte
+from clientes.models import Cliente
 import json
 
 
@@ -28,6 +29,7 @@ def dashboard(request):
     is_supervisor_laser = user.is_staff or user.groups.filter(name='Supervisor de Laser').exists()
     is_operador_laser = user.groups.filter(name='Operador laser').exists()
     is_laser = is_supervisor_laser or is_operador_laser
+    is_vendedor = user.groups.filter(name='Vendedor').exists()
 
     # ── Indicadores gerais ──
     total_produtos = Produto.objects.filter(ativo=True).count()
@@ -56,6 +58,18 @@ def dashboard(request):
     meus_cortes_periodo = RegistroCorte.objects.filter(
         operador=user, data__gte=data_inicio.date()
     ).count()
+
+    # ── Indicadores vendedor ──
+    meus_clientes_ativos = 0
+    meus_ultimos_clientes = None
+
+    if is_vendedor and not is_gerente:
+        meus_clientes_ativos = Cliente.objects.filter(
+            criado_por=user, ativo=True
+        ).count()
+        meus_ultimos_clientes = Cliente.objects.filter(
+            criado_por=user
+        ).order_by('-criado_em')[:5]
 
     # ── Eixo de datas ──
     dias_labels = [
@@ -146,6 +160,8 @@ def dashboard(request):
         'total_chapas_estoque': total_chapas_estoque,
         'total_cortes_periodo': total_cortes_periodo,
         'meus_cortes_periodo': meus_cortes_periodo,
+        'meus_clientes_ativos': meus_clientes_ativos,
+        'meus_ultimos_clientes': meus_ultimos_clientes,
         'estoque_baixo': estoque_baixo,
         'dias_labels': json.dumps(dias_labels),
         'entradas_data': json.dumps(entradas_data),
@@ -170,4 +186,5 @@ def dashboard(request):
         'is_supervisor_laser': is_supervisor_laser,
         'is_operador_laser': is_operador_laser,
         'is_laser': is_laser,
+        'is_vendedor': is_vendedor,
     })

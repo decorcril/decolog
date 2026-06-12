@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load core_extras %}
 
 {% block title %}{{ cliente.nome }} — Decolog{% endblock %}
 
@@ -12,13 +13,20 @@
       <a href="{% url 'clientes:list' %}" class="text-muted text-decoration-none">
         <i class="bi bi-people me-1"></i>Clientes
       </a>
-      <i class="bi bi-chevron-right mx-1" style="font-size: 0.7rem;"></i> {{ cliente.codigo|stringformat:"04d" }} — {{ cliente.nome }}
+      <i class="bi bi-chevron-right mx-1" style="font-size: 0.7rem;"></i>
+      {{ cliente.codigo }} — {{ cliente.nome }}
     </p>
   </div>
   {% if user.is_staff or is_gerente or cliente.criado_por == user %}
     <a href="{% url 'clientes:edit' cliente.pk %}" class="btn btn-primary">
       <i class="bi bi-pencil me-1"></i> Editar
     </a>
+  {% endif %}
+  {% if user.is_staff or is_gerente %}
+  <a href="{% url 'clientes:anonimizar' cliente.pk %}"
+     class="btn btn-outline-danger btn-sm">
+    <i class="bi bi-shield-exclamation me-1"></i> Anonimizar
+  </a>
   {% endif %}
 </div>
 
@@ -32,7 +40,7 @@
         <div class="row g-3">
           <div class="col-md-3">
             <p class="text-muted small mb-1">CÓDIGO</p>
-            <p class="fw-semibold mb-0">{{ cliente.codigo|stringformat:"04d" }}</p>
+            <p class="fw-semibold mb-0">{{ cliente.codigo }}</p>
           </div>
           <div class="col-md-3">
             <p class="text-muted small mb-1">TIPO</p>
@@ -74,16 +82,16 @@
           {% if cliente.telefone %}
           <div class="col-md-3">
             <p class="text-muted small mb-1">TELEFONE</p>
-            <p class="fw-semibold mb-0">{{ cliente.telefone }}</p>
+            <p class="fw-semibold mb-0">{{ cliente.telefone|formato_telefone }}</p>
           </div>
           {% endif %}
           {% if cliente.whatsapp %}
           <div class="col-md-3">
             <p class="text-muted small mb-1">WHATSAPP</p>
             <p class="fw-semibold mb-0">
-              <a href="https://wa.me/{{ cliente.whatsapp|cut:' '|cut:'('|cut:')'|cut:'-' }}"
+              <a href="https://wa.me/{{ cliente.whatsapp|cut:' '|cut:'('|cut:')'|cut:'-'|cut:'+' }}"
                  target="_blank" class="text-decoration-none text-success">
-                <i class="bi bi-whatsapp me-1"></i>{{ cliente.whatsapp }}
+                <i class="bi bi-whatsapp me-1"></i>{{ cliente.whatsapp|formato_telefone }}
               </a>
             </p>
           </div>
