@@ -10,32 +10,44 @@
     <h4 class="fw-bold mb-1">Produtos</h4>
     <p class="text-muted small mb-0">Insumos, chapas e produtos finais</p>
   </div>
+  {% if pode_gerir %}
   <a href="{% url 'produtos:criar' %}" class="btn btn-primary">
     <i class="bi bi-plus-lg me-1"></i> Novo Produto
   </a>
+  {% endif %}
 </div>
 
-<div class="d-flex flex-wrap gap-2 mb-4">
-  <form method="get" class="d-flex gap-2 flex-wrap">
-    <input type="text" name="q" value="{{ q }}" class="form-control"
-      style="max-width: 260px;" placeholder="Buscar produto...">
-    <select name="categoria" class="form-select" style="max-width: 200px;" onchange="this.form.submit()">
-      <option value="">Todas as categorias</option>
-      {% for value, label in categoria_choices %}
-        <option value="{{ value }}" {% if categoria == value %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
-    <button class="btn btn-outline-secondary" type="submit">
-      <i class="bi bi-search"></i>
-    </button>
-    {% if q or categoria %}
-      <a href="{% url 'produtos:lista' %}" class="btn btn-outline-secondary">
-        <i class="bi bi-x-lg"></i>
-      </a>
-    {% endif %}
-  </form>
+{# Filtros #}
+<div class="card mb-4">
+  <div class="card-body p-3">
+    <form method="get" class="row g-2 align-items-center">
+      <div class="col-md-6">
+        <input type="text" name="q" value="{{ q }}" class="form-control"
+               placeholder="Buscar produto...">
+      </div>
+      <div class="col-md-3">
+        <select name="categoria" class="form-select" onchange="this.form.submit()">
+          <option value="">Todas as categorias</option>
+          {% for value, label in categoria_choices %}
+            <option value="{{ value }}" {% if categoria == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3 d-flex gap-2">
+        <button type="submit" class="btn btn-primary w-100">
+          <i class="bi bi-search me-1"></i> Buscar
+        </button>
+        {% if q or categoria %}
+        <a href="{% url 'produtos:lista' %}" class="btn btn-outline-secondary">
+          <i class="bi bi-x-lg"></i>
+        </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
 </div>
 
+{# Cards #}
 <div class="row g-3">
   {% for produto in produtos %}
   <div class="col-sm-6 col-lg-4">
@@ -44,15 +56,26 @@
       <div class="card h-100 card-hover">
         <div class="card-body p-4">
 
+          {# Ícone e badge #}
           <div class="d-flex justify-content-between align-items-start mb-3">
-            <div class="rounded-3 p-2 {% if produto.is_chapa %}bg-info bg-opacity-10{% elif produto.is_insumo %}bg-warning bg-opacity-10{% else %}bg-primary bg-opacity-10{% endif %}">
-              <i class="bi fs-5 {% if produto.is_chapa %}bi-grid text-info{% elif produto.is_insumo %}bi-box text-warning{% else %}bi-box-seam text-primary{% endif %}"></i>
+            <div class="rounded-3 p-2
+              {% if produto.is_chapa %}bg-info bg-opacity-10
+              {% elif produto.is_insumo %}bg-warning bg-opacity-10
+              {% else %}bg-primary bg-opacity-10{% endif %}">
+              <i class="bi fs-5
+                {% if produto.is_chapa %}bi-grid text-info
+                {% elif produto.is_insumo %}bi-box text-warning
+                {% else %}bi-box-seam text-primary{% endif %}"></i>
             </div>
-            <span class="badge {% if produto.is_chapa %}bg-info bg-opacity-10 text-info{% elif produto.is_insumo %}bg-warning bg-opacity-10 text-warning{% else %}bg-primary bg-opacity-10 text-primary{% endif %}">
+            <span class="badge
+              {% if produto.is_chapa %}bg-info bg-opacity-10 text-info
+              {% elif produto.is_insumo %}bg-warning bg-opacity-10 text-warning
+              {% else %}bg-primary bg-opacity-10 text-primary{% endif %}">
               {{ produto.get_categoria_display }}
             </span>
           </div>
 
+          {# Nome e código #}
           <h6 class="fw-bold mb-0 text-dark">{{ produto.nome }}</h6>
           {% if produto.codigo %}
             <p class="text-muted small mb-2 mt-1" style="font-family: monospace;">{{ produto.codigo }}</p>
@@ -60,6 +83,19 @@
             <div class="mb-2"></div>
           {% endif %}
 
+          
+          {# Preço — só produtos finais e para quem tem acesso a vendas #}
+            {% if not produto.is_chapa and not produto.is_insumo %}
+              {% if is_gerente or is_vendedor or is_financeiro %}
+                {% if produto.preco %}
+                  <p class="fw-semibold mb-2 text-dark">Preço Base: {{ produto.preco.preco_venda|moeda }}</p>
+                {% else %}
+                  <p class="text-muted small mb-2">Sem preço cadastrado</p>
+                {% endif %}
+              {% endif %}
+            {% endif %}
+
+          {# Estoque #}
           <div class="text-muted small">
             <i class="bi bi-building me-1"></i>
             {{ produto.saldos_por_local|length }} local{% if produto.saldos_por_local|length != 1 %}is{% endif %} com estoque
@@ -81,9 +117,11 @@
           </a>
         {% else %}
           <p class="text-muted mt-3 mb-3">Nenhum produto cadastrado ainda.</p>
+          {% if pode_gerir %}
           <a href="{% url 'produtos:criar' %}" class="btn btn-primary btn-sm">
             <i class="bi bi-plus-lg me-1"></i> Cadastrar primeiro produto
           </a>
+          {% endif %}
         {% endif %}
       </div>
     </div>
@@ -91,6 +129,7 @@
   {% endfor %}
 </div>
 
+{# Paginação #}
 {% if page_obj.has_other_pages %}
 <div class="d-flex justify-content-between align-items-center mt-4">
   <span class="text-muted small">

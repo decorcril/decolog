@@ -1,0 +1,330 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load core_extras %}
+
+{% block title %}{{ titulo }} — Decolog{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+
+<div class="mb-4">
+  <h4 class="fw-bold mb-1">{{ titulo }}</h4>
+  <p class="text-muted small mb-0">
+    <a href="{% url 'vendas:pedido_list' %}" class="text-muted text-decoration-none">
+      <i class="bi bi-cart3 me-1"></i>Pedidos
+    </a>
+    <i class="bi bi-chevron-right mx-1" style="font-size: 0.7rem;"></i>
+    {{ titulo }}
+  </p>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-10">
+
+    {# Form principal — só dados, sem produtos #}
+    <form method="post" novalidate id="form-pedido">
+      {% csrf_token %}
+      {% if not pedido %}<input type="hidden" name="items_json" id="items_json_field">{% endif %}
+
+      {# Cliente #}
+      <div class="card mb-4">
+        <div class="card-body p-4">
+          <p class="fw-semibold text-secondary small mb-3">CLIENTE</p>
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label fw-semibold text-secondary small">CLIENTE</label>
+              {% if pedido %}
+                <input type="text" class="form-control bg-light"
+                       value="{{ pedido.cliente.codigo }} — {{ pedido.cliente.nome }}" readonly>
+                <input type="hidden" name="cliente" value="{{ pedido.cliente.pk }}">
+              {% else %}
+                <select id="id_cliente" name="cliente" class="form-select" required></select>
+              {% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold text-secondary small">CONTATO</label>
+              <input type="text" name="contato" class="form-control"
+                     value="{{ pedido.contato|default:'' }}" placeholder="Nome do contato">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# Comercial #}
+      <div class="card mb-4">
+        <div class="card-body p-4">
+          <p class="fw-semibold text-secondary small mb-3">DADOS COMERCIAIS</p>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold text-secondary small">TIPO</label>
+              <select name="tipo_venda" class="form-select" required>
+                <option value="">Selecione...</option>
+                {% for value, label in tipo_venda_choices %}
+                  <option value="{{ value }}" {% if pedido and pedido.tipo_venda == value %}selected{% endif %}>
+                    {{ label }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold text-secondary small">CONDIÇÃO DE PAGAMENTO</label>
+              <input type="text" name="condicao_pagamento" class="form-control"
+                     value="{{ pedido.condicao_pagamento|default:'' }}" placeholder="Ex: 30/60 dias">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold text-secondary small">Tipo de Envio</label>
+              <select name="transportadora" class="form-select">
+                <option value="">Selecione...</option>
+                {% for op in transportadora_choices %}
+                  <option value="{{ op }}" {% if pedido and pedido.transportadora == op %}selected{% endif %}>
+                    {{ op }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold text-secondary small">FRETE (R$)</label>
+              <input type="text" name="frete" id="id_frete" class="form-control"
+                     value="{{ pedido.frete|default:'0' }}" data-mask="moeda">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold text-secondary small">SINAL (%)</label>
+              <input type="number" name="percentual_entrada" class="form-control"
+                     value="{{ pedido.percentual_entrada|default:'0' }}"
+                     min="0" max="100" step="0.01">
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </form>
+
+    {# Produtos — fora do form principal #}
+
+    {% if not pedido %}
+    {# Criação — itens via JS #}
+    <div class="card mb-4">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">PRODUTOS</p>
+
+        <div class="row g-2 mb-3">
+          <div class="col-md-8">
+            <label class="form-label fw-semibold text-secondary small">BUSCAR PRODUTO</label>
+            <select id="id_produto_search" class="form-select">
+              <option value="">Pesquisar produto...</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold text-secondary small">PREÇO UNIT.</label>
+            <input type="text" id="id_preco_add" class="form-control bg-light"
+                   data-mask="moeda" placeholder="0,00" readonly>
+          </div>
+          <div class="col-md-2 d-flex align-items-end">
+            <button type="button" id="btn_add_item" class="btn btn-primary w-100">
+              <i class="bi bi-plus-lg me-1"></i> Adicionar
+            </button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Produto</th>
+                <th class="text-center" style="width:150px">Quantidade</th>
+                <th class="text-end" style="width:130px">Preço Unit.</th>
+                <th class="text-end" style="width:130px">Subtotal</th>
+                <th style="width:40px"></th>
+              </tr>
+            </thead>
+            <tbody id="items_body">
+              <tr id="empty_row">
+                <td colspan="5" class="text-center text-muted py-3">Nenhum produto adicionado.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="row justify-content-end mt-3">
+          <div class="col-md-4">
+            <table class="table table-sm mb-0">
+              <tr>
+                <td class="text-muted small">Subtotal Produtos</td>
+                <td class="text-end fw-semibold">R$ <span id="total_produtos">0,00</span></td>
+              </tr>
+              <tr>
+                <td class="text-muted small">
+                  <label for="id_desconto" class="mb-0">Desconto (R$)</label>
+                </td>
+                <td class="text-end">
+                  <input type="text" id="id_desconto" name="total_desconto"
+                         form="form-pedido"
+                         class="form-control form-control-sm text-end"
+                         value="0,00" data-mask="moeda"
+                         style="width:110px; margin-left:auto;">
+                </td>
+              </tr>
+              <tr>
+                <td class="text-muted small">Frete</td>
+                <td class="text-end text-muted small">R$ <span id="total_frete">0,00</span></td>
+              </tr>
+              <tr class="table-light">
+                <td class="fw-bold">Total Geral</td>
+                <td class="text-end fw-bold fs-6">R$ <span id="total_geral">0,00</span></td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% else %}
+    {# Edição — itens via AJAX #}
+    <div class="card mb-4">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">PRODUTOS</p>
+
+        {% if pedido.itens.all %}
+        <div class="table-responsive mb-3">
+          <table class="table table-sm mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Produto</th>
+                <th class="text-center" style="width:150px">Qtd</th>
+                <th class="text-end">Preço Unit.</th>
+                <th class="text-end">Subtotal</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="edit_items_body">
+              {% for item in pedido.itens.all %}
+              <tr data-item-pk="{{ item.pk }}">
+                <td class="fw-semibold small">{{ item.produto.nome }}</td>
+                <td class="text-center" style="width:150px">
+                  <div class="input-group input-group-sm">
+                    <button type="button" class="btn btn-outline-secondary btn-edit-minus"
+                            data-item-pk="{{ item.pk }}" data-qtd="{{ item.quantidade }}"
+                            {% if item.quantidade <= 1 %}disabled{% endif %}>−</button>
+                    <input type="number" class="form-control text-center input-edit-qtd"
+                           value="{{ item.quantidade }}" min="1"
+                           data-item-pk="{{ item.pk }}" style="width:55px">
+                    <button type="button" class="btn btn-outline-secondary btn-edit-plus"
+                            data-item-pk="{{ item.pk }}" data-qtd="{{ item.quantidade }}">+</button>
+                  </div>
+                </td>
+                <td class="text-end text-muted small">{{ item.preco_unitario|moeda }}</td>
+                <td class="text-end fw-semibold">{{ item.subtotal|moeda }}</td>
+                <td class="text-end">
+                  <button type="button" class="btn btn-sm btn-link text-danger p-0 btn-edit-remove"
+                          data-item-pk="{{ item.pk }}">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="text-muted small mb-3">Nenhum item adicionado.</p>
+        {% endif %}
+
+        <form id="form-add-item" class="row g-2 mb-3" data-pedido-pk="{{ pedido.pk }}">
+          {% csrf_token %}
+          <div class="col-md-6">
+            <select id="id_produto_search_edit" class="form-select form-select-sm">
+              <option value="">Pesquisar produto...</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <input type="number" id="edit_qtd" class="form-control form-select-sm" value="1" min="1">
+          </div>
+          <div class="col-md-2">
+            <input type="text" id="id_preco_edit" class="form-control form-select-sm bg-light"
+                   placeholder="Preço" data-mask="moeda" readonly>
+          </div>
+          <div class="col-md-2">
+            <button type="button" id="btn_add_item_edit" class="btn btn-primary btn-sm w-100">
+              <i class="bi bi-plus-lg"></i> Add
+            </button>
+          </div>
+        </form>
+
+        <div class="row justify-content-end">
+          <div class="col-md-4">
+            <table class="table table-sm mb-0">
+              <tr>
+                <td class="text-muted small">Total Produtos</td>
+                <td class="text-end fw-semibold" id="edit_total_produtos">{{ pedido.total_produtos|moeda }}</td>
+              </tr>
+              <tr>
+                <td class="text-muted small">
+                  <label for="id_desconto_edit" class="mb-0">Desconto (R$)</label>
+                </td>
+                <td class="text-end">
+                  <input type="text" id="id_desconto_edit" name="total_desconto"
+                         form="form-pedido"
+                         class="form-control form-control-sm text-end"
+                         value="{{ pedido.total_desconto|default:'0' }}" data-mask="moeda"
+                         style="width:110px; margin-left:auto;">
+                </td>
+              </tr>
+              {% if pedido.frete %}
+              <tr>
+                <td class="text-muted small">Frete</td>
+                <td class="text-end text-muted small" id="edit_total_frete">{{ pedido.frete|moeda }}</td>
+              </tr>
+              {% endif %}
+              <tr class="table-light">
+                <td class="fw-bold">Total Geral</td>
+                <td class="text-end fw-bold fs-6" id="edit_total_geral">{{ pedido.total_geral|moeda }}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    {% endif %}
+
+    {# Observações — fora do form mas associadas via form= #}
+    <div class="card mb-4">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">OBSERVAÇÕES</p>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold text-secondary small">OBSERVAÇÕES</label>
+            <textarea name="observacoes" form="form-pedido"
+                      class="form-control" rows="3">{{ pedido.observacoes|default:'' }}</textarea>
+          </div>
+          {% if is_gerente or is_financeiro %}
+          <div class="col-md-6">
+            <label class="form-label fw-semibold text-secondary small">OBSERVAÇÕES INTERNAS</label>
+            <textarea name="observacoes_internas" form="form-pedido"
+                      class="form-control" rows="3">{{ pedido.observacoes_internas|default:'' }}</textarea>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 mb-4">
+      <button type="submit" form="form-pedido" class="btn btn-primary px-4">
+        <i class="bi bi-check-lg me-1"></i> Salvar
+      </button>
+      <a href="{% if pedido %}{% url 'vendas:pedido_detail' pedido.pk %}{% else %}{% url 'vendas:pedido_list' %}{% endif %}"
+         class="btn btn-outline-secondary px-4">Cancelar</a>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script src="{% static 'js/pedido_form.js' %}"></script>
+{% endblock %}

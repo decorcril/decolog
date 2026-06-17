@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load core_extras %}
+
+{% block title %}{{ titulo }} — Decolog{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+
+<div class="mb-4">
+  <h4 class="fw-bold mb-1">{{ titulo }}</h4>
+  <p class="text-muted small mb-0">
+    <a href="{% url 'vendas:orcamento_list' %}" class="text-muted text-decoration-none">
+      <i class="bi bi-file-earmark-text me-1"></i>Orçamentos
+    </a>
+    <i class="bi bi-chevron-right mx-1" style="font-size: 0.7rem;"></i>
+    {{ titulo }}
+  </p>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-10">
+
+    <form method="post" novalidate id="form-orcamento">
+      {% csrf_token %}
+      <input type="hidden" name="items_json" id="items_json_field">
+      <input type="hidden" name="transportadora_frete" id="id_transportadora_frete" value="">
+
+      {# Cliente #}
+      <div class="card mb-4">
+        <div class="card-body p-4">
+          <p class="fw-semibold text-secondary small mb-3">CLIENTE</p>
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label fw-semibold text-secondary small">CLIENTE</label>
+              <select id="id_cliente" name="cliente" class="form-select" required></select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold text-secondary small">CONTATO</label>
+              <input type="text" name="contato" class="form-control" placeholder="Nome do contato">
+            </div>
+          </div>
+          <input type="hidden" id="cep_destino">
+        </div>
+      </div>
+
+      {# Comercial #}
+      <div class="card mb-4">
+        <div class="card-body p-4">
+          <p class="fw-semibold text-secondary small mb-3">DADOS COMERCIAIS</p>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold text-secondary small">TIPO DE VENDA</label>
+              <select name="tipo_venda" id="id_tipo_venda" class="form-select" required>
+                <option value="">Selecione...</option>
+                {% for value, label in tipo_venda_choices %}
+                  <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold text-secondary small">CONDIÇÃO DE PAGAMENTO</label>
+              <input type="text" name="condicao_pagamento" class="form-control"
+                     placeholder="Ex: 30/60 dias">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold text-secondary small">TIPO DE ENVIO</label>
+              <select name="transportadora" class="form-select">
+                <option value="">Selecione...</option>
+                {% for op in transportadora_choices %}
+                  <option value="{{ op }}">{{ op }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold text-secondary small">SINAL (%)</label>
+              <input type="number" name="percentual_entrada" class="form-control"
+                     value="0" min="0" max="100" step="0.01">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold text-secondary small">FRETE (R$)</label>
+              <input type="text" name="frete" id="id_frete" class="form-control"
+                     value="0" data-mask="moeda">
+              <small class="text-muted">Ou calcule pelo Melhor Envio abaixo.</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </form>
+
+    {# Produtos #}
+    <div class="card mb-4">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">PRODUTOS</p>
+
+        <div class="row g-2 mb-3">
+          <div class="col-md-8">
+            <label class="form-label fw-semibold text-secondary small">BUSCAR PRODUTO</label>
+            <select id="id_produto_search" class="form-select">
+              <option value="">Pesquisar produto...</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold text-secondary small">PREÇO UNIT.</label>
+            <input type="text" id="id_preco_add" class="form-control bg-light"
+                   data-mask="moeda" placeholder="0,00" readonly>
+          </div>
+          <div class="col-md-2 d-flex align-items-end">
+            <button type="button" id="btn_add_item" class="btn btn-primary w-100">
+              <i class="bi bi-plus-lg me-1"></i> Adicionar
+            </button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Produto</th>
+                <th class="text-center" style="width:150px">Quantidade</th>
+                <th class="text-end" style="width:80px">Peso (kg)</th>
+                <th class="text-end" style="width:80px">Larg. (cm)</th>
+                <th class="text-end" style="width:80px">Alt. (cm)</th>
+                <th class="text-end" style="width:80px">Comp. (cm)</th>
+                <th class="text-end" style="width:130px">Preço Unit.</th>
+                <th class="text-end" style="width:130px">Subtotal</th>
+                <th style="width:40px"></th>
+              </tr>
+            </thead>
+            <tbody id="items_body">
+              <tr id="empty_row">
+                <td colspan="9" class="text-center text-muted py-3">Nenhum produto adicionado.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="row justify-content-end mt-3">
+          <div class="col-md-4">
+            <table class="table table-sm mb-0">
+              <tr>
+                <td class="text-muted small">Subtotal Produtos</td>
+                <td class="text-end fw-semibold">R$ <span id="total_produtos">0,00</span></td>
+              </tr>
+              <tr>
+                <td class="text-muted small">
+                  <label for="id_desconto" class="mb-0">Desconto (R$)</label>
+                </td>
+                <td class="text-end">
+                  <input type="text" id="id_desconto" name="total_desconto"
+                         form="form-orcamento"
+                         class="form-control form-control-sm text-end"
+                         value="0,00" data-mask="moeda"
+                         style="width:110px; margin-left:auto;">
+                </td>
+              </tr>
+              <tr>
+                <td class="text-muted small">Frete</td>
+                <td class="text-end text-muted small">R$ <span id="total_frete">0,00</span></td>
+              </tr>
+              <tr class="table-light">
+                <td class="fw-bold">Total Geral</td>
+                <td class="text-end fw-bold fs-6">R$ <span id="total_geral">0,00</span></td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        {# Calcular Frete — Melhor Envio #}
+        <div class="mt-3 pt-3 border-top">
+          <p class="fw-semibold text-secondary small mb-3">CALCULAR FRETE — MELHOR ENVIO</p>
+          <button type="button" id="btn_calcular_frete" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-truck me-1"></i> Calcular Frete
+          </button>
+          <div id="frete_opcoes" class="mt-3"></div>
+        </div>
+
+      </div>
+    </div>
+
+    {# Observações #}
+    <div class="card mb-4">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">OBSERVAÇÕES</p>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold text-secondary small">OBSERVAÇÕES</label>
+            <textarea name="observacoes" form="form-orcamento"
+                      class="form-control" rows="3"></textarea>
+          </div>
+          {% if is_gerente or is_financeiro %}
+          <div class="col-md-6">
+            <label class="form-label fw-semibold text-secondary small">OBSERVAÇÕES INTERNAS</label>
+            <textarea name="observacoes_internas" form="form-orcamento"
+                      class="form-control" rows="3"></textarea>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 mb-4">
+      <button type="submit" form="form-orcamento" class="btn btn-primary px-4">
+        <i class="bi bi-check-lg me-1"></i> Salvar Orçamento
+      </button>
+      <a href="{% url 'vendas:orcamento_list' %}" class="btn btn-outline-secondary px-4">
+        Cancelar
+      </a>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script src="{% static 'js/orcamento_form.js' %}"></script>
+{% endblock %}

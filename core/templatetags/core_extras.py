@@ -97,3 +97,13 @@ def formato_telefone(numero):
         return f'({digitos[:2]}) {digitos[2:6]}-{digitos[6:]}'
 
     return numero
+
+@register.filter
+def moeda(valor):
+    if valor is None:
+        return 'R$ 0,00'
+    try:
+        valor = float(valor)
+        return f'R$ {valor:_.2f}'.replace('.', ',').replace('_', '.')
+    except (ValueError, TypeError):
+        return 'R$ 0,00'

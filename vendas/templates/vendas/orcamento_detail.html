@@ -1,0 +1,217 @@
+{% extends 'base.html' %}
+{% load core_extras %}
+
+{% block title %}Orçamento {{ orcamento.numero }} — Decolog{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-start mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">Orçamento {{ orcamento.numero }}</h4>
+    <p class="text-muted small mb-0">
+      <a href="{% url 'vendas:orcamento_list' %}" class="text-muted text-decoration-none">
+        <i class="bi bi-file-earmark-text me-1"></i>Orçamentos
+      </a>
+      <i class="bi bi-chevron-right mx-1" style="font-size: 0.7rem;"></i>
+      {{ orcamento.numero }}
+    </p>
+  </div>
+
+  {% if orcamento.status == 'draft' and not orcamento.expirado %}
+  <div class="d-flex gap-2">
+    <form method="post" action="{% url 'vendas:orcamento_aprovar' orcamento.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-success">
+        <i class="bi bi-check-lg me-1"></i> Aprovar
+      </button>
+    </form>
+    <form method="post" action="{% url 'vendas:orcamento_rejeitar' orcamento.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-danger">
+        <i class="bi bi-x-lg me-1"></i> Rejeitar
+      </button>
+    </form>
+  </div>
+  {% endif %}
+
+  {% if orcamento.pedido %}
+  <a href="{% url 'vendas:pedido_detail' orcamento.pedido.pk %}" class="btn btn-outline-primary">
+    <i class="bi bi-cart3 me-1"></i> Ver Pedido {{ orcamento.pedido.numero }}
+  </a>
+  {% endif %}
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+
+    {# Itens #}
+    <div class="card mb-4">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">ITENS DO ORÇAMENTO</p>
+        {% if orcamento.itens.all %}
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Produto</th>
+                <th class="text-center">Qtd</th>
+                <th class="text-end">Preço Unit.</th>
+                <th class="text-end">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in orcamento.itens.all %}
+              <tr>
+                <td class="fw-semibold small">{{ item.produto.nome }}</td>
+                <td class="text-center">{{ item.quantidade }}</td>
+                <td class="text-end text-muted small">{{ item.preco_unitario|moeda }}</td>
+                <td class="text-end fw-semibold">{{ item.subtotal|moeda }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="text-muted small mb-0">Nenhum item adicionado.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if orcamento.observacoes %}
+    <div class="card mb-4">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-2">OBSERVAÇÕES</p>
+        <p class="text-muted small mb-0">{{ orcamento.observacoes }}</p>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if orcamento.observacoes_internas and is_financeiro or is_gerente %}
+    <div class="card mb-4">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-2">OBSERVAÇÕES INTERNAS</p>
+        <p class="text-muted small mb-0">{{ orcamento.observacoes_internas }}</p>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  {# Sidebar #}
+  <div class="col-lg-4">
+
+    {# Status #}
+    <div class="card mb-4">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">STATUS</p>
+        <div class="d-flex flex-column gap-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Status</span>
+            <span class="badge
+              {% if orcamento.status == 'draft' %}bg-warning bg-opacity-10 text-warning
+              {% elif orcamento.status == 'approved' %}bg-success bg-opacity-10 text-success
+              {% elif orcamento.status == 'rejected' %}bg-danger bg-opacity-10 text-danger
+              {% elif orcamento.status == 'expired' %}bg-secondary bg-opacity-10 text-secondary
+              {% endif %}">
+              {{ orcamento.get_status_display }}
+            </span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Válido até</span>
+            <span class="small fw-semibold {% if orcamento.expirado %}text-danger{% endif %}">
+              {{ orcamento.validade|date:"d/m/Y" }}
+            </span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Criado em</span>
+            <span class="small fw-semibold">{{ orcamento.criado_em|date:"d/m/Y" }}</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Criado por</span>
+            <span class="small fw-semibold">{{ orcamento.criado_por.get_full_name|default:orcamento.criado_por.username }}</span>
+          </div>
+          {% if orcamento.pedido %}
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Pedido gerado</span>
+            <span class="small fw-semibold text-success">{{ orcamento.pedido.numero }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# Cliente #}
+    <div class="card mb-4">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">CLIENTE</p>
+        <div class="d-flex flex-column gap-2">
+          <div>
+            <p class="text-muted small mb-0">Nome</p>
+            <p class="fw-semibold mb-0">
+              <a href="{% url 'clientes:detail' orcamento.cliente.pk %}" class="text-decoration-none">
+                {{ orcamento.cliente.nome }}
+              </a>
+            </p>
+          </div>
+          {% if orcamento.contato %}
+          <div>
+            <p class="text-muted small mb-0">Contato</p>
+            <p class="fw-semibold mb-0">{{ orcamento.contato }}</p>
+          </div>
+          {% endif %}
+          {% if orcamento.condicao_pagamento %}
+          <div>
+            <p class="text-muted small mb-0">Condição de Pagamento</p>
+            <p class="fw-semibold mb-0">{{ orcamento.condicao_pagamento }}</p>
+          </div>
+          {% endif %}
+          {% if orcamento.cliente.cep %}
+          <div>
+            <p class="text-muted small mb-0">CEP</p>
+            <p class="fw-semibold mb-0">{{ orcamento.cliente.cep }}</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# Financeiro #}
+    <div class="card mb-4">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">FINANCEIRO</p>
+        <div class="d-flex flex-column gap-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Total Produtos</span>
+            <span class="fw-semibold">{{ orcamento.total_produtos|moeda }}</span>
+          </div>
+          {% if orcamento.total_desconto %}
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Desconto</span>
+            <span class="fw-semibold text-danger">- {{ orcamento.total_desconto|moeda }}</span>
+          </div>
+          {% endif %}
+          {% if orcamento.frete %}
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Frete</span>
+            <span class="fw-semibold">{{ orcamento.frete|moeda }}</span>
+          </div>
+          {% endif %}
+          {% if orcamento.transportadora %}
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Transportadora</span>
+            <span class="fw-semibold small text-end">{{ orcamento.transportadora }}</span>
+          </div>
+          {% endif %}
+          <hr class="my-1" style="border-color: #f0f2f5;">
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Total Geral</span>
+            <span class="fw-bold fs-6">{{ orcamento.total_geral|moeda }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

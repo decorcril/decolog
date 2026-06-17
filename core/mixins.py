@@ -56,3 +56,12 @@ def montagem_ou_gerente(view_func):
 
 def vendedor_ou_gerente(view_func):
     return grupo_requerido('Vendedor', 'Gerente')(view_func)
+
+def financeiro_ou_gerente(view_func):
+    return grupo_requerido('Financeiro', 'Gerente')(view_func)
+
+def vendedor_ou_gerente(view_func):
+    return grupo_requerido('Vendedor', 'Gerente')(view_func)
+
+def acesso_vendas(view_func):
+    return grupo_requerido('Vendedor', 'Financeiro', 'Gerente')(view_func)

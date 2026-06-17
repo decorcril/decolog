@@ -15,4 +15,5 @@ urlpatterns = [
     path('producao/', include('producao_corte.urls')),
     path('montagem/', include('montagem.urls')),
     path('clientes/', include('clientes.urls')),
+    path('vendas/', include('vendas.urls')),
 ]

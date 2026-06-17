@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Preço — {{ produto.nome }} — Decolog{% endblock %}
+
+{% block content %}
+
+<div class="mb-4">
+  <h4 class="fw-bold mb-1">Preço de Venda</h4>
+  <p class="text-muted small mb-0">
+    <a href="{% url 'produtos:lista' %}" class="text-muted text-decoration-none">
+      <i class="bi bi-box-seam me-1"></i>Produtos
+    </a>
+    <i class="bi bi-chevron-right mx-1" style="font-size: 0.7rem;"></i>
+    <a href="{% url 'produtos:detalhe' produto.pk %}" class="text-muted text-decoration-none">
+      {{ produto.nome }}
+    </a>
+    <i class="bi bi-chevron-right mx-1" style="font-size: 0.7rem;"></i>
+    Preço
+  </p>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">PREÇO DE VENDA</p>
+        <p class="text-muted small mb-3">{{ produto.nome }}</p>
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="mb-4">
+            <label class="form-label fw-semibold text-secondary small">VALOR (R$)</label>
+            <input type="text" name="preco_venda" class="form-control"
+                   value="{% if preco.preco_venda %}{{ preco.preco_venda }}{% else %}0,00{% endif %}"
+                   data-mask="moeda" required>
+          </div>
+          {% if preco.atualizado_em %}
+          <p class="text-muted small mb-3">
+            Última atualização: {{ preco.atualizado_em|date:"d/m/Y H:i" }}
+            {% if preco.atualizado_por %}
+              por {{ preco.atualizado_por.get_full_name|default:preco.atualizado_por.username }}
+            {% endif %}
+          </p>
+          {% endif %}
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-check-lg me-1"></i> Salvar
+            </button>
+            <a href="{% url 'produtos:detalhe' produto.pk %}" class="btn btn-outline-secondary px-4">
+              Cancelar
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

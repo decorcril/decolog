@@ -13,19 +13,29 @@ from core.mixins import gerente_ou_admin, vendedor_ou_gerente
 
 @vendedor_ou_gerente
 def cliente_list(request):
-    q = request.GET.get('q', '')
+    q     = request.GET.get('q', '')
     ativo = request.GET.get('ativo', 'true')
 
     clientes = Cliente.objects.all()
 
     if q:
-        clientes = clientes.annotate(
-            codigo_str=Cast('codigo', output_field=CharField())
-        ).filter(
+        q_limpo = q.replace('.', '').replace('-', '').replace('/', '').replace(' ', '')
+        
+        # Tenta formatar como CPF (11 dígitos)
+        if len(q_limpo) == 11 and q_limpo.isdigit():
+            q_formatado = f'{q_limpo[:3]}.{q_limpo[3:6]}.{q_limpo[6:9]}-{q_limpo[9:]}'
+        # Tenta formatar como CNPJ (14 dígitos)
+        elif len(q_limpo) == 14 and q_limpo.isdigit():
+            q_formatado = f'{q_limpo[:2]}.{q_limpo[2:5]}.{q_limpo[5:8]}/{q_limpo[8:12]}-{q_limpo[12:]}'
+        else:
+            q_formatado = q
+
+        clientes = clientes.filter(
             Q(nome__icontains=q) |
             Q(nome_fantasia__icontains=q) |
             Q(documento__icontains=q) |
-            Q(codigo_str__icontains=q)
+            Q(documento__icontains=q_formatado) |
+            Q(codigo__icontains=q)
         )
 
     if ativo == 'true':
@@ -34,13 +44,13 @@ def cliente_list(request):
         clientes = clientes.filter(ativo=False)
 
     paginator = Paginator(clientes, 20)
-    page = request.GET.get('page', 1)
-    clientes = paginator.get_page(page)
+    page      = request.GET.get('page', 1)
+    clientes  = paginator.get_page(page)
 
     return render(request, 'clientes/list.html', {
         'clientes': clientes,
-        'q': q,
-        'ativo': ativo,
+        'q':        q,
+        'ativo':    ativo,
     })
 
 

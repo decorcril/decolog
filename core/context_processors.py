@@ -9,6 +9,7 @@ def perfis_usuario(request):
     is_operador_laser = 'Operador laser' in grupos
     is_montagem = 'Operador de Montagem' in grupos
     is_vendedor = 'Vendedor' in grupos
+    is_financeiro = 'Financeiro' in grupos
 
     return {
         'is_gerente': is_gerente,
@@ -18,4 +19,6 @@ def perfis_usuario(request):
         'is_laser': is_supervisor_laser or is_operador_laser,
         'is_montagem': is_montagem,
         'is_vendedor': is_vendedor,
+        'is_financeiro': is_financeiro,
+        
     }

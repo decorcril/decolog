@@ -1,1 +1,2 @@
 from .produto import produto_list, produto_create, produto_update, produto_delete, produto_detail
+from .preco import preco_edit

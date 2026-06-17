@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load core_extras %}
+
+{% block title %}Pedidos — Decolog{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">Pedidos</h4>
+    <p class="text-muted small mb-0">
+      {{ pedidos.paginator.count }} pedido{{ pedidos.paginator.count|pluralize }} encontrado{{ pedidos.paginator.count|pluralize }}
+    </p>
+  </div>
+  {% if is_vendedor or is_gerente %}
+  <a href="{% url 'vendas:pedido_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i> Novo Pedido
+  </a>
+  {% endif %}
+</div>
+
+{# Filtros #}
+<div class="card mb-4">
+  <div class="card-body p-3">
+    <form method="get" class="row g-2 align-items-center">
+
+      <div class="col-md-3">
+        <input type="text" name="q" value="{{ q }}" class="form-control"
+               placeholder="Número, cliente...">
+      </div>
+
+      <div class="col-md-2">
+        <select name="status" class="form-select">
+          <option value="">Todos os status</option>
+          {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <select name="tipo_venda" class="form-select">
+          <option value="">Todos os tipos</option>
+          {% for value, label in tipo_venda_choices %}
+            <option value="{{ value }}" {% if tipo_venda == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {% if is_financeiro or is_gerente %}
+      <div class="col-md-2">
+        <input type="text" name="transacao" value="{{ transacao }}" class="form-control"
+               placeholder="Nº de transação...">
+      </div>
+      <div class="col-md-1 d-flex align-items-center">
+        <div class="form-check mb-0">
+          <input type="checkbox" name="pendentes" value="1" id="chk_pendentes"
+                 class="form-check-input" {% if pendentes == '1' %}checked{% endif %}>
+          <label class="form-check-label small text-nowrap" for="chk_pendentes">
+            Pendente
+          </label>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="col d-flex gap-2 justify-content-end">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-search me-1"></i> Buscar
+        </button>
+        <a href="{% url 'vendas:pedido_list' %}" class="btn btn-outline-secondary">
+          <i class="bi bi-x-lg"></i>
+        </a>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{# Cards #}
+<div class="row g-3">
+  {% for pedido in pedidos %}
+  <div class="col-md-6 col-lg-4">
+    <a href="{% url 'vendas:pedido_detail' pedido.pk %}" class="text-decoration-none">
+      <div class="card h-100 card-hover">
+        <div class="card-body p-4">
+
+          {# Cabeçalho #}
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <span class="fw-bold">{{ pedido.numero }}</span>
+            <span class="badge
+              {% if pedido.status == 'open' %}bg-secondary bg-opacity-10 text-secondary
+              {% elif pedido.status == 'in_production' %}bg-warning bg-opacity-10 text-warning
+              {% elif pedido.status == 'picking' %}bg-info bg-opacity-10 text-info
+              {% elif pedido.status == 'shipped' %}bg-primary bg-opacity-10 text-primary
+              {% elif pedido.status == 'delivered' %}bg-success bg-opacity-10 text-success
+              {% elif pedido.status == 'canceled' %}bg-danger bg-opacity-10 text-danger
+              {% endif %}">
+              {{ pedido.get_status_display }}
+            </span>
+          </div>
+
+          {# Cliente e tipo #}
+          <p class="fw-semibold mb-1 text-dark">{{ pedido.cliente.nome }}</p>
+          <p class="text-muted small mb-2">{{ pedido.get_tipo_venda_display }}</p>
+
+          {# Financeiro #}
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="text-muted small">Total</span>
+            <span class="fw-bold text-dark">{{ pedido.total_geral|moeda }}</span>
+          </div>
+
+          {% if is_financeiro or is_gerente %}
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="text-muted small">Pago</span>
+            <span class="fw-semibold text-success">{{ pedido.total_pago|moeda }}</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-muted small">Saldo</span>
+            <span class="fw-semibold {% if pedido.saldo_restante > 0 %}text-danger{% else %}text-success{% endif %}">
+              {{ pedido.saldo_restante|moeda }}
+            </span>
+          </div>
+          {% if pedido.saldo_restante > 0 and pedido.status != 'canceled' %}
+          <span class="badge bg-danger bg-opacity-10 text-danger mb-2">
+            <i class="bi bi-exclamation-circle me-1"></i>Pagamento pendente
+          </span>
+          {% endif %}
+          {% endif %}
+
+          {# Rodapé #}
+          <div class="d-flex justify-content-between align-items-center mt-2">
+            <span class="text-muted small">{{ pedido.criado_por.get_full_name|default:pedido.criado_por.username }}</span>
+            <span class="text-muted small">{{ pedido.criado_em|date:"d/m/Y" }}</span>
+          </div>
+
+        </div>
+      </div>
+    </a>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body p-4 text-center text-muted">
+        <i class="bi bi-cart3 fs-3 mb-2 d-block"></i>
+        Nenhum pedido encontrado.
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{# Paginação #}
+{% if pedidos.has_other_pages %}
+<div class="d-flex justify-content-between align-items-center mt-4">
+  <span class="text-muted small">
+    Página {{ pedidos.number }} de {{ pedidos.paginator.num_pages }}
+    — {{ pedidos.paginator.count }} pedido(s)
+  </span>
+  <nav>
+    <ul class="pagination pagination-sm mb-0">
+      {% if pedidos.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page=1&q={{ q }}&status={{ status }}&tipo_venda={{ tipo_venda }}&transacao={{ transacao }}&pendentes={{ pendentes }}">«</a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="?page={{ pedidos.previous_page_number }}&q={{ q }}&status={{ status }}&tipo_venda={{ tipo_venda }}&transacao={{ transacao }}&pendentes={{ pendentes }}">‹</a>
+      </li>
+      {% endif %}
+      {% for num in pedidos.paginator.page_range %}
+        {% if pedidos.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > pedidos.number|add:'-3' and num < pedidos.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ num }}&q={{ q }}&status={{ status }}&tipo_venda={{ tipo_venda }}&transacao={{ transacao }}&pendentes={{ pendentes }}">{{ num }}</a>
+          </li>
+        {% endif %}
+      {% endfor %}
+      {% if pedidos.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ pedidos.next_page_number }}&q={{ q }}&status={{ status }}&tipo_venda={{ tipo_venda }}&transacao={{ transacao }}&pendentes={{ pendentes }}">›</a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="?page={{ pedidos.paginator.num_pages }}&q={{ q }}&status={{ status }}&tipo_venda={{ tipo_venda }}&transacao={{ transacao }}&pendentes={{ pendentes }}">»</a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+</div>
+{% endif %}
+
+{% endblock %}
