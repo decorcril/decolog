@@ -1,10 +1,12 @@
 from django.urls import path
+from clientes import views as clientes_views
 from core.views import (
     dashboard,
     local_list, local_create, local_update, local_delete,
     fornecedor_list, fornecedor_create, fornecedor_update, fornecedor_delete,
 )
 from core.views.fornecedor import tag_delete, tag_list
+from core.views.notificacao import notificacoes_lista, notificacoes_marcar_lida
 
 app_name = 'core'
 
@@ -22,4 +24,7 @@ urlpatterns = [
     path('fornecedores/<int:pk>/excluir/', fornecedor_delete, name='fornecedor_delete'),
     path('fornecedores/tags/', tag_list, name='tag_list'),
     path('fornecedores/tags/<int:pk>/excluir/', tag_delete, name='tag_delete'),
+    # Notificações
+    path('notificacoes/', notificacoes_lista, name='notificacoes_lista'),
+    path('notificacoes/<int:pedido_pk>/lida/', notificacoes_marcar_lida, name='notificacoes_marcar_lida'),
 ]

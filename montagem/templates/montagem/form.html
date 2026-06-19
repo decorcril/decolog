@@ -10,19 +10,82 @@
 {% block content %}
 
 <div class="mb-4">
-  <h4 class="page-title">Registrar Produção</h4>
-  <p class="page-subtitle">Registre os produtos montados na fábrica</p>
+  <h4 class="page-title">
+    {% if pedido %}Registrar Montagem — Pedido {{ pedido.numero }}{% else %}Registrar Produção{% endif %}
+  </h4>
+  <p class="page-subtitle">
+    {% if pedido %}Informe as quantidades montadas agora{% else %}Registre os produtos montados na fábrica{% endif %}
+  </p>
 </div>
 
 <form method="post" novalidate>
   {% csrf_token %}
+  {% if pedido %}
+  <input type="hidden" name="pedido_pk" value="{{ pedido_pk }}">
+  {% endif %}
+
   <div class="row g-3 justify-content-center">
     <div class="col-lg-6">
+
+      {% if pedido %}
+      {# Progresso e quantidades a montar #}
+      <div class="card mb-3" style="border-left: 4px solid var(--bs-primary);">
+        <div class="card-body py-3">
+          <p class="fw-semibold mb-1 text-primary">
+            <i class="bi bi-cart3 me-1"></i> Pedido {{ pedido.numero }}
+          </p>
+          <p class="text-muted small mb-3">{{ pedido.cliente.nome }} — {{ pedido.get_tipo_venda_display }}</p>
+
+          <table class="table table-sm mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Produto</th>
+                <th class="text-center">Total</th>
+                <th class="text-center">Montado</th>
+                <th class="text-center">Falta</th>
+                <th class="text-center" style="width:100px">Montar agora</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in pedido.progresso_montagem %}
+              <tr>
+                <td class="small fw-semibold">{{ p.nome }}</td>
+                <td class="text-center">{{ p.total }}</td>
+                <td class="text-center {% if p.completo %}text-success fw-semibold{% endif %}">
+                  {{ p.montado }}
+                </td>
+                <td class="text-center {% if p.falta > 0 %}text-danger fw-semibold{% else %}text-success{% endif %}">
+                  {% if p.completo %}
+                    <i class="bi bi-check-circle-fill text-success"></i>
+                  {% else %}
+                    {{ p.falta }}
+                  {% endif %}
+                </td>
+                <td class="text-center">
+                  {% if not p.completo %}
+                  <input type="number"
+                         name="quantidade_{{ p.nome }}"
+                         class="form-control form-control-sm text-center"
+                         value="{{ p.falta }}"
+                         min="0" max="{{ p.falta }}"
+                         style="width:80px; margin:auto;">
+                  {% else %}
+                  <span class="text-success small">✓</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+
       <div class="card">
         <div class="card-body p-4">
 
+          {% if not pedido %}
           <div class="card-section-title">Produto Montado</div>
-
           <div class="mb-3">
             <label class="form-label">Produto</label>
             <select name="produto" id="id_produto" class="form-select" required>
@@ -32,30 +95,32 @@
               {% endfor %}
             </select>
           </div>
-
           <div class="mb-3">
             <label class="form-label">Quantidade</label>
             <input type="number" name="quantidade" class="form-control"
                    placeholder="0" step="1" min="1" required>
           </div>
+          {% endif %}
 
           <div class="mb-0">
             <label class="form-label">
-              Observação <span class="text-muted fw-normal" style="text-transform:none;letter-spacing:0;">(opcional)</span>
+              Observação <span class="text-muted fw-normal">(opcional)</span>
             </label>
-            <textarea name="observacao" class="form-control" rows="3"
-                      placeholder="Ex: Nome/Código do Produto personalizado, Número do Pedido..."></textarea>
+            <textarea name="observacao" class="form-control" rows="2"
+                      placeholder="Ex: observações sobre a montagem...">{% if pedido %}Pedido {{ pedido.numero }} — {{ pedido.cliente.nome }}{% endif %}</textarea>
           </div>
 
         </div>
       </div>
 
       <div class="d-flex gap-2 mt-3 justify-content-end">
-        <a href="{% url 'montagem:list' %}" class="btn btn-outline-secondary px-4">
-          Ver histórico
+        <a href="{% if pedido %}{% url 'vendas:montagem_list' %}{% else %}{% url 'montagem:list' %}{% endif %}"
+           class="btn btn-outline-secondary px-4">
+          {% if pedido %}Voltar{% else %}Ver histórico{% endif %}
         </a>
         <button type="submit" class="btn btn-primary px-4">
-          <i class="bi bi-check-lg me-1"></i> Registrar Produção
+          <i class="bi bi-check-lg me-1"></i>
+          {% if pedido %}Confirmar Montagem{% else %}Registrar Produção{% endif %}
         </button>
       </div>
 

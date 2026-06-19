@@ -40,6 +40,33 @@ document.addEventListener('DOMContentLoaded', function () {
       .catch(e => console.error(e));
   }
 
+  // ── Totais da edição ──
+  function atualizarTotaisEdit() {
+    const tpEl      = document.getElementById('edit_total_produtos');
+    const tgEl      = document.getElementById('edit_total_geral');
+    const freteEl   = document.getElementById('id_frete');
+    const descontoEl = document.getElementById('id_desconto_edit');
+
+    if (!tpEl || !tgEl) return;
+
+    // Remove "R$ " antes de parsear
+    const totalProdutos = parseMoeda(tpEl.textContent.replace('R$', '').trim());
+    const frete         = freteEl   ? parseMoeda(freteEl.value)     : 0;
+    const desconto      = descontoEl ? parseMoeda(descontoEl.value) : 0;
+    const total         = totalProdutos - desconto + frete;
+
+    tgEl.textContent = formatMoedaBR(total > 0 ? total : 0);
+
+    const totalFreteEl = document.getElementById('edit_total_frete');
+    if (totalFreteEl) totalFreteEl.textContent = formatMoedaBR(frete);
+}
+
+  // Listeners frete e desconto
+  const freteEl    = document.getElementById('id_frete');
+  const descontoEl = document.getElementById('id_desconto_edit');
+  if (freteEl)    freteEl.addEventListener('input', atualizarTotaisEdit);
+  if (descontoEl) descontoEl.addEventListener('input', atualizarTotaisEdit);
+
   const editItemsBody = document.getElementById('edit_items_body');
   const formAddItem   = document.getElementById('form-add-item');
   const pedidoPk      = formAddItem ? formAddItem.dataset.pedidoPk : null;
@@ -68,6 +95,31 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     },
   });
+
+  // ── Listener tipo de venda — limpa produto e preço ao trocar ──
+  const tipoVendaEl = document.querySelector('[name="tipo_venda"]');
+if (tipoVendaEl) {
+  tipoVendaEl.addEventListener('change', function () {
+    tsProdutoEdit.clear();
+    tsProdutoEdit.clearOptions();
+    produtoEditSelecionado = null;
+    document.getElementById('id_preco_edit').value = '';
+
+    // Se tipo gratuito, zera preço de todos os itens na tela
+    if (isGratuito()) {
+      editItemsBody.querySelectorAll('tr').forEach(tr => {
+        const itemPk = tr.dataset.itemPk;
+        if (!itemPk) return;
+        ajaxPost(`/vendas/${pedidoPk}/itens/${itemPk}/atualizar/`, {
+          quantidade:     tr.querySelector('.input-edit-qtd')?.value || 1,
+          preco_unitario: '0.00',
+        }, data => {
+          atualizarTabelaEdit(data.itens, data.totais);
+        });
+      });
+    }
+  });
+}
 
   function atualizarTabelaEdit(itens, totais) {
     editItemsBody.innerHTML = '';
@@ -107,6 +159,8 @@ document.addEventListener('DOMContentLoaded', function () {
       if (tg) tg.textContent = formatMoedaBR(totais.total_geral);
     }
 
+    // Recalcula totais com frete atual do form
+    atualizarTotaisEdit();
     bindEditListeners();
   }
 

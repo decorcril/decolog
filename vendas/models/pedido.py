@@ -1,23 +1,27 @@
 from decimal import Decimal, ROUND_HALF_UP
 from django.db import models
+from django.db.models import Sum
 from django.contrib.auth.models import User
 from clientes.models import Cliente
 from produtos.models import Produto
 
 TWO = Decimal("0.01")
 
-FREE_SALE_TYPES = {"exchange", "maintenance", "advertising", "replacement"}
+FREE_SALE_TYPES = {"exchange", "maintenance", "advertising", "replacement", "comodato"}
 
 
 class Pedido(models.Model):
 
     class Status(models.TextChoices):
-        OPEN          = "open",          "Em aberto"
-        IN_PRODUCTION = "in_production", "Em Produção"
-        PICKING       = "picking",       "Em Separação"
-        SHIPPED       = "shipped",       "Enviado"
-        DELIVERED     = "delivered",     "Entregue"
-        CANCELED      = "canceled",      "Cancelado"
+        OPEN              = "open",              "Em aberto"
+        AGUARD_PAGAMENTO  = "aguard_pagamento",  "Aguardando Pagamento"
+        AGUARD_PRODUCAO   = "aguard_producao",   "Aguardando Produção"
+        CUTTING           = "cutting",           "Em Corte"
+        ASSEMBLING        = "assembling",        "Em Montagem"
+        PICKING           = "picking",           "Em Separação"
+        SHIPPED           = "shipped",           "Enviado"
+        DELIVERED         = "delivered",         "Entregue"
+        CANCELED          = "canceled",          "Cancelado"
 
     class TipoVenda(models.TextChoices):
         DIRECT      = "direct",      "Venda direta"
@@ -27,64 +31,27 @@ class Pedido(models.Model):
         ADVERTISING = "advertising", "Publicidade"
         COMODATO    = "comodato",    "Comodato"
 
-    # Identificação
-    numero = models.CharField(
-        max_length=10, unique=True, blank=True,
-        verbose_name='Número do Pedido', db_index=True
-    )
-
-    # Relacionamentos
-    cliente = models.ForeignKey(
-        Cliente, on_delete=models.PROTECT,
-        related_name='pedidos', verbose_name='Cliente'
-    )
-    criado_por = models.ForeignKey(
-        User, on_delete=models.PROTECT,
-        related_name='pedidos_criados', verbose_name='Criado por'
-    )
-    responsavel = models.ForeignKey(
-        User, on_delete=models.PROTECT,
-        related_name='pedidos_responsavel',
-        null=True, blank=True, verbose_name='Responsável'
-    )
-
-    # Status e tipo
-    status    = models.CharField(
-        max_length=20, choices=Status.choices,
-        default=Status.OPEN, db_index=True,
-        verbose_name='Status'
-    )
-    tipo_venda = models.CharField(
-        max_length=20, choices=TipoVenda.choices,
-        blank=True, verbose_name='Tipo de Venda'
-    )
-
-    # Dados comerciais
-    pedido_cliente    = models.CharField(max_length=100, blank=True, verbose_name='Pedido do Cliente')
+    numero = models.CharField(max_length=10, unique=True, blank=True, verbose_name='Número do Pedido', db_index=True)
+    cliente            = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='pedidos', verbose_name='Cliente')
+    criado_por         = models.ForeignKey(User, on_delete=models.PROTECT, related_name='pedidos_criados', verbose_name='Criado por')
+    responsavel        = models.ForeignKey(User, on_delete=models.PROTECT, related_name='pedidos_responsavel', null=True, blank=True, verbose_name='Responsável')
+    status             = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN, db_index=True, verbose_name='Status')
+    tipo_venda         = models.CharField(max_length=20, choices=TipoVenda.choices, blank=True, verbose_name='Tipo de Venda')
+    pedido_cliente     = models.CharField(max_length=100, blank=True, verbose_name='Pedido do Cliente')
     condicao_pagamento = models.CharField(max_length=100, blank=True, verbose_name='Condição de Pagamento')
-    contato           = models.CharField(max_length=100, blank=True, verbose_name='Contato')
-    transportadora    = models.CharField(max_length=50, blank=True, verbose_name='Transportadora')
-    frete             = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Frete')
-    percentual_entrada = models.DecimalField(
-        max_digits=5, decimal_places=2, default=Decimal("0.00"),
-        blank=True, verbose_name='Entrada (%)',
-        help_text='Percentual mínimo para liberar produção'
-    )
-    data_entrega = models.DateField(null=True, blank=True, verbose_name='Data de Entrega')
-
-    # Observações
-    observacoes          = models.TextField(blank=True, verbose_name='Observações')
+    contato            = models.CharField(max_length=100, blank=True, verbose_name='Contato')
+    transportadora     = models.CharField(max_length=50, blank=True, verbose_name='Transportadora')
+    frete              = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Frete')
+    percentual_entrada = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0.00"), blank=True, verbose_name='Entrada (%)')
+    data_entrega       = models.DateField(null=True, blank=True, verbose_name='Data de Entrega')
+    observacoes        = models.TextField(blank=True, verbose_name='Observações')
     observacoes_internas = models.TextField(blank=True, verbose_name='Observações Internas')
-
-    # Totais
-    total_produtos = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Total Produtos')
-    total_desconto = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Total Desconto')
-    total_impostos = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Total Impostos')
-    total_geral    = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Total Geral')
-
-    # Datas
-    criado_em     = models.DateTimeField(auto_now_add=True)
-    atualizado_em = models.DateTimeField(auto_now=True)
+    total_produtos     = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Total Produtos')
+    total_desconto     = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Total Desconto')
+    total_impostos     = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Total Impostos')
+    total_geral        = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Total Geral')
+    criado_em          = models.DateTimeField(auto_now_add=True)
+    atualizado_em      = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name        = 'Pedido'
@@ -106,8 +73,6 @@ class Pedido(models.Model):
             self.responsavel = self.criado_por
         super().save(*args, **kwargs)
 
-    # ── Properties ──
-
     @property
     def is_free_sale(self) -> bool:
         return self.tipo_venda in FREE_SALE_TYPES
@@ -125,10 +90,54 @@ class Pedido(models.Model):
     def valor_entrada(self) -> Decimal:
         return (self.total_geral * self.percentual_entrada / 100).quantize(TWO)
 
-    # ── Status automático ──
+    @property
+    def progresso_corte(self):
+        from producao_corte.models import ProdutoCortado
+        resultado = []
+        for item in self.itens.select_related('produto').all():
+            cortado = ProdutoCortado.objects.filter(
+                item_corte__registro__pedido=self,
+                produto=item.produto,
+            ).aggregate(total=Sum('quantidade'))['total'] or Decimal('0')
+            resultado.append({
+                'nome':     item.produto.nome,
+                'cortado':  cortado,
+                'total':    item.quantidade,
+                'completo': cortado >= item.quantidade,
+                'falta':    max(Decimal('0'), item.quantidade - cortado),
+            })
+        return resultado
+
+    @property
+    def corte_completo(self):
+        return all(p['completo'] for p in self.progresso_corte)
+
+    @property
+    def progresso_montagem(self):
+        from montagem.models import ItemMontagem
+        resultado = []
+        for item in self.itens.select_related('produto').all():
+            montado = ItemMontagem.objects.filter(
+                registro__pedido=self,
+                produto=item.produto,
+            ).aggregate(total=Sum('quantidade'))['total'] or Decimal('0')
+            resultado.append({
+                'nome':     item.produto.nome,
+                'montado':  montado,
+                'total':    item.quantidade,
+                'completo': montado >= item.quantidade,
+                'falta':    max(Decimal('0'), Decimal(str(item.quantidade)) - Decimal(str(montado))),
+            })
+        return resultado
+
+    @property
+    def montagem_completa(self):
+        return all(p['completo'] for p in self.progresso_montagem)
 
     def sync_status(self):
         protected = {
+            self.Status.CUTTING,
+            self.Status.ASSEMBLING,
             self.Status.PICKING,
             self.Status.SHIPPED,
             self.Status.DELIVERED,
@@ -138,9 +147,19 @@ class Pedido(models.Model):
             return
 
         if self.is_free_sale:
-            new_status = self.Status.IN_PRODUCTION
+            new_status = self.Status.AGUARD_PRODUCAO
         else:
-            new_status = self.Status.IN_PRODUCTION if self.pagamentos.exists() else self.Status.OPEN
+            if self.pagamentos.exists():
+                if self.percentual_entrada > 0:
+                    new_status = (
+                        self.Status.AGUARD_PRODUCAO
+                        if self.total_pago >= self.valor_entrada
+                        else self.Status.AGUARD_PAGAMENTO
+                    )
+                else:
+                    new_status = self.Status.AGUARD_PRODUCAO
+            else:
+                new_status = self.Status.OPEN
 
         if self.status != new_status:
             self.status = new_status
@@ -148,19 +167,10 @@ class Pedido(models.Model):
 
 
 class ItemPedido(models.Model):
-    pedido = models.ForeignKey(
-        Pedido, on_delete=models.CASCADE,
-        related_name='itens', verbose_name='Pedido'
-    )
-    produto = models.ForeignKey(
-        Produto, on_delete=models.PROTECT,
-        related_name='itens_pedido', verbose_name='Produto'
-    )
-    quantidade    = models.PositiveIntegerField(default=1, verbose_name='Quantidade')
-    preco_unitario = models.DecimalField(
-        max_digits=10, decimal_places=2,
-        verbose_name='Preço Unitário'
-    )
+    pedido         = models.ForeignKey(Pedido, on_delete=models.CASCADE, related_name='itens', verbose_name='Pedido')
+    produto        = models.ForeignKey(Produto, on_delete=models.PROTECT, related_name='itens_pedido', verbose_name='Produto')
+    quantidade     = models.PositiveIntegerField(default=1, verbose_name='Quantidade')
+    preco_unitario = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Preço Unitário')
 
     class Meta:
         verbose_name        = 'Item do Pedido'
@@ -185,12 +195,12 @@ class ItemPedido(models.Model):
 
     def _sync_totais(self, pedido=None):
         pedido = pedido or self.pedido
-        total = sum(
+        total  = sum(
             (i.preco_unitario * i.quantidade).quantize(TWO)
             for i in pedido.itens.all()
         )
         pedido.total_produtos = total
-        pedido.total_geral = (
+        pedido.total_geral    = (
             total - pedido.total_desconto + pedido.total_impostos + pedido.frete
         ).quantize(TWO)
         pedido.save(update_fields=['total_produtos', 'total_geral', 'atualizado_em'])

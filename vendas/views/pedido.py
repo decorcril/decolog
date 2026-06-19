@@ -266,6 +266,12 @@ def item_update(request, pk, item_pk):
         if quantidade < 1:
             quantidade = 1
         item.quantidade = quantidade
+
+        # Atualiza preço se enviado
+        preco_unitario = request.POST.get('preco_unitario')
+        if preco_unitario is not None:
+            item.preco_unitario = Decimal(preco_unitario)
+
         item.save()
         pedido.refresh_from_db()
         return JsonResponse({
@@ -275,7 +281,6 @@ def item_update(request, pk, item_pk):
         })
 
     return JsonResponse({'ok': False})
-
 
 def _serializar_itens(pedido):
     return [
@@ -300,3 +305,35 @@ def _serializar_totais(pedido):
         'total_pago':     float(pedido.total_pago),
         'saldo_restante': float(pedido.saldo_restante),
     }
+
+@acesso_vendas
+def item_add(request, pk):
+    pedido = get_object_or_404(Pedido, pk=pk)
+
+    if request.method == 'POST':
+        produto_id     = request.POST.get('produto')
+        quantidade     = int(request.POST.get('quantidade', 1))
+        preco_unitario = Decimal(request.POST.get('preco_unitario', '0'))
+
+        produto = get_object_or_404(Produto, pk=produto_id)
+
+        item_existente = pedido.itens.filter(produto=produto).first()
+        if item_existente:
+            item_existente.quantidade += quantidade
+            item_existente.save()
+        else:
+            ItemPedido.objects.create(
+                pedido         = pedido,
+                produto        = produto,
+                quantidade     = quantidade,
+                preco_unitario = preco_unitario,
+            )
+
+        pedido.refresh_from_db()
+        return JsonResponse({
+            'ok':    True,
+            'itens': _serializar_itens(pedido),
+            'totais': _serializar_totais(pedido),
+        })
+
+    return JsonResponse({'ok': False})

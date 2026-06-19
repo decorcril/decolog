@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
   const TIPOS_GRATUITOS = ['exchange', 'replacement', 'advertising', 'comodato'];
 
-  // ── Helpers ──
   function parseMoeda(str) {
     return parseFloat((str || '0').replace(/\./g, '').replace(',', '.')) || 0;
   }
@@ -86,6 +85,34 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       },
     });
+
+    // ── Listener tipo de venda — limpa produtos e itens ──
+    const tipoVendaEl = document.querySelector('[name="tipo_venda"]');
+    if (tipoVendaEl) {
+      tipoVendaEl.addEventListener('change', function () {
+        if (items.length > 0) {
+          const confirma = confirm(
+            'Ao trocar o tipo de venda os itens adicionados serão removidos. Deseja continuar?'
+          );
+          if (!confirma) {
+            this.value = this.dataset.valorAnterior || '';
+            return;
+          }
+          items = [];
+        }
+        // Guarda valor atual para possível rollback
+        this.dataset.valorAnterior = this.value;
+        // Limpa produto selecionado e preço
+        tsProduto.clear();
+        tsProduto.clearOptions();
+        produtoSelecionado = null;
+        document.getElementById('id_preco_add').value = '';
+        renderItems();
+      });
+
+      // Guarda valor inicial
+      tipoVendaEl.dataset.valorAnterior = tipoVendaEl.value;
+    }
 
     function renderItems() {
       const tbody    = document.getElementById('items_body');
@@ -208,4 +235,149 @@ document.addEventListener('DOMContentLoaded', function () {
     renderItems();
   }
 
+  // ══════════════════════════════════════════
+  // EDIÇÃO — itens via AJAX
+  // ══════════════════════════════════════════
+  const editItemsBody = document.getElementById('edit_items_body');
+  const formAddItem   = document.getElementById('form-add-item');
+  const pedidoPk      = formAddItem ? formAddItem.dataset.pedidoPk : null;
+  let produtoEditSelecionado = null;
+
+  if (document.getElementById('id_produto_search_edit')) {
+    const tsProdutoEdit = new TomSelect('#id_produto_search_edit', {
+      valueField: 'value',
+      labelField: 'text',
+      searchField: ['text'],
+      placeholder: 'Pesquisar produto...',
+      load: function (query, callback) {
+        if (!query.length) return callback();
+        fetch(`/vendas/autocomplete/produtos/?q=${encodeURIComponent(query)}&tipo_venda=${getTipoVenda()}`)
+          .then(r => r.json())
+          .then(data => callback(data.results))
+          .catch(() => callback());
+      },
+      minChars: 2,
+      shouldLoad: q => q.length >= 2,
+      onItemAdd: function (value) {
+        const option = tsProdutoEdit.options[value];
+        if (option) {
+          produtoEditSelecionado = option;
+          const preco = isGratuito() ? 0 : parseFloat(option.preco || 0);
+          document.getElementById('id_preco_edit').value = formatMoeda(preco);
+        }
+      },
+    });
+
+    document.getElementById('btn_add_item_edit').addEventListener('click', function () {
+      if (!produtoEditSelecionado) { alert('Selecione um produto.'); return; }
+
+      const preco = parseMoeda(document.getElementById('id_preco_edit').value);
+      if (preco <= 0 && !isGratuito()) {
+        alert('Este produto não tem preço cadastrado.');
+        return;
+      }
+
+      const qtd = parseInt(document.getElementById('edit_qtd').value) || 1;
+
+      ajaxPost(`/vendas/${pedidoPk}/itens/adicionar/`, {
+        produto:        produtoEditSelecionado.value,
+        quantidade:     qtd,
+        preco_unitario: preco.toFixed(2),
+      }, data => {
+        atualizarTabelaEdit(data.itens, data.totais);
+        tsProdutoEdit.clear();
+        tsProdutoEdit.clearOptions();
+        produtoEditSelecionado = null;
+        document.getElementById('id_preco_edit').value = '';
+        document.getElementById('edit_qtd').value = 1;
+      });
+    });
+  }
+
+  function atualizarTabelaEdit(itens, totais) {
+    if (!editItemsBody) return;
+    editItemsBody.innerHTML = '';
+    itens.forEach(item => {
+      const tr = document.createElement('tr');
+      tr.dataset.itemPk = item.pk;
+      tr.innerHTML = `
+        <td class="fw-semibold small">${item.nome}</td>
+        <td class="text-center" style="width:150px">
+          <div class="input-group input-group-sm">
+            <button type="button" class="btn btn-outline-secondary btn-edit-minus"
+                    data-item-pk="${item.pk}" data-qtd="${item.quantidade}"
+                    ${item.quantidade <= 1 ? 'disabled' : ''}>−</button>
+            <input type="number" class="form-control text-center input-edit-qtd"
+                   value="${item.quantidade}" min="1"
+                   data-item-pk="${item.pk}" style="width:55px">
+            <button type="button" class="btn btn-outline-secondary btn-edit-plus"
+                    data-item-pk="${item.pk}" data-qtd="${item.quantidade}">+</button>
+          </div>
+        </td>
+        <td class="text-end text-muted small">${formatMoedaBR(item.preco)}</td>
+        <td class="text-end fw-semibold">${formatMoedaBR(item.subtotal)}</td>
+        <td class="text-end">
+          <button type="button" class="btn btn-sm btn-link text-danger p-0 btn-edit-remove"
+                  data-item-pk="${item.pk}">
+            <i class="bi bi-trash"></i>
+          </button>
+        </td>
+      `;
+      editItemsBody.appendChild(tr);
+    });
+
+    if (totais) {
+      const tp = document.getElementById('edit_total_produtos');
+      const tg = document.getElementById('edit_total_geral');
+      if (tp) tp.textContent = formatMoedaBR(totais.total_produtos);
+      if (tg) tg.textContent = formatMoedaBR(totais.total_geral);
+    }
+
+    bindEditListeners();
+  }
+
+  function bindEditListeners() {
+    if (!editItemsBody) return;
+
+    editItemsBody.querySelectorAll('.btn-edit-minus').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const itemPk = this.dataset.itemPk;
+        const qtd    = Math.max(1, parseInt(this.dataset.qtd) - 1);
+        ajaxPost(`/vendas/${pedidoPk}/itens/${itemPk}/atualizar/`, { quantidade: qtd }, data => {
+          atualizarTabelaEdit(data.itens, data.totais);
+        });
+      });
+    });
+
+    editItemsBody.querySelectorAll('.btn-edit-plus').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const itemPk = this.dataset.itemPk;
+        const qtd    = parseInt(this.dataset.qtd) + 1;
+        ajaxPost(`/vendas/${pedidoPk}/itens/${itemPk}/atualizar/`, { quantidade: qtd }, data => {
+          atualizarTabelaEdit(data.itens, data.totais);
+        });
+      });
+    });
+
+    editItemsBody.querySelectorAll('.input-edit-qtd').forEach(input => {
+      input.addEventListener('change', function () {
+        const itemPk = this.dataset.itemPk;
+        const qtd    = Math.max(1, parseInt(this.value) || 1);
+        ajaxPost(`/vendas/${pedidoPk}/itens/${itemPk}/atualizar/`, { quantidade: qtd }, data => {
+          atualizarTabelaEdit(data.itens, data.totais);
+        });
+      });
+    });
+
+    editItemsBody.querySelectorAll('.btn-edit-remove').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const itemPk = this.dataset.itemPk;
+        ajaxPost(`/vendas/${pedidoPk}/itens/${itemPk}/remover/`, {}, data => {
+          atualizarTabelaEdit(data.itens, data.totais);
+        });
+      });
+    });
+  }
+
+  if (editItemsBody) bindEditListeners();
 });

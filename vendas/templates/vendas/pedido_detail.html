@@ -173,9 +173,13 @@
         <div class="d-flex flex-column gap-2">
           <div class="d-flex justify-content-between align-items-center">
             <span class="text-muted small">Status</span>
+            {# Badge status #}
             <span class="badge
               {% if pedido.status == 'open' %}bg-secondary bg-opacity-10 text-secondary
-              {% elif pedido.status == 'in_production' %}bg-warning bg-opacity-10 text-warning
+              {% elif pedido.status == 'aguard_pagamento' %}bg-warning bg-opacity-10 text-warning
+              {% elif pedido.status == 'aguard_producao' %}bg-info bg-opacity-10 text-info
+              {% elif pedido.status == 'cutting' %}bg-primary bg-opacity-10 text-primary
+              {% elif pedido.status == 'assembling' %}bg-warning bg-opacity-10 text-warning
               {% elif pedido.status == 'picking' %}bg-info bg-opacity-10 text-info
               {% elif pedido.status == 'shipped' %}bg-primary bg-opacity-10 text-primary
               {% elif pedido.status == 'delivered' %}bg-success bg-opacity-10 text-success

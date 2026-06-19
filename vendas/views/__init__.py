@@ -4,9 +4,11 @@ from .pedido import (
     pedido_detail,
     pedido_edit,
     pedido_status,
+    item_add,
     item_remove,
     item_update,
 )
+
 from .pagamento import (
     pagamento_add,
     pagamento_delete,
@@ -22,4 +24,12 @@ from .orcamento import (
     orcamento_detail,
     orcamento_aprovar,
     orcamento_rejeitar,
+)
+
+from .producao import (
+    laser_list,
+    laser_confirmar,
+    laser_finalizar,
+    montagem_list,
+    montagem_finalizar,
 )

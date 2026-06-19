@@ -126,6 +126,9 @@
       {# -- Corte a Laser [MOBILE] -- #}
       {% if is_laser or is_gerente or user.is_staff %}
       <div class="mobile-nav-section">Corte a Laser</div>
+      <a href="{% url 'vendas:laser_list' %}" class="mobile-nav-link">
+        <i class="bi bi-list-check"></i> Fila de Pedidos
+      </a>
       <a href="{% url 'producao_corte:create' %}" class="mobile-nav-link">
         <i class="bi bi-plus-circle"></i> Registrar Corte
       </a>
@@ -137,6 +140,9 @@
       {# -- Produção [MOBILE] -- #}
       {% if is_montagem or is_gerente or user.is_staff %}
       <div class="mobile-nav-section">Produção</div>
+      <a href="{% url 'vendas:montagem_list' %}" class="mobile-nav-link">
+        <i class="bi bi-list-check"></i> Fila de Pedidos
+      </a>
       <a href="{% url 'montagem:registrar' %}" class="mobile-nav-link">
         <i class="bi bi-tools"></i> Registrar Produção
       </a>
@@ -231,7 +237,6 @@
           <i class="bi bi-cart3"></i> Vendas
         </a>
         <ul class="dropdown-menu">
-          <li><hr class="dropdown-divider" style="border-color: rgba(255,255,255,0.08);"></li>
           <li>
             <a class="dropdown-item" href="{% url 'vendas:orcamento_list' %}">
               <i class="bi bi-file-earmark-text"></i> Orçamentos
@@ -356,6 +361,12 @@
         </a>
         <ul class="dropdown-menu">
           <li>
+            <a class="dropdown-item" href="{% url 'vendas:laser_list' %}">
+              <i class="bi bi-list-check"></i> Fila de Pedidos
+            </a>
+          </li>
+          <li><hr class="dropdown-divider" style="border-color: rgba(255,255,255,0.08);"></li>
+          <li>
             <a class="dropdown-item" href="{% url 'producao_corte:create' %}">
               <i class="bi bi-plus-circle"></i> Registrar Corte
             </a>
@@ -376,6 +387,12 @@
           <i class="bi bi-tools"></i> Produção
         </a>
         <ul class="dropdown-menu">
+          <li>
+            <a class="dropdown-item" href="{% url 'vendas:montagem_list' %}">
+              <i class="bi bi-list-check"></i> Fila de Pedidos
+            </a>
+          </li>
+          <li><hr class="dropdown-divider" style="border-color: rgba(255,255,255,0.08);"></li>
           <li>
             <a class="dropdown-item" href="{% url 'montagem:registrar' %}">
               <i class="bi bi-plus-circle"></i> Registrar Produção
@@ -398,6 +415,33 @@
       {% endif %}
 
     </div>
+    {# ── Sininho de notificações ── #}
+{% if user.is_authenticated %}
+<div class="dropdown ms-2" id="notif-dropdown">
+  <button class="btn btn-sm btn-link text-white position-relative p-1"
+        id="notif-btn" data-bs-toggle="dropdown" data-bs-auto-close="outside"
+        data-url="{% url 'core:notificacoes_lista' %}"
+        data-lida-url="/notificacoes/">
+    <i class="bi bi-bell fs-5"></i>
+    <span id="notif-badge"
+          class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+          style="display:none; font-size:0.65rem;">
+      0
+    </span>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end shadow p-0"
+      style="min-width:320px; max-height:420px; overflow-y:auto;">
+    <li class="px-3 py-2 border-bottom">
+      <span class="fw-semibold small">Notificações</span>
+    </li>
+    <div id="notif-lista">
+      <li class="px-3 py-3 text-center text-muted small">
+        <span class="spinner-border spinner-border-sm me-1"></span> Carregando...
+      </li>
+    </div>
+  </ul>
+</div>
+{% endif %}
 
     <div class="topbar-user">
       <span class="username d-none d-md-inline">{{ user.get_full_name|default:user.username }}</span>
@@ -424,8 +468,10 @@
       {% endif %}
 
       {% block content %}{% endblock %}
+      
 
     </div>
+    
   </div>
 
 {% else %}
@@ -454,6 +500,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="{% static 'js/base.js' %}"></script>
 <script src="{% static 'js/masks.js' %}"></script>
+<script src="{% static 'js/notificacoes.js' %}"></script>
 {% block extra_js %}{% endblock %}
 
 </body>

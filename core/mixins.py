@@ -23,7 +23,6 @@ def grupo_requerido(*grupos):
     return decorator
 
 
-# Atalhos por perfil
 def admin_required(view_func):
     return grupo_requerido()(view_func)
 
@@ -33,26 +32,8 @@ def gerente_ou_admin(view_func):
 def estoquista_ou_admin(view_func):
     return grupo_requerido('Estoquista')(view_func)
 
-def logistica_ou_admin(view_func):
-    return grupo_requerido('Logística')(view_func)
-
 def estoque_ou_gerente(view_func):
     return grupo_requerido('Estoquista', 'Gerente')(view_func)
-
-def producao_ou_admin(view_func):
-    return grupo_requerido('Produção')(view_func)
-
-def operador_laser_ou_acima(view_func):
-    return grupo_requerido('Operador de Laser', 'Supervisor de Laser')(view_func)
-
-def supervisor_laser_ou_admin(view_func):
-    return grupo_requerido('Supervisor de Laser')(view_func)
-
-def producao_ou_gerente(view_func):
-    return grupo_requerido('Operador laser', 'Supervisor de Laser', 'Gerente')(view_func)
-
-def montagem_ou_gerente(view_func):
-    return grupo_requerido('Operador de Montagem', 'Gerente')(view_func)
 
 def vendedor_ou_gerente(view_func):
     return grupo_requerido('Vendedor', 'Gerente')(view_func)
@@ -60,8 +41,17 @@ def vendedor_ou_gerente(view_func):
 def financeiro_ou_gerente(view_func):
     return grupo_requerido('Financeiro', 'Gerente')(view_func)
 
-def vendedor_ou_gerente(view_func):
-    return grupo_requerido('Vendedor', 'Gerente')(view_func)
-
 def acesso_vendas(view_func):
     return grupo_requerido('Vendedor', 'Financeiro', 'Gerente')(view_func)
+
+def laser_ou_gerente(view_func):
+    return grupo_requerido('Operador de Laser', 'Supervisor de Laser', 'Gerente')(view_func)
+
+def producao_ou_gerente(view_func):
+    return grupo_requerido('Operador de Laser', 'Supervisor de Laser', 'Gerente')(view_func)
+
+def supervisor_laser_ou_admin(view_func):
+    return grupo_requerido('Supervisor de Laser')(view_func)
+
+def montagem_ou_gerente(view_func):
+    return grupo_requerido('Operador de Montagem', 'Supervisor de Montagem', 'Gerente')(view_func)

@@ -5,6 +5,7 @@ from django.db import transaction
 from django.db.models import Sum
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
+from django.urls import reverse
 from decimal import Decimal
 from datetime import date
 import json
@@ -18,6 +19,13 @@ from ..models import RegistroCorte, ItemCorte, ProdutoCortado
 
 @producao_ou_gerente
 def registro_corte_create(request):
+    from vendas.models import Pedido
+
+    pedido_pk = request.GET.get('pedido_pk') or request.POST.get('pedido_pk')
+    pedido    = None
+    if pedido_pk:
+        pedido = get_object_or_404(Pedido, pk=pedido_pk)
+
     produtos_materiais = Produto.objects.filter(
         categoria__in=['chapa'], ativo=True
     ).order_by('nome')
@@ -26,24 +34,24 @@ def registro_corte_create(request):
     ).order_by('nome')
 
     if request.method == 'POST':
-        data_str = request.POST.get('data')
+        data_str   = request.POST.get('data')
         observacao = request.POST.get('observacao', '')
 
         try:
             data_parsed = date.fromisoformat(data_str)
         except (ValueError, TypeError):
             messages.error(request, 'Data inválida.')
-            return redirect('producao_corte:create')
+            return redirect(reverse('producao_corte:create') + (f'?pedido_pk={pedido_pk}' if pedido_pk else ''))
 
         if data_parsed > timezone.localdate():
             messages.error(request, 'A data não pode ser no futuro.')
-            return redirect('producao_corte:create')
+            return redirect(reverse('producao_corte:create') + (f'?pedido_pk={pedido_pk}' if pedido_pk else ''))
 
         chapas = []
         i = 0
         while f'entrada_produto_{i}' in request.POST:
             prod_id = request.POST.get(f'entrada_produto_{i}')
-            qty = request.POST.get(f'entrada_quantidade_{i}')
+            qty     = request.POST.get(f'entrada_quantidade_{i}')
             if prod_id and qty:
                 chapas.append((i, prod_id, Decimal(qty)))
             i += 1
@@ -54,24 +62,24 @@ def registro_corte_create(request):
             j = 0
             while f'saida_chapa_{chapa_idx}_produto_{j}' in request.POST:
                 prod_id = request.POST.get(f'saida_chapa_{chapa_idx}_produto_{j}')
-                qty = request.POST.get(f'saida_chapa_{chapa_idx}_quantidade_{j}')
+                qty     = request.POST.get(f'saida_chapa_{chapa_idx}_quantidade_{j}')
                 if prod_id and qty:
                     produtos_por_chapa[chapa_idx].append((prod_id, Decimal(qty)))
                 j += 1
 
         if not chapas:
             messages.error(request, 'Informe ao menos uma chapa utilizada.')
-            return redirect('producao_corte:create')
+            return redirect(reverse('producao_corte:create') + (f'?pedido_pk={pedido_pk}' if pedido_pk else ''))
 
         tem_produtos = any(produtos_por_chapa.get(idx) for idx, _, _ in chapas)
         if not tem_produtos:
             messages.error(request, 'Informe ao menos um produto cortado.')
-            return redirect('producao_corte:create')
+            return redirect(reverse('producao_corte:create') + (f'?pedido_pk={pedido_pk}' if pedido_pk else ''))
 
         try:
             with transaction.atomic():
                 for _, prod_id, quantidade in chapas:
-                    produto = Produto.objects.get(pk=prod_id)
+                    produto       = Produto.objects.get(pk=prod_id)
                     estoque_total = Estoque.objects.filter(
                         produto=produto
                     ).aggregate(total=Sum('quantidade'))['total'] or Decimal('0')
@@ -86,10 +94,11 @@ def registro_corte_create(request):
                     data=data_parsed,
                     operador=request.user,
                     observacao=observacao,
+                    pedido=pedido,
                 )
 
                 for chapa_idx, prod_id, quantidade in chapas:
-                    produto = Produto.objects.get(pk=prod_id)
+                    produto  = Produto.objects.get(pk=prod_id)
                     restante = quantidade
 
                     for estoque in Estoque.objects.filter(
@@ -104,7 +113,7 @@ def registro_corte_create(request):
                             tipo='saida',
                             motivo='uso_interno',
                             quantidade=abate,
-                            observacao=f'Corte em {data_parsed.strftime("%d/%m/%Y")}',
+                            observacao=f'Corte em {data_parsed.strftime("%d/%m/%Y")}' + (f' — Pedido {pedido.numero}' if pedido else ''),
                             usuario=request.user,
                             registro_corte=registro,
                         )
@@ -123,23 +132,56 @@ def registro_corte_create(request):
                             quantidade=qty_saida,
                         )
 
-                messages.success(request, 'Registro de corte salvo com sucesso!')
-                return redirect('producao_corte:list')
+                if pedido:
+                    pedido.refresh_from_db()
+                    progresso       = pedido.progresso_corte
+                    todos_completos = all(p['completo'] for p in progresso)
+                    incompletos     = [p for p in progresso if not p['completo']]
+
+                    if todos_completos:
+                        pedido.status = Pedido.Status.ASSEMBLING
+                        pedido.save(update_fields=['status', 'atualizado_em'])
+                        messages.success(request, f'Corte completo! Pedido {pedido.numero} enviado para montagem.')
+                    else:
+                        pedido.status = Pedido.Status.CUTTING
+                        pedido.save(update_fields=['status', 'atualizado_em'])
+                        faltam = ', '.join(
+                            f"{p['nome']} ({p['falta']} restante{'s' if p['falta'] > 1 else ''})"
+                            for p in incompletos
+                        )
+                        messages.warning(request, f'Corte parcial registrado. Faltam: {faltam}')
+                else:
+                    messages.success(request, 'Registro de corte salvo com sucesso!')
+
+                return redirect('vendas:laser_list' if pedido else 'producao_corte:list')
 
         except ValueError as e:
             messages.error(request, str(e))
-            return redirect('producao_corte:create')
+            return redirect(reverse('producao_corte:create') + (f'?pedido_pk={pedido_pk}' if pedido_pk else ''))
 
+    produtos_pedido = []
+    if pedido:
+        progresso = pedido.progresso_corte
+        for p in progresso:
+            if not p['completo']:
+                produtos_pedido.append({
+                    'id':         str(pedido.itens.get(produto__nome=p['nome']).produto.pk),
+                    'nome':       p['nome'],
+                    'quantidade': float(p['falta']),  # só o que falta
+                })
     return render(request, 'producao_corte/registro_corte_form.html', {
-    'hoje': timezone.localdate().isoformat(),
-    'materiais_json': json.dumps([
-        {'id': str(p.pk), 'nome': p.nome, 'codigo': p.codigo or ''}
-        for p in produtos_materiais
-    ], ensure_ascii=False),
-    'produtos_json': json.dumps([
-        {'id': str(p.pk), 'nome': p.nome, 'codigo': p.codigo or ''}
-        for p in produtos_finais
-    ], ensure_ascii=False),
+        'hoje':           timezone.localdate().isoformat(),
+        'materiais_json': json.dumps([
+            {'id': str(p.pk), 'nome': p.nome, 'codigo': p.codigo or ''}
+            for p in produtos_materiais
+        ], ensure_ascii=False),
+        'produtos_json': json.dumps([
+            {'id': str(p.pk), 'nome': p.nome, 'codigo': p.codigo or ''}
+            for p in produtos_finais
+        ], ensure_ascii=False),
+        'pedido':          pedido,
+        'pedido_pk':       pedido_pk or '',
+        'produtos_pedido': json.dumps(produtos_pedido, ensure_ascii=False),
     })
 
 
@@ -159,7 +201,7 @@ def registro_corte_list(request):
 
     operador_id = request.GET.get('operador', '')
     data_inicio = request.GET.get('data_inicio', '')
-    data_fim = request.GET.get('data_fim', '')
+    data_fim    = request.GET.get('data_fim', '')
 
     if is_supervisor and operador_id:
         registros = registros.filter(operador__id=operador_id)
@@ -175,23 +217,24 @@ def registro_corte_list(request):
         total_chapas=Sum('itens__quantidade_chapa')
     ).order_by('-data', '-criado_em')
 
-    paginator = Paginator(registros, 20)
+    paginator   = Paginator(registros, 20)
     page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    page_obj    = paginator.get_page(page_number)
 
     operadores = User.objects.filter(
         registrocorte__isnull=False
     ).distinct() if is_supervisor else None
 
     return render(request, 'producao_corte/registro_corte_list.html', {
-        'registros': page_obj,
+        'registros':    page_obj,
         'is_supervisor': is_supervisor,
-        'operadores': operadores,
-        'operador_id': operador_id,
-        'data_inicio': data_inicio,
-        'data_fim': data_fim,
-        'page_obj': page_obj,
+        'operadores':   operadores,
+        'operador_id':  operador_id,
+        'data_inicio':  data_inicio,
+        'data_fim':     data_fim,
+        'page_obj':     page_obj,
     })
+
 
 @producao_ou_gerente
 def registro_corte_delete(request, pk):
@@ -221,6 +264,7 @@ def registro_corte_delete(request, pk):
         'registro': registro,
     })
 
+
 @producao_ou_gerente
 def registro_corte_detail(request, pk):
     registro = get_object_or_404(
@@ -236,11 +280,11 @@ def registro_corte_detail(request, pk):
         ).exists()
     )
     operador_id = request.GET.get('operador', '')
-    page = request.GET.get('page', '')
+    page        = request.GET.get('page', '')
 
     return render(request, 'producao_corte/registro_corte_detail.html', {
-        'registro': registro,
+        'registro':     registro,
         'is_supervisor': is_supervisor,
-        'operador_id': operador_id,
-        'page': page,
+        'operador_id':  operador_id,
+        'page':         page,
     })

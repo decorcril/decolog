@@ -4,6 +4,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const data = JSON.parse(dataEl.textContent);
   const MATERIAIS = data.materiais;
   const PRODUTOS_FINAIS = data.produtos;
+
+  const pedidoProdutosEl = document.getElementById('pedido-produtos');
+  const PRODUTOS_PEDIDO = pedidoProdutosEl ? JSON.parse(pedidoProdutosEl.textContent) : [];
+
   let chapaCount = 0;
 
   function initTomSelect(el, lista) {
@@ -20,13 +24,9 @@ document.addEventListener('DOMContentLoaded', () => {
       maxOptions: 50,
       render: {
         option: (data) => `<div class="ts-option">${data.text}</div>`,
-        item: (data) => `<div>${data.text}</div>`,
+        item:   (data) => `<div>${data.text}</div>`,
       }
     });
-  }
-
-  function buildSelect(name, required = true) {
-    return `<select name="${name}" ${required ? 'required' : ''}></select>`;
   }
 
   function addChapa() {
@@ -59,12 +59,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('chapas-container').appendChild(chapaDiv);
     initTomSelect(document.getElementById(`chapa-select-${ci}`), MATERIAIS);
-    addProduto(chapaDiv.querySelector('.btn-outline-success'), ci);
+
+    return chapaDiv;
   }
 
-  function addProduto(btn, chapaIdx) {
+  function addProduto(btn, chapaIdx, produtoId = null, quantidade = null) {
     const lista = btn.previousElementSibling;
-    const pi = parseInt(lista.dataset.prodCount);
+    const pi    = parseInt(lista.dataset.prodCount);
     lista.dataset.prodCount = pi + 1;
 
     const div = document.createElement('div');
@@ -77,7 +78,8 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
       <div class="col-3">
         <input type="number" name="saida_chapa_${chapaIdx}_quantidade_${pi}"
-               class="form-control" placeholder="Qtd" min="1" step="1" required>
+               class="form-control" placeholder="Qtd" min="1" step="1"
+               value="${quantidade || ''}" required>
       </div>
       <div class="col-auto">
         <button type="button" class="btn btn-outline-danger btn-sm"
@@ -85,12 +87,37 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     `;
     lista.appendChild(div);
-    initTomSelect(document.getElementById(selectId), PRODUTOS_FINAIS);
+
+    const ts = initTomSelect(document.getElementById(selectId), PRODUTOS_FINAIS);
+
+    // Pré-seleciona o produto se fornecido
+    if (produtoId) {
+      ts.setValue(String(produtoId));
+    }
   }
 
   window.addProduto = addProduto;
-
   document.getElementById('btn-add-chapa').addEventListener('click', addChapa);
 
-  addChapa();
+  // ── Pré-preenche produtos do pedido ──
+  if (PRODUTOS_PEDIDO.length > 0) {
+    // Cria uma chapa por padrão e preenche os produtos do pedido nela
+    const chapaDiv = addChapa();
+    const ci       = parseInt(chapaDiv.dataset.chapaIdx);
+    const btn      = chapaDiv.querySelector('.btn-outline-success');
+
+    // Remove o produto vazio que foi adicionado automaticamente pelo addChapa
+    chapaDiv.querySelector('.saidas-list').innerHTML = '';
+    chapaDiv.querySelector('.saidas-list').dataset.prodCount = '0';
+
+    // Adiciona um produto por item do pedido
+    PRODUTOS_PEDIDO.forEach(item => {
+      addProduto(btn, ci, item.id, item.quantidade);
+    });
+  } else {
+    // Corte avulso — começa com uma chapa vazia e um produto vazio
+    const chapaDiv = addChapa();
+    const ci       = parseInt(chapaDiv.dataset.chapaIdx);
+    addProduto(chapaDiv.querySelector('.btn-outline-success'), ci);
+  }
 });

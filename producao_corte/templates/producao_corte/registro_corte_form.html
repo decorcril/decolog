@@ -11,8 +11,11 @@
 <div class="container-fluid px-3 py-3" style="max-width: 800px;">
 
   <div class="d-flex align-items-center mb-3 gap-2">
-    <a href="{% url 'producao_corte:list' %}" class="btn btn-sm btn-outline-secondary">←</a>
-    <h5 class="mb-0 fw-bold">Registro de Corte</h5>
+    <a href="{% if pedido %}{% url 'vendas:laser_list' %}{% else %}{% url 'producao_corte:list' %}{% endif %}"
+       class="btn btn-sm btn-outline-secondary">←</a>
+    <h5 class="mb-0 fw-bold">
+      {% if pedido %}Registro de Corte — Pedido {{ pedido.numero }}{% else %}Registro de Corte{% endif %}
+    </h5>
   </div>
 
   {% if messages %}
@@ -27,9 +30,36 @@
   <script id="corte-data" type="application/json">
   {"materiais": {{ materiais_json|safe }}, "produtos": {{ produtos_json|safe }}}
   </script>
+  <script id="pedido-produtos" type="application/json">{{ produtos_pedido|safe }}</script>
 
   <form method="post" id="form-corte">
     {% csrf_token %}
+    {% if pedido %}
+    <input type="hidden" name="pedido_pk" value="{{ pedido_pk }}">
+    {% endif %}
+
+    {% if pedido %}
+<div class="card border-0 shadow-sm mb-3" style="border-left: 4px solid var(--bs-primary) !important;">
+  <div class="card-body py-3">
+    <p class="fw-semibold mb-1 text-primary">
+      <i class="bi bi-cart3 me-1"></i> Pedido {{ pedido.numero }}
+    </p>
+    <p class="text-muted small mb-2">
+      {{ pedido.cliente.nome }} — {{ pedido.get_tipo_venda_display }}
+    </p>
+    <p class="text-muted small mb-1 fw-semibold">Falta cortar:</p>
+    <ul class="mb-0 small">
+      {% for p in pedido.progresso_corte %}
+        {% if not p.completo %}
+        <li class="text-danger">{{ p.falta }}x {{ p.nome }}</li>
+        {% else %}
+        <li class="text-success"><i class="bi bi-check-circle-fill me-1"></i>{{ p.nome }} — cortado</li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endif %}
 
     <div class="card border-0 shadow-sm mb-3">
       <div class="card-body py-3">
@@ -57,7 +87,7 @@
           Observação <span class="text-muted fw-normal">(opcional)</span>
         </label>
         <textarea name="observacao" class="form-control" rows="2"
-                  placeholder="Ex: Nome/Código do Produto personalizado, Número do Pedido..."></textarea>
+                  placeholder="Ex: Nome/Código do Produto personalizado...">{% if pedido %}Pedido {{ pedido.numero }} — {{ pedido.cliente.nome }}{% endif %}</textarea>
       </div>
     </div>
 

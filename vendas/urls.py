@@ -21,4 +21,10 @@ urlpatterns = [
     path('orcamentos/<int:pk>/',                 views.orcamento_detail,   name='orcamento_detail'),
     path('orcamentos/<int:pk>/aprovar/',         views.orcamento_aprovar,  name='orcamento_aprovar'),
     path('orcamentos/<int:pk>/rejeitar/',        views.orcamento_rejeitar, name='orcamento_rejeitar'),
+    path('<int:pk>/itens/adicionar/', views.item_add, name='item_add'),
+    path('laser/',                        views.laser_list,       name='laser_list'),
+    path('laser/<int:pk>/confirmar/',     views.laser_confirmar,  name='laser_confirmar'),
+    path('laser/<int:pk>/finalizar/',     views.laser_finalizar,  name='laser_finalizar'),
+    path('montagem/',                     views.montagem_list,    name='montagem_list'),
+    path('montagem/<int:pk>/finalizar/',  views.montagem_finalizar, name='montagem_finalizar'),
 ]
