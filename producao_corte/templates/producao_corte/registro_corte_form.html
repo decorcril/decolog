@@ -42,7 +42,7 @@
 <div class="card border-0 shadow-sm mb-3" style="border-left: 4px solid var(--bs-primary) !important;">
   <div class="card-body py-3">
     <p class="fw-semibold mb-1 text-primary">
-      <i class="bi bi-cart3 me-1"></i> Pedido {{ pedido.numero }}
+      <i class="bi me-1"></i> Pedido {{ pedido.numero }}
     </p>
     <p class="text-muted small mb-2">
       {{ pedido.cliente.nome }} — {{ pedido.get_tipo_venda_display }}
@@ -51,7 +51,7 @@
     <ul class="mb-0 small">
       {% for p in pedido.progresso_corte %}
         {% if not p.completo %}
-        <li class="text-danger">{{ p.falta }}x {{ p.nome }}</li>
+        <li class="text-danger">{{ p.falta }}x {{ p.nome }} — Falta cortar</li>
         {% else %}
         <li class="text-success"><i class="bi bi-check-circle-fill me-1"></i>{{ p.nome }} — cortado</li>
         {% endif %}
