@@ -138,8 +138,9 @@
         <a href="{% url 'movimentacoes:ordem_list' %}" class="btn btn-outline-secondary px-4">
           Cancelar
         </a>
-        <button type="submit" class="btn btn-primary px-4" id="btn-enviar">
-          <i class="bi bi-send me-1"></i> Enviar Transferência
+        <button type="submit" class="btn btn-primary px-4"
+          onclick="return confirm('Tem certeza que deseja registrar esta transferência?\nEsta ação não pode ser desfeita.')">
+          <i class="bi bi-arrow-up-circle me-1"></i> Registrar transferência
         </button>
       </div>
 

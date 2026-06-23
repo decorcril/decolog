@@ -9,6 +9,8 @@ class Notificacao(models.Model):
         PEDIDO_ABERTO      = 'pedido_aberto',      'Pedido em Aberto'
         AGUARD_PRODUCAO    = 'aguard_producao',     'Aguardando Corte'
         AGUARD_MONTAGEM    = 'aguard_montagem',     'Aguardando Montagem'
+        PEDIDO_CANCELADO   = 'pedido_cancelado',    'Pedido Cancelado'
+
 
     destinatario = models.ForeignKey(
         User, on_delete=models.CASCADE,

@@ -7,7 +7,7 @@ from django.db.models import Q, Sum, F
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
+from django.utils import timezone
 
 from clientes.models import Cliente
 from core.mixins import acesso_vendas, financeiro_ou_gerente, vendedor_ou_gerente
@@ -15,272 +15,17 @@ from produtos.models import Produto
 from vendas.models import Pedido, ItemPedido
 
 
-@acesso_vendas
-def pedido_list(request):
-    q         = request.GET.get('q', '')
-    status    = request.GET.get('status', '')
-    pendentes = request.GET.get('pendentes', '')
-    transacao = request.GET.get('transacao', '')
-
-    pedidos = Pedido.objects.select_related('cliente', 'criado_por').all()
-
-    tipo_venda = request.GET.get('tipo_venda', '')
-
-    if tipo_venda:
-        pedidos = pedidos.filter(tipo_venda=tipo_venda)
-
-    if not request.user.is_staff:
-        grupos = request.user.groups.values_list('name', flat=True)
-        if 'Vendedor' in grupos and 'Financeiro' not in grupos and 'Gerente' not in grupos:
-            pedidos = pedidos.filter(criado_por=request.user)
-
-    if q:
-        pedidos = pedidos.filter(
-            Q(numero__icontains=q) |
-            Q(cliente__nome__icontains=q)
+def _parse_decimal(val, default='0'):
+    """Converte valor monetário formatado em BR para Decimal."""
+    try:
+        return Decimal(
+            (val or default)
+            .replace('.', '')
+            .replace(',', '.')
         )
+    except Exception:
+        return Decimal(default)
 
-    if status:
-        pedidos = pedidos.filter(status=status)
-
-    if pendentes == '1':
-        pedidos = pedidos.annotate(
-            total_pago_ann=Coalesce(Sum('pagamentos__valor'), Decimal('0.00'))
-        ).filter(
-            total_pago_ann__lt=F('total_geral')
-        ).exclude(status='canceled')
-
-    if transacao:
-        from vendas.models.pagamento import Pagamento
-        pedido_ids = Pagamento.objects.filter(
-            transacao__icontains=transacao
-        ).values_list('pedido_id', flat=True)
-        pedidos = pedidos.filter(pk__in=pedido_ids)
-
-    paginator = Paginator(pedidos, 20)
-    page      = request.GET.get('page', 1)
-    pedidos   = paginator.get_page(page)
-
-    return render(request, 'vendas/pedido_list.html', {
-        'pedidos':        pedidos,
-        'q':              q,
-        'status':         status,
-        'pendentes':      pendentes,
-        'transacao':      transacao,
-        'status_choices': Pedido.Status.choices,
-        'tipo_venda':        tipo_venda,
-        'tipo_venda_choices': Pedido.TipoVenda.choices,
-    })
-
-
-@vendedor_ou_gerente
-def pedido_create(request):
-    if request.method == 'POST':
-        import json
-
-        cliente_id           = request.POST.get('cliente')
-        tipo_venda           = request.POST.get('tipo_venda')
-        condicao_pagamento   = request.POST.get('condicao_pagamento', '')
-        contato              = request.POST.get('contato', '')
-        transportadora       = request.POST.get('transportadora', '')
-        frete                = request.POST.get('frete', '0').replace('.', '').replace(',', '.') or '0'
-        percentual_entrada   = request.POST.get('percentual_entrada', '0') or '0'
-        total_desconto       = request.POST.get('total_desconto', '0').replace('.', '').replace(',', '.') or '0'
-        observacoes          = request.POST.get('observacoes', '')
-        observacoes_internas = request.POST.get('observacoes_internas', '')
-        items_json           = request.POST.get('items_json', '[]')
-
-        if not cliente_id:
-            messages.error(request, 'Selecione um cliente.')
-        elif not tipo_venda:
-            messages.error(request, 'Selecione o tipo de venda.')
-        else:
-            try:
-                items = json.loads(items_json)
-            except Exception:
-                items = []
-
-            if not items:
-                messages.error(request, 'Adicione pelo menos um produto ao pedido.')
-            else:
-                cliente = get_object_or_404(Cliente, pk=cliente_id)
-                pedido  = Pedido.objects.create(
-                    cliente              = cliente,
-                    tipo_venda           = tipo_venda,
-                    condicao_pagamento   = condicao_pagamento,
-                    contato              = contato,
-                    transportadora       = transportadora,
-                    frete                = Decimal(frete),
-                    percentual_entrada   = Decimal(percentual_entrada),
-                    total_desconto       = Decimal(total_desconto),
-                    observacoes          = observacoes,
-                    observacoes_internas = observacoes_internas,
-                    criado_por           = request.user,
-                )
-                for item in items:
-                    ItemPedido.objects.create(
-                        pedido         = pedido,
-                        produto_id     = item['id'],
-                        quantidade     = item['quantidade'],
-                        preco_unitario = Decimal(str(item['preco'])),
-                    )
-                pedido.sync_status()
-                messages.success(request, f'Pedido {pedido.numero} criado com sucesso!')
-                return redirect('vendas:pedido_detail', pk=pedido.pk)
-
-    TRANSPORTADORA_CHOICES = [
-        'Contratação Remetente - CIF',
-        'Contratação Destinatário - FOB',
-        'Envio pela Decorcril',
-        'Retirada na Loja',
-    ]
-
-    return render(request, 'vendas/pedido_form.html', {
-        'titulo':                 'Novo Pedido',
-        'tipo_venda_choices':     Pedido.TipoVenda.choices,
-        'transportadora_choices': TRANSPORTADORA_CHOICES,
-    })
-
-
-@acesso_vendas
-def pedido_detail(request, pk):
-    pedido = get_object_or_404(
-        Pedido.objects.select_related('cliente', 'criado_por', 'responsavel')
-                      .prefetch_related('itens__produto', 'pagamentos'),
-        pk=pk
-    )
-
-    if not request.user.is_staff:
-        grupos = request.user.groups.values_list('name', flat=True)
-        if 'Vendedor' in grupos and 'Financeiro' not in grupos and 'Gerente' not in grupos:
-            if pedido.criado_por != request.user:
-                raise PermissionDenied
-
-    produtos = Produto.objects.filter(
-        ativo=True, categoria='produto_final'
-    ).select_related('preco').order_by('nome')
-
-    return render(request, 'vendas/pedido_detail.html', {
-        'pedido':         pedido,
-        'produtos':       produtos,
-        'status_choices': Pedido.Status.choices,
-    })
-
-
-@vendedor_ou_gerente
-def pedido_edit(request, pk):
-    pedido = get_object_or_404(Pedido, pk=pk)
-
-    if not request.user.is_staff:
-        grupos = request.user.groups.values_list('name', flat=True)
-        if 'Gerente' not in grupos:
-            if pedido.criado_por != request.user:
-                raise PermissionDenied
-            if pedido.status != Pedido.Status.OPEN:
-                messages.error(request, 'Só é possível editar pedidos em aberto.')
-                return redirect('vendas:pedido_detail', pk=pedido.pk)
-
-    if request.method == 'POST':
-        frete          = request.POST.get('frete', '0').replace('.', '').replace(',', '.') or '0'
-        total_desconto = request.POST.get('total_desconto', '0').replace('.', '').replace(',', '.') or '0'
-
-        pedido.tipo_venda          = request.POST.get('tipo_venda', pedido.tipo_venda)
-        pedido.condicao_pagamento  = request.POST.get('condicao_pagamento', '')
-        pedido.contato             = request.POST.get('contato', '')
-        pedido.transportadora      = request.POST.get('transportadora', '')
-        pedido.frete               = Decimal(frete)
-        pedido.percentual_entrada  = Decimal(request.POST.get('percentual_entrada', '0') or '0')
-        pedido.total_desconto      = Decimal(total_desconto)
-        pedido.observacoes         = request.POST.get('observacoes', '')
-        pedido.observacoes_internas = request.POST.get('observacoes_internas', '')
-        pedido.save()
-        messages.success(request, f'Pedido {pedido.numero} atualizado!')
-        return redirect('vendas:pedido_detail', pk=pedido.pk)
-
-    TRANSPORTADORA_CHOICES = [
-        'Contratação Remetente - CIF',
-        'Contratação Destinatário - FOB',
-        'Envio pela Decorcril',
-        'Retirada na Loja',
-    ]
-
-    return render(request, 'vendas/pedido_edit_form.html', {
-    'titulo':                 f'Editar Pedido {pedido.numero}',
-    'pedido':                 pedido,
-    'tipo_venda_choices':     Pedido.TipoVenda.choices,
-    'transportadora_choices': TRANSPORTADORA_CHOICES,
-    })
-
-
-@acesso_vendas
-def pedido_status(request, pk):
-    pedido = get_object_or_404(Pedido, pk=pk)
-
-    if request.method == 'POST':
-        novo_status = request.POST.get('status')
-
-        # Cancelamento — só vendedor do pedido, gerente ou admin
-        if novo_status == 'canceled':
-            grupos = request.user.groups.values_list('name', flat=True)
-            pode_cancelar = (
-                request.user.is_staff or
-                'Gerente' in grupos or
-                pedido.criado_por == request.user
-            )
-            if not pode_cancelar:
-                messages.error(request, 'Você não tem permissão para cancelar este pedido.')
-                return redirect('vendas:pedido_detail', pk=pedido.pk)
-
-        if novo_status in dict(Pedido.Status.choices):
-            pedido.status = novo_status
-            pedido.save(update_fields=['status', 'atualizado_em'])
-            messages.success(request, f'Status atualizado para {pedido.get_status_display()}.')
-        else:
-            messages.error(request, 'Status inválido.')
-
-    return redirect('vendas:pedido_detail', pk=pedido.pk)
-@acesso_vendas
-def item_remove(request, pk, item_pk):
-    pedido = get_object_or_404(Pedido, pk=pk)
-    item   = get_object_or_404(ItemPedido, pk=item_pk, pedido=pedido)
-
-    if request.method == 'POST':
-        item.delete()
-        pedido.refresh_from_db()
-        return JsonResponse({
-            'ok':    True,
-            'itens': _serializar_itens(pedido),
-            'totais': _serializar_totais(pedido),
-        })
-
-    return JsonResponse({'ok': False})
-
-
-@acesso_vendas
-def item_update(request, pk, item_pk):
-    pedido = get_object_or_404(Pedido, pk=pk)
-    item   = get_object_or_404(ItemPedido, pk=item_pk, pedido=pedido)
-
-    if request.method == 'POST':
-        quantidade = int(request.POST.get('quantidade', 1))
-        if quantidade < 1:
-            quantidade = 1
-        item.quantidade = quantidade
-
-        # Atualiza preço se enviado
-        preco_unitario = request.POST.get('preco_unitario')
-        if preco_unitario is not None:
-            item.preco_unitario = Decimal(preco_unitario)
-
-        item.save()
-        pedido.refresh_from_db()
-        return JsonResponse({
-            'ok':    True,
-            'itens': _serializar_itens(pedido),
-            'totais': _serializar_totais(pedido),
-        })
-
-    return JsonResponse({'ok': False})
 
 def _serializar_itens(pedido):
     return [
@@ -306,6 +51,316 @@ def _serializar_totais(pedido):
         'saldo_restante': float(pedido.saldo_restante),
     }
 
+
+def _recalcular_total_geral(pedido):
+    """Recalcula e salva o total_geral do pedido."""
+    total = (
+        pedido.total_produtos
+        - pedido.total_desconto
+        + pedido.total_impostos
+        + pedido.frete
+    )
+    pedido.total_geral = max(Decimal('0'), total)
+    pedido.save(update_fields=['total_geral', 'atualizado_em'])
+
+
+TRANSPORTADORA_CHOICES = [
+    'Contratação Remetente - CIF',
+    'Contratação Destinatário - FOB',
+    'Envio pela Decorcril',
+    'Retirada na Loja',
+]
+
+
+@acesso_vendas
+def pedido_list(request):
+    q           = request.GET.get('q', '')
+    status      = request.GET.get('status', '')
+    pendentes   = request.GET.get('pendentes', '')
+    transacao   = request.GET.get('transacao', '')
+    tipo_venda  = request.GET.get('tipo_venda', '')
+    data_inicio = request.GET.get('data_inicio', '')
+    data_fim    = request.GET.get('data_fim', '')
+
+    pedidos = Pedido.objects.select_related('cliente', 'criado_por').all()
+
+    if tipo_venda:
+        pedidos = pedidos.filter(tipo_venda=tipo_venda)
+
+    if not request.user.is_staff:
+        grupos = request.user.groups.values_list('name', flat=True)
+        if 'Vendedor' in grupos and 'Financeiro' not in grupos and 'Gerente' not in grupos:
+            pedidos = pedidos.filter(criado_por=request.user)
+
+    if q:
+        pedidos = pedidos.filter(
+            Q(numero__icontains=q) | Q(cliente__nome__icontains=q)
+        )
+
+    if status:
+        pedidos = pedidos.filter(status=status)
+
+    if data_inicio:
+        pedidos = pedidos.filter(criado_em__date__gte=data_inicio)
+
+    if data_fim:
+        pedidos = pedidos.filter(criado_em__date__lte=data_fim)
+
+    if pendentes == '1':
+        pedidos = pedidos.annotate(
+            total_pago_ann=Coalesce(Sum('pagamentos__valor'), Decimal('0.00'))
+        ).filter(
+            total_pago_ann__lt=F('total_geral')
+        ).exclude(status='canceled')
+
+    if transacao:
+        from vendas.models.pagamento import Pagamento
+        pedido_ids = Pagamento.objects.filter(
+            transacao__icontains=transacao
+        ).values_list('pedido_id', flat=True)
+        pedidos = pedidos.filter(pk__in=pedido_ids)
+
+    paginator = Paginator(pedidos, 20)
+    pedidos   = paginator.get_page(request.GET.get('page', 1))
+
+    return render(request, 'vendas/pedido_list.html', {
+        'pedidos':            pedidos,
+        'q':                  q,
+        'status':             status,
+        'pendentes':          pendentes,
+        'transacao':          transacao,
+        'tipo_venda':         tipo_venda,
+        'data_inicio':        data_inicio,
+        'data_fim':           data_fim,
+        'status_choices':     Pedido.Status.choices,
+        'tipo_venda_choices': Pedido.TipoVenda.choices,
+    })
+
+
+@vendedor_ou_gerente
+def pedido_create(request):
+    if request.method == 'POST':
+        import json
+
+        cliente_id           = request.POST.get('cliente')
+        tipo_venda           = request.POST.get('tipo_venda')
+        condicao_pagamento   = request.POST.get('condicao_pagamento', '')
+        contato              = request.POST.get('contato', '')
+        transportadora       = request.POST.get('transportadora', '')
+        frete                = _parse_decimal(request.POST.get('frete', '0'))
+        percentual_entrada   = _parse_decimal(request.POST.get('percentual_entrada', '0'))
+        total_desconto       = _parse_decimal(request.POST.get('total_desconto', '0'))
+        observacoes          = request.POST.get('observacoes', '')
+        observacoes_internas = request.POST.get('observacoes_internas', '')
+        items_json           = request.POST.get('items_json', '[]')
+
+        if not cliente_id:
+            messages.error(request, 'Selecione um cliente.')
+        elif not tipo_venda:
+            messages.error(request, 'Selecione o tipo de venda.')
+        else:
+            try:
+                items = json.loads(items_json)
+            except Exception:
+                items = []
+
+            if not items:
+                messages.error(request, 'Adicione pelo menos um produto ao pedido.')
+            else:
+                cliente = get_object_or_404(Cliente, pk=cliente_id)
+                pedido  = Pedido.objects.create(
+                    cliente              = cliente,
+                    tipo_venda           = tipo_venda,
+                    condicao_pagamento   = condicao_pagamento,
+                    contato              = contato,
+                    transportadora       = transportadora,
+                    frete                = frete,
+                    percentual_entrada   = percentual_entrada,
+                    total_desconto       = total_desconto,
+                    observacoes          = observacoes,
+                    observacoes_internas = observacoes_internas,
+                    criado_por           = request.user,
+                )
+                for item in items:
+                    ItemPedido.objects.create(
+                        pedido         = pedido,
+                        produto_id     = item['id'],
+                        quantidade     = item['quantidade'],
+                        preco_unitario = Decimal(str(item['preco'])),
+                    )
+                pedido.sync_status()
+                messages.success(request, f'Pedido {pedido.numero} criado com sucesso!')
+                return redirect('vendas:pedido_detail', pk=pedido.pk)
+
+    return render(request, 'vendas/pedido_form.html', {
+        'titulo':                 'Novo Pedido',
+        'tipo_venda_choices':     Pedido.TipoVenda.choices,
+        'transportadora_choices': TRANSPORTADORA_CHOICES,
+    })
+
+
+@acesso_vendas
+def pedido_detail(request, pk):
+    pedido = get_object_or_404(
+        Pedido.objects.select_related('cliente', 'criado_por', 'responsavel')
+                      .prefetch_related('itens__produto', 'pagamentos'),
+        pk=pk
+    )
+
+    if not request.user.is_staff:
+        grupos = request.user.groups.values_list('name', flat=True)
+        if 'Vendedor' in grupos and 'Financeiro' not in grupos and 'Gerente' not in grupos:
+            if pedido.criado_por != request.user:
+                raise PermissionDenied
+
+    return render(request, 'vendas/pedido_detail.html', {
+        'pedido':         pedido,
+        'status_choices': Pedido.Status.choices,
+    })
+
+
+@vendedor_ou_gerente
+def pedido_edit(request, pk):
+    pedido = get_object_or_404(Pedido, pk=pk)
+
+    if not request.user.is_staff:
+        grupos = request.user.groups.values_list('name', flat=True)
+        if 'Gerente' not in grupos:
+            if pedido.criado_por != request.user:
+                raise PermissionDenied
+            if pedido.status != Pedido.Status.OPEN:
+                messages.error(request, 'Só é possível editar pedidos em aberto.')
+                return redirect('vendas:pedido_detail', pk=pedido.pk)
+
+    if request.method == 'POST':
+        pedido.tipo_venda           = request.POST.get('tipo_venda', pedido.tipo_venda)
+        pedido.condicao_pagamento   = request.POST.get('condicao_pagamento', '')
+        pedido.contato              = request.POST.get('contato', '')
+        pedido.transportadora       = request.POST.get('transportadora', '')
+        pedido.frete                = _parse_decimal(request.POST.get('frete', '0'))
+        pedido.percentual_entrada   = _parse_decimal(request.POST.get('percentual_entrada', '0'))
+        pedido.total_desconto       = _parse_decimal(request.POST.get('total_desconto', '0'))
+        pedido.observacoes          = request.POST.get('observacoes', '')
+        pedido.observacoes_internas = request.POST.get('observacoes_internas', '')
+        pedido.save()
+
+        # Recalcula total_geral após alterar frete/desconto
+        _recalcular_total_geral(pedido)
+
+        messages.success(request, f'Pedido {pedido.numero} atualizado!')
+        return redirect('vendas:pedido_detail', pk=pedido.pk)
+
+    return render(request, 'vendas/pedido_edit_form.html', {
+        'titulo':                 f'Editar Pedido {pedido.numero}',
+        'pedido':                 pedido,
+        'tipo_venda_choices':     Pedido.TipoVenda.choices,
+        'transportadora_choices': TRANSPORTADORA_CHOICES,
+    })
+
+
+@acesso_vendas
+def pedido_status(request, pk):
+    pedido = get_object_or_404(Pedido, pk=pk)
+
+    if request.method == 'POST':
+        novo_status = request.POST.get('status')
+
+        if novo_status == 'canceled':
+            grupos = request.user.groups.values_list('name', flat=True)
+            pode_cancelar = (
+                request.user.is_staff or
+                'Gerente' in grupos or
+                'Financeiro' in grupos or
+                pedido.criado_por == request.user
+            )
+            if not pode_cancelar:
+                messages.error(request, 'Você não tem permissão para cancelar este pedido.')
+                return redirect('vendas:pedido_detail', pk=pedido.pk)
+
+            motivo = request.POST.get('motivo_cancelamento', '').strip()
+            if not motivo:
+                messages.error(request, 'Informe o motivo do cancelamento.')
+                return redirect('vendas:pedido_detail', pk=pedido.pk)
+
+            pedido.status              = Pedido.Status.CANCELED
+            pedido.cancelado_por       = request.user
+            pedido.motivo_cancelamento = motivo
+            pedido.cancelado_em        = timezone.now()
+            pedido.save(update_fields=[
+                'status', 'cancelado_por', 'motivo_cancelamento',
+                'cancelado_em', 'atualizado_em'
+            ])
+
+            from core.models.notificacao import Notificacao
+            Notificacao.objects.filter(pedido=pedido, tipo='pedido_cancelado').delete()
+
+            messages.success(request, f'Pedido {pedido.numero} cancelado.')
+            return redirect('vendas:pedido_detail', pk=pedido.pk)
+
+        if novo_status in dict(Pedido.Status.choices):
+            if pedido.status == Pedido.Status.CANCELED:
+                from core.models.notificacao import Notificacao
+                pedido.cancelado_por       = None
+                pedido.motivo_cancelamento = ''
+                pedido.cancelado_em        = None
+                pedido.status              = novo_status
+                pedido.save(update_fields=[
+                    'status', 'cancelado_por', 'motivo_cancelamento',
+                    'cancelado_em', 'atualizado_em'
+                ])
+                Notificacao.objects.filter(pedido=pedido, tipo='pedido_cancelado').delete()
+            else:
+                pedido.status = novo_status
+                pedido.save(update_fields=['status', 'atualizado_em'])
+
+            messages.success(request, f'Status atualizado para {pedido.get_status_display()}.')
+        else:
+            messages.error(request, 'Status inválido.')
+
+    return redirect('vendas:pedido_detail', pk=pedido.pk)
+
+
+@acesso_vendas
+def item_remove(request, pk, item_pk):
+    pedido = get_object_or_404(Pedido, pk=pk)
+    item   = get_object_or_404(ItemPedido, pk=item_pk, pedido=pedido)
+
+    if request.method == 'POST':
+        item.delete()
+        pedido.refresh_from_db()
+        return JsonResponse({
+            'ok':    True,
+            'itens': _serializar_itens(pedido),
+            'totais': _serializar_totais(pedido),
+        })
+
+    return JsonResponse({'ok': False})
+
+
+@acesso_vendas
+def item_update(request, pk, item_pk):
+    pedido = get_object_or_404(Pedido, pk=pk)
+    item   = get_object_or_404(ItemPedido, pk=item_pk, pedido=pedido)
+
+    if request.method == 'POST':
+        quantidade = max(1, int(request.POST.get('quantidade', 1)))
+        item.quantidade = quantidade
+
+        preco_unitario = request.POST.get('preco_unitario')
+        if preco_unitario is not None:
+            item.preco_unitario = Decimal(preco_unitario)
+
+        item.save()
+        pedido.refresh_from_db()
+        return JsonResponse({
+            'ok':    True,
+            'itens': _serializar_itens(pedido),
+            'totais': _serializar_totais(pedido),
+        })
+
+    return JsonResponse({'ok': False})
+
+
 @acesso_vendas
 def item_add(request, pk):
     pedido = get_object_or_404(Pedido, pk=pk)
@@ -314,8 +369,7 @@ def item_add(request, pk):
         produto_id     = request.POST.get('produto')
         quantidade     = int(request.POST.get('quantidade', 1))
         preco_unitario = Decimal(request.POST.get('preco_unitario', '0'))
-
-        produto = get_object_or_404(Produto, pk=produto_id)
+        produto        = get_object_or_404(Produto, pk=produto_id)
 
         item_existente = pedido.itens.filter(produto=produto).first()
         if item_existente:

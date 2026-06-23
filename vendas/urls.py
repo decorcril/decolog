@@ -27,4 +27,6 @@ urlpatterns = [
     path('laser/<int:pk>/finalizar/',     views.laser_finalizar,  name='laser_finalizar'),
     path('montagem/',                     views.montagem_list,    name='montagem_list'),
     path('montagem/<int:pk>/finalizar/',  views.montagem_finalizar, name='montagem_finalizar'),
+    path('relatorio/comissoes/', views.relatorio_comissoes, name='relatorio_comissoes'),
+    path('relatorio/comissoes/exportar/', views.exportar_comissoes_csv, name='exportar_comissoes_csv'),
 ]

@@ -8,10 +8,10 @@ from django.db.models.functions import Cast
 
 from clientes.models import Cliente
 from clientes.forms import ClienteForm
-from core.mixins import gerente_ou_admin, vendedor_ou_gerente
+from core.mixins import gerente_ou_admin, vendedor_ou_gerente, acesso_vendas
 
 
-@vendedor_ou_gerente
+@acesso_vendas
 def cliente_list(request):
     q     = request.GET.get('q', '')
     ativo = request.GET.get('ativo', 'true')
@@ -98,7 +98,7 @@ def cliente_edit(request, pk):
     })
 
 
-@vendedor_ou_gerente
+@acesso_vendas
 def cliente_detail(request, pk):
     cliente = get_object_or_404(Cliente, pk=pk)
     return render(request, 'clientes/detail.html', {'cliente': cliente})

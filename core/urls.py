@@ -2,6 +2,7 @@ from django.urls import path
 from clientes import views as clientes_views
 from core.views import (
     dashboard,
+    dashboard_vendas,
     local_list, local_create, local_update, local_delete,
     fornecedor_list, fornecedor_create, fornecedor_update, fornecedor_delete,
 )
@@ -27,4 +28,5 @@ urlpatterns = [
     # Notificações
     path('notificacoes/', notificacoes_lista, name='notificacoes_lista'),
     path('notificacoes/<int:pedido_pk>/lida/', notificacoes_marcar_lida, name='notificacoes_marcar_lida'),
+    path('dashboard/vendas/', dashboard_vendas, name='dashboard_vendas'),
 ]

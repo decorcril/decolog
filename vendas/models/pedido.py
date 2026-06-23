@@ -14,7 +14,6 @@ class Pedido(models.Model):
 
     class Status(models.TextChoices):
         OPEN              = "open",              "Em aberto"
-        AGUARD_PAGAMENTO  = "aguard_pagamento",  "Aguardando Pagamento"
         AGUARD_PRODUCAO   = "aguard_producao",   "Aguardando Produção"
         CUTTING           = "cutting",           "Em Corte"
         ASSEMBLING        = "assembling",        "Em Montagem"
@@ -52,6 +51,14 @@ class Pedido(models.Model):
     total_geral        = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Total Geral')
     criado_em          = models.DateTimeField(auto_now_add=True)
     atualizado_em      = models.DateTimeField(auto_now=True)
+    cancelado_por       = models.ForeignKey(
+    User, on_delete=models.SET_NULL,
+    null=True, blank=True,
+    related_name='pedidos_cancelados',
+    verbose_name='Cancelado por'
+)
+    motivo_cancelamento = models.TextField(blank=True, verbose_name='Motivo do Cancelamento')
+    cancelado_em        = models.DateTimeField(null=True, blank=True, verbose_name='Cancelado em')
 
     class Meta:
         verbose_name        = 'Pedido'

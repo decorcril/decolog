@@ -94,6 +94,23 @@ def _gerar_notificacoes(user):
                 'url':       '/vendas/montagem/',
                 'pedido_pk': pedido.pk,
             })
+    
+    # ── Financeiro / Gerente — pedidos cancelados ──
+    if is_staff or 'Financeiro' in grupos or 'Gerente' in grupos:
+        lidos   = _pedidos_lidos(user, 'pedido_cancelado')
+        pedidos = Pedido.objects.filter(
+            status='canceled',
+        ).exclude(pk__in=lidos).select_related('cliente', 'cancelado_por')
+
+        for pedido in pedidos:
+            notificacoes.append({
+                'tipo':      'pedido_cancelado',
+                'label':     f'Cancelado por {pedido.cancelado_por.get_full_name() or pedido.cancelado_por.username if pedido.cancelado_por else "—"}',
+                'pedido':    pedido.numero,
+                'cliente':   pedido.cliente.nome,
+                'url':       f'/vendas/{pedido.pk}/',
+                'pedido_pk': pedido.pk,
+            })
 
     return notificacoes
 
@@ -124,6 +141,8 @@ def notificacoes_marcar_lida(request, pedido_pk):
             tipos.append('aguard_producao')
         if is_staff or 'Operador de Montagem' in grupos or 'Supervisor de Montagem' in grupos or 'Gerente' in grupos:
             tipos.append('aguard_montagem')
+        if is_staff or 'Financeiro' in grupos or 'Gerente' in grupos:
+            tipos.append('pedido_cancelado')
 
         for tipo in tipos:
             Notificacao.objects.update_or_create(

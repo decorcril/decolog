@@ -91,9 +91,10 @@
       </div>
     </div>
 
-    <button type="submit" class="btn btn-primary w-100 py-3 fw-bold fs-5">
-      Salvar Registro
-    </button>
+    <button type="submit" class="btn btn-primary px-4"
+          onclick="return confirm('Tem certeza que deseja registar?')">
+        <i class="bi bi-arrow-up-circle me-1"></i> Salvar
+      </button>
   </form>
 </div>
 {% endblock %}

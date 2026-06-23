@@ -4,3 +4,4 @@ from .fornecedor import (
     fornecedor_list, fornecedor_create, fornecedor_update, fornecedor_delete,
     tag_list, tag_delete,
 )
+from .dashboard_vendas import dashboard_vendas

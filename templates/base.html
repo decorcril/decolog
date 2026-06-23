@@ -260,6 +260,14 @@
             </a>
           </li>
           {% endif %}
+          {% if is_gerente or is_financeiro %}
+<li><hr class="dropdown-divider" style="border-color: rgba(255,255,255,0.08);"></li>
+<li>
+  <a class="dropdown-item" href="{% url 'vendas:relatorio_comissoes' %}">
+    <i class="bi bi-graph-up"></i>Relatório de Comissões
+  </a>
+</li>
+{% endif %}
         </ul>
       </div>
       {% endif %}

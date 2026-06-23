@@ -32,18 +32,37 @@
       </button>
       <ul class="dropdown-menu">
         {% for value, label in status_choices %}
-        <li>
-          <form method="post" action="{% url 'vendas:pedido_status' pedido.pk %}">
-            {% csrf_token %}
-            <input type="hidden" name="status" value="{{ value }}">
-            <button type="submit" class="dropdown-item {% if pedido.status == value %}fw-bold{% endif %}">
-              {{ label }}
-            </button>
-          </form>
-        </li>
+          {% if value != 'canceled' %}
+          <li>
+            <form method="post" action="{% url 'vendas:pedido_status' pedido.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="status" value="{{ value }}">
+              <button type="submit" class="dropdown-item {% if pedido.status == value %}fw-bold{% endif %}">
+                {{ label }}
+              </button>
+            </form>
+          </li>
+          {% endif %}
         {% endfor %}
+        {% if pedido.status != 'canceled' %}
+        <li><hr class="dropdown-divider"></li>
+        <li>
+          <button type="button" class="dropdown-item text-danger"
+                  data-bs-toggle="modal" data-bs-target="#modal-cancelar">
+            <i class="bi bi-x-circle me-1"></i> Cancelar Pedido
+          </button>
+        </li>
+        {% endif %}
       </ul>
     </div>
+    {% endif %}
+
+    {# Botão cancelar para vendedor dono do pedido #}
+    {% if is_vendedor and not is_gerente and pedido.criado_por == request.user and pedido.status != 'canceled' %}
+    <button type="button" class="btn btn-outline-danger"
+            data-bs-toggle="modal" data-bs-target="#modal-cancelar">
+      <i class="bi bi-x-circle me-1"></i> Cancelar Pedido
+    </button>
     {% endif %}
   </div>
 </div>
@@ -52,47 +71,43 @@
   <div class="col-lg-8">
 
     {# Itens #}
-    {# Itens #}
-<div class="card mb-4">
-  <div class="card-body p-4">
-    <p class="fw-semibold text-secondary small mb-3">ITENS DO PEDIDO</p>
-
-    {% if pedido.itens.all %}
-    <div class="table-responsive">
-      <table class="table table-sm mb-0">
-        <thead class="table-light">
-          <tr>
-            <th>Produto</th>
-            <th class="text-center">Qtd</th>
-            <th class="text-end">Preço Unit.</th>
-            <th class="text-end">Subtotal</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for item in pedido.itens.all %}
-          <tr>
-            <td class="fw-semibold small">{{ item.produto.nome }}</td>
-            <td class="text-center">{{ item.quantidade }}</td>
-            <td class="text-end text-muted small">{{ item.preco_unitario|moeda }}</td>
-            <td class="text-end fw-semibold">{{ item.subtotal|moeda }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <div class="card mb-4">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">ITENS DO PEDIDO</p>
+        {% if pedido.itens.all %}
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Produto</th>
+                <th class="text-center">Qtd</th>
+                <th class="text-end">Preço Unit.</th>
+                <th class="text-end">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in pedido.itens.all %}
+              <tr>
+                <td class="fw-semibold small">{{ item.produto.nome }}</td>
+                <td class="text-center">{{ item.quantidade }}</td>
+                <td class="text-end text-muted small">{{ item.preco_unitario|moeda }}</td>
+                <td class="text-end fw-semibold">{{ item.subtotal|moeda }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="text-muted small mb-0">Nenhum item adicionado.</p>
+        {% endif %}
+      </div>
     </div>
-    {% else %}
-    <p class="text-muted small mb-0">Nenhum item adicionado.</p>
-    {% endif %}
-
-  </div>
-</div>
 
     {# Pagamentos #}
     {% if is_financeiro or is_gerente %}
     <div class="card mb-4">
       <div class="card-body p-4">
         <p class="fw-semibold text-secondary small mb-3">PAGAMENTOS</p>
-
         {% if pedido.pagamentos.all %}
         <div class="table-responsive mb-3">
           <table class="table table-sm mb-0">
@@ -113,13 +128,14 @@
                 <td class="text-muted small">{{ pag.transacao|default:"—" }}</td>
                 <td class="text-end fw-semibold">{{ pag.valor|moeda }}</td>
                 <td class="text-end">
-                  <form method="post" action="{% url 'vendas:pagamento_delete' pedido.pk pag.pk %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-link text-danger p-0">
-                      <i class="bi bi-trash"></i>
-                    </button>
-                  </form>
-                </td>
+                <form method="post" action="{% url 'vendas:pagamento_delete' pedido.pk pag.pk %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-link text-danger p-0"
+                          onclick="return confirm('Tem certeza que deseja remover o pagamento de {{ pag.valor|moeda }}?\nEsta ação não pode ser desfeita.')">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </td>
               </tr>
               {% endfor %}
             </tbody>
@@ -129,7 +145,6 @@
         <p class="text-muted small mb-3">Nenhum pagamento registrado.</p>
         {% endif %}
 
-        {# Adicionar pagamento #}
         <form method="post" action="{% url 'vendas:pagamento_add' pedido.pk %}" class="row g-2">
           {% csrf_token %}
           <div class="col-md-3">
@@ -156,7 +171,31 @@
             </button>
           </div>
         </form>
+      </div>
+    </div>
+    {% endif %}
 
+    {# Cancelamento #}
+    {% if pedido.status == 'canceled' and pedido.cancelado_por %}
+    <div class="card mb-4 border-danger">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-danger small mb-3">
+          <i class="bi bi-x-circle me-1"></i> PEDIDO CANCELADO
+        </p>
+        <div class="d-flex flex-column gap-2">
+          <div class="d-flex justify-content-between">
+            <span class="text-muted small">Cancelado por</span>
+            <span class="small fw-semibold">{{ pedido.cancelado_por.get_full_name|default:pedido.cancelado_por.username }}</span>
+          </div>
+          <div class="d-flex justify-content-between">
+            <span class="text-muted small">Cancelado em</span>
+            <span class="small fw-semibold">{{ pedido.cancelado_em|date:"d/m/Y H:i" }}</span>
+          </div>
+          <div>
+            <p class="text-muted small mb-1">Motivo</p>
+            <p class="small fw-semibold mb-0">{{ pedido.motivo_cancelamento }}</p>
+          </div>
+        </div>
       </div>
     </div>
     {% endif %}
@@ -173,7 +212,6 @@
         <div class="d-flex flex-column gap-2">
           <div class="d-flex justify-content-between align-items-center">
             <span class="text-muted small">Status</span>
-            {# Badge status #}
             <span class="badge
               {% if pedido.status == 'open' %}bg-secondary bg-opacity-10 text-secondary
               {% elif pedido.status == 'aguard_pagamento' %}bg-warning bg-opacity-10 text-warning
@@ -287,16 +325,6 @@
         </div>
       </div>
     </div>
-    {% if is_vendedor and not is_gerente and pedido.criado_por == request.user and pedido.status != 'canceled' %}
-<form method="post" action="{% url 'vendas:pedido_status' pedido.pk %}">
-  {% csrf_token %}
-  <input type="hidden" name="status" value="canceled">
-  <button type="submit" class="btn btn-outline-danger"
-          onclick="return confirm('Tem certeza que deseja cancelar este pedido?')">
-    <i class="bi bi-x-circle me-1"></i> Cancelar Pedido
-  </button>
-</form>
-{% endif %}
 
     {% if pedido.observacoes %}
     <div class="card mb-4">
@@ -318,6 +346,42 @@
 
   </div>
 </div>
+
+{# Modal de cancelamento #}
+{% if pedido.status != 'canceled' %}
+<div class="modal fade" id="modal-cancelar" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold text-danger">
+          <i class="bi bi-x-circle me-1"></i> Cancelar Pedido {{ pedido.numero }}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'vendas:pedido_status' pedido.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="status" value="canceled">
+        <div class="modal-body">
+          <p class="text-muted small mb-3">
+            Esta ação não pode ser desfeita. Informe o motivo do cancelamento.
+          </p>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Motivo do cancelamento <span class="text-danger">*</span></label>
+            <textarea name="motivo_cancelamento" class="form-control" rows="3"
+                      placeholder="Descreva o motivo..." required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Voltar</button>
+          <button type="submit" class="btn btn-danger">
+            <i class="bi bi-x-circle me-1"></i> Confirmar Cancelamento
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 {% endblock %}
 

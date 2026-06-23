@@ -13,6 +13,8 @@
     pedido_aberto:      'bi-cart3 text-secondary',
     aguard_producao:    'bi-scissors text-primary',
     aguard_montagem:    'bi-tools text-warning',
+    pedido_cancelado:   'bi-x-circle text-danger',
+
   };
 
   function getCsrf() {

@@ -33,3 +33,6 @@ from .producao import (
     montagem_list,
     montagem_finalizar,
 )
+
+from .relatorio import relatorio_comissoes
+from .relatorio import relatorio_comissoes, exportar_comissoes_csv
