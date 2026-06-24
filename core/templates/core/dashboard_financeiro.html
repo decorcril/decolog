@@ -1,0 +1,295 @@
+{% extends 'base.html' %}
+{% load core_extras %}
+
+{% block title %}Dashboard — Financeiro{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">Dashboard Financeiro</h4>
+    <p class="text-muted small mb-0">{{ mes_nome }} {{ ano }}</p>
+  </div>
+</div>
+
+{# ── Métricas de pagamentos ── #}
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card h-100">
+      <div class="card-body p-4">
+        <p class="text-muted small mb-1">Recebido Hoje</p>
+        <p class="fw-bold fs-4 mb-0 text-success">{{ pag_hoje|moeda }}</p>
+        <p class="text-muted small mb-0">{{ hoje|date:"d/m/Y" }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card h-100">
+      <div class="card-body p-4">
+        <p class="text-muted small mb-1">Recebido na Semana</p>
+        <p class="fw-bold fs-4 mb-0 text-success">{{ pag_semana|moeda }}</p>
+        <p class="text-muted small mb-0">Esta semana</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card h-100">
+      <div class="card-body p-4">
+        <p class="text-muted small mb-1">Recebido no Mês</p>
+        <p class="fw-bold fs-4 mb-0 text-success">{{ pag_mes|moeda }}</p>
+        <p class="text-muted small mb-0">{{ mes_nome }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card h-100">
+      <div class="card-body p-4">
+        <p class="text-muted small mb-1">Total a Receber</p>
+        <p class="fw-bold fs-4 mb-0 {% if total_a_receber > 0 %}text-danger{% else %}text-success{% endif %}">
+          {{ total_a_receber|moeda }}
+        </p>
+        <p class="text-muted small mb-0">{{ qtd_pendentes }} pedido{{ qtd_pendentes|pluralize }} pendente{{ qtd_pendentes|pluralize }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Alertas ── #}
+{% if qtd_vencidos > 0 %}
+<div class="alert alert-danger d-flex align-items-center mb-4 py-2">
+  <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+  <span>
+    <strong>{{ qtd_vencidos }} pedido{{ qtd_vencidos|pluralize }}</strong>
+    com pagamento vencido — data de entrega ultrapassada e saldo em aberto.
+  </span>
+</div>
+{% endif %}
+
+{# ── Gráfico + Contadores ── #}
+<div class="row g-4 mb-4">
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">RECEBIMENTOS POR MÊS (últimos 6 meses)</p>
+        <canvas id="chart-recebimentos" height="100"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">SITUAÇÃO DOS PEDIDOS</p>
+        <div class="d-flex flex-column gap-3">
+          <div class="d-flex justify-content-between align-items-center p-3 rounded" style="background:#fff8e1;">
+            <span class="small fw-semibold">Em Aberto</span>
+            <span class="fw-bold fs-5">{{ total_pedidos_abertos }}</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center p-3 rounded" style="background:#fff3e0;">
+            <span class="small fw-semibold">Ag. Pagamento</span>
+            <span class="fw-bold fs-5 text-warning">{{ total_aguard_pagamento }}</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center p-3 rounded" style="background:#fce4ec;">
+            <span class="small fw-semibold">Cancelados no Mês</span>
+            <span class="fw-bold fs-5 text-danger">{{ total_cancelados_mes }}</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center p-3 rounded" style="background:#fce4ec;">
+            <span class="small fw-semibold">Vencidos</span>
+            <span class="fw-bold fs-5 text-danger">{{ qtd_vencidos }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Pagamentos vencidos ── #}
+{% if vencidos %}
+<div class="card mb-4 border-danger">
+  <div class="card-body p-4">
+    <p class="fw-semibold text-danger small mb-3">
+      <i class="bi bi-exclamation-circle me-1"></i>
+      PAGAMENTOS VENCIDOS — data de entrega ultrapassada
+    </p>
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Pedido</th>
+            <th>Cliente</th>
+            <th>Vendedor</th>
+            <th class="text-end">Total</th>
+            <th class="text-end">Pago</th>
+            <th class="text-end">Saldo</th>
+            <th>Entrega prevista</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pedido in vencidos %}
+          <tr>
+            <td>
+              <a href="{% url 'vendas:pedido_detail' pedido.pk %}" class="text-decoration-none fw-semibold">
+                {{ pedido.numero }}
+              </a>
+            </td>
+            <td class="small">{{ pedido.cliente.nome }}</td>
+            <td class="small text-muted">{{ pedido.criado_por.get_full_name|default:pedido.criado_por.username }}</td>
+            <td class="text-end small">{{ pedido.total_geral|moeda }}</td>
+            <td class="text-end small text-success">{{ pedido.total_pago|moeda }}</td>
+            <td class="text-end small text-danger fw-semibold">{{ pedido.saldo_restante|moeda }}</td>
+            <td class="small text-danger">{{ pedido.data_entrega|date:"d/m/Y" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# ── Pedidos com saldo pendente ── #}
+{% if pendentes_lista %}
+<div class="card mb-4">
+  <div class="card-body p-4">
+    <p class="fw-semibold text-secondary small mb-3">
+      <i class="bi bi-cash-coin me-1"></i>
+      PAGAMENTOS PENDENTES
+    </p>
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Pedido</th>
+            <th>Cliente</th>
+            <th>Vendedor</th>
+            <th>Status</th>
+            <th class="text-end">Total</th>
+            <th class="text-end">Pago</th>
+            <th class="text-end">Saldo</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pedido in pendentes_lista %}
+          <tr>
+            <td>
+              <a href="{% url 'vendas:pedido_detail' pedido.pk %}" class="text-decoration-none fw-semibold">
+                {{ pedido.numero }}
+              </a>
+            </td>
+            <td class="small">{{ pedido.cliente.nome }}</td>
+            <td class="small text-muted">{{ pedido.criado_por.get_full_name|default:pedido.criado_por.username }}</td>
+            <td>
+              <span class="badge
+                {% if pedido.status == 'open' %}bg-secondary bg-opacity-10 text-secondary
+                {% elif pedido.status == 'aguard_pagamento' %}bg-warning bg-opacity-10 text-warning
+                {% elif pedido.status == 'aguard_producao' %}bg-info bg-opacity-10 text-info
+                {% elif pedido.status == 'cutting' %}bg-primary bg-opacity-10 text-primary
+                {% elif pedido.status == 'assembling' %}bg-warning bg-opacity-10 text-warning
+                {% elif pedido.status == 'picking' %}bg-info bg-opacity-10 text-info
+                {% elif pedido.status == 'shipped' %}bg-primary bg-opacity-10 text-primary
+                {% endif %}">
+                {{ pedido.get_status_display }}
+              </span>
+            </td>
+            <td class="text-end small">{{ pedido.total_geral|moeda }}</td>
+            <td class="text-end small text-success">{{ pedido.total_pago|moeda }}</td>
+            <td class="text-end small text-danger fw-semibold">{{ pedido.saldo_restante|moeda }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# ── Cancelados recentes ── #}
+{% if cancelados_recentes %}
+<div class="card mb-4">
+  <div class="card-body p-4">
+    <p class="fw-semibold text-secondary small mb-3">
+      <i class="bi bi-x-circle me-1"></i>
+      CANCELAMENTOS RECENTES
+    </p>
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Pedido</th>
+            <th>Cliente</th>
+            <th>Vendedor</th>
+            <th>Cancelado por</th>
+            <th>Cancelado em</th>
+            <th class="text-end">Total</th>
+            <th>Motivo</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pedido in cancelados_recentes %}
+          <tr>
+            <td>
+              <a href="{% url 'vendas:pedido_detail' pedido.pk %}" class="text-decoration-none fw-semibold">
+                {{ pedido.numero }}
+              </a>
+            </td>
+            <td class="small">{{ pedido.cliente.nome }}</td>
+            <td class="small text-muted">{{ pedido.criado_por.get_full_name|default:pedido.criado_por.username }}</td>
+            <td class="small">{{ pedido.cancelado_por.get_full_name|default:pedido.cancelado_por.username }}</td>
+            <td class="small text-muted">{{ pedido.cancelado_em|date:"d/m/Y H:i" }}</td>
+            <td class="text-end small">{{ pedido.total_geral|moeda }}</td>
+            <td class="small text-muted" style="max-width:200px;">
+              <span title="{{ pedido.motivo_cancelamento }}">
+                {{ pedido.motivo_cancelamento|truncatechars:40 }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+(function () {
+  const labels = {{ meses_labels|safe }};
+  const data   = {{ meses_data|safe }};
+
+  new Chart(document.getElementById('chart-recebimentos'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label:           'Recebimentos (R$)',
+        data,
+        backgroundColor: 'rgba(25, 135, 84, 0.15)',
+        borderColor:     'rgba(25, 135, 84, 0.8)',
+        borderWidth:     2,
+        borderRadius:    6,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => 'R$ ' + ctx.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { callback: val => 'R$ ' + val.toLocaleString('pt-BR') }
+        }
+      }
+    }
+  });
+})();
+</script>
+{% endblock %}

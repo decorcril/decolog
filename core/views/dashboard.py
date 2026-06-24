@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Count, F
 from django.db.models.functions import TruncDate
@@ -15,15 +15,16 @@ import json
 
 @login_required
 def dashboard(request):
-    user = request.user
-    is_vendedor = user.groups.filter(name='Vendedor').exists()
-    is_gerente  = user.is_staff or user.groups.filter(name='Gerente').exists()
+    user          = request.user
+    is_vendedor   = user.groups.filter(name='Vendedor').exists()
+    is_gerente    = user.is_staff or user.groups.filter(name='Gerente').exists()
     is_financeiro = user.groups.filter(name='Financeiro').exists()
 
-    # Redireciona vendedor para o dashboard de vendas
     if is_vendedor and not is_gerente and not is_financeiro:
-        from django.shortcuts import redirect
         return redirect('core:dashboard_vendas')
+
+    if is_financeiro and not is_gerente:
+        return redirect('core:dashboard_financeiro')
     
     periodo = request.GET.get('periodo', '30')
     try:

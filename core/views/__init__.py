@@ -5,3 +5,4 @@ from .fornecedor import (
     tag_list, tag_delete,
 )
 from .dashboard_vendas import dashboard_vendas
+from .dashboard_financeiro import dashboard_financeiro
