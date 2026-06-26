@@ -40,6 +40,11 @@ class Pedido(models.Model):
     condicao_pagamento = models.CharField(max_length=100, blank=True, verbose_name='Condição de Pagamento')
     contato            = models.CharField(max_length=100, blank=True, verbose_name='Contato')
     transportadora     = models.CharField(max_length=50, blank=True, verbose_name='Transportadora')
+    local_saida = models.ForeignKey(
+    'core.Local', on_delete=models.SET_NULL,
+    null=True, blank=True,
+    related_name='pedidos_saida',
+    verbose_name='Local de Saída')
     frete              = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Frete')
     percentual_entrada = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0.00"), blank=True, verbose_name='Entrada (%)')
     data_entrega       = models.DateField(null=True, blank=True, verbose_name='Data de Entrega')
@@ -59,6 +64,11 @@ class Pedido(models.Model):
 )
     motivo_cancelamento = models.TextField(blank=True, verbose_name='Motivo do Cancelamento')
     cancelado_em        = models.DateTimeField(null=True, blank=True, verbose_name='Cancelado em')
+    operador_corte = models.ForeignKey(
+    User, on_delete=models.SET_NULL,
+    null=True, blank=True,
+    related_name='pedidos_corte',
+    verbose_name='Operador de Corte')
 
     class Meta:
         verbose_name        = 'Pedido'

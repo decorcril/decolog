@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% load core_extras %}
+
+{% block title %}Dashboard — Laser{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">Meu Dashboard</h4>
+    <p class="text-muted small mb-0">{{ hoje|date:"d/m/Y" }}</p>
+  </div>
+  <a href="{% url 'vendas:laser_list' %}" class="btn btn-primary">
+    <i class="bi bi-scissors me-1"></i> Fila de Corte
+  </a>
+</div>
+
+{# ── Métricas ── #}
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card h-100">
+      <div class="card-body p-4">
+        <p class="text-muted small mb-1">Pedidos Atribuídos</p>
+        <p class="fw-bold fs-4 mb-0 {% if pedidos %}text-primary{% else %}text-success{% endif %}">
+          {{ pedidos|length }}
+        </p>
+        <p class="text-muted small mb-0">aguardando ou em corte</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card h-100">
+      <div class="card-body p-4">
+        <p class="text-muted small mb-1">Cortes Hoje</p>
+        <p class="fw-bold fs-4 mb-0">{{ cortes_hoje }}</p>
+        <p class="text-muted small mb-0">{{ hoje|date:"d/m/Y" }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card h-100">
+      <div class="card-body p-4">
+        <p class="text-muted small mb-1">Cortes na Semana</p>
+        <p class="fw-bold fs-4 mb-0">{{ cortes_semana }}</p>
+        <p class="text-muted small mb-0">esta semana</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Pedidos atribuídos ── #}
+{% if pedidos %}
+<p class="fw-semibold text-secondary small mb-3">MEUS PEDIDOS</p>
+<div class="row g-3">
+  {% for item in pedidos %}
+  <div class="col-md-6">
+    <div class="card h-100 {% if item.status == 'cutting' %}border-primary{% else %}border-warning{% endif %}">
+      <div class="card-body p-4">
+
+        {# Cabeçalho #}
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div>
+            <a href="{% url 'vendas:pedido_detail' item.pedido.pk %}" class="fw-bold text-decoration-none">
+              {{ item.pedido.numero }}
+            </a>
+            <p class="text-muted small mb-0">{{ item.pedido.cliente.nome }}</p>
+            <p class="text-muted small mb-0">{{ item.pedido.criado_em|date:"d/m/Y" }}</p>
+          </div>
+          <span class="badge {% if item.status == 'cutting' %}bg-primary bg-opacity-10 text-primary{% else %}bg-warning bg-opacity-10 text-warning{% endif %}">
+            {{ item.pedido.get_status_display }}
+          </span>
+        </div>
+
+        {# Progresso #}
+        <p class="fw-semibold text-secondary small mb-2">PROGRESSO DO CORTE</p>
+        {% for p in item.progresso_corte %}
+        <div class="mb-2">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="small">{{ p.nome }}</span>
+            <span class="small fw-semibold {% if p.completo %}text-success{% else %}text-primary{% endif %}">
+              {{ p.cortado }}/{{ p.total }}
+              {% if p.completo %}
+              <i class="bi bi-check-circle-fill text-success"></i>
+              {% endif %}
+            </span>
+          </div>
+          <div class="progress" style="height:5px;">
+            <div class="progress-bar {% if p.completo %}bg-success{% else %}bg-primary{% endif %}"
+                 style="width:{% widthratio p.cortado p.total 100 %}%"></div>
+          </div>
+        </div>
+        {% endfor %}
+
+        {# Botão #}
+        <div class="mt-3">
+          <a href="{% url 'vendas:laser_confirmar' item.pedido.pk %}" class="btn btn-sm btn-primary w-100">
+            <i class="bi bi-scissors me-1"></i>
+            {% if item.status == 'cutting' %}Continuar Corte{% else %}Registrar Corte{% endif %}
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="card">
+  <div class="card-body p-4 text-center text-muted">
+    <i class="bi bi-scissors fs-3 mb-2 d-block text-success"></i>
+    Nenhum pedido atribuído a você no momento.
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

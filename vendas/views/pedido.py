@@ -11,12 +11,13 @@ from django.utils import timezone
 
 from clientes.models import Cliente
 from core.mixins import acesso_vendas, financeiro_ou_gerente, vendedor_ou_gerente
+from core.models import Local
+from movimentacoes.models import Movimentacao
 from produtos.models import Produto
 from vendas.models import Pedido, ItemPedido
 
 
 def _parse_decimal(val, default='0'):
-    """Converte valor monetário formatado em BR para Decimal."""
     try:
         return Decimal(
             (val or default)
@@ -53,7 +54,6 @@ def _serializar_totais(pedido):
 
 
 def _recalcular_total_geral(pedido):
-    """Recalcula e salva o total_geral do pedido."""
     total = (
         pedido.total_produtos
         - pedido.total_desconto
@@ -62,6 +62,46 @@ def _recalcular_total_geral(pedido):
     )
     pedido.total_geral = max(Decimal('0'), total)
     pedido.save(update_fields=['total_geral', 'atualizado_em'])
+
+
+def _baixar_estoque_pedido(pedido, user):
+    """Registra saída de estoque quando pedido entra em picking."""
+    local = pedido.local_saida
+    if not local:
+        local = Local.objects.filter(tipo='fabrica').first()
+    if not local:
+        return
+
+    for item in pedido.itens.select_related('produto').all():
+        Movimentacao.objects.create(
+            produto    = item.produto,
+            local      = local,
+            tipo       = Movimentacao.TIPO_SAIDA,
+            motivo     = 'venda',
+            quantidade = item.quantidade,
+            observacao = f'Separação — Pedido {pedido.numero}',
+            usuario    = user,
+        )
+
+
+def _estornar_estoque_pedido(pedido, user):
+    """Estorna saída de estoque ao cancelar pedido em picking/shipped/delivered."""
+    local = pedido.local_saida
+    if not local:
+        local = Local.objects.filter(tipo='fabrica').first()
+    if not local:
+        return
+
+    for item in pedido.itens.select_related('produto').all():
+        Movimentacao.objects.create(
+            produto    = item.produto,
+            local      = local,
+            tipo       = Movimentacao.TIPO_ENTRADA,
+            motivo     = 'uso_interno',
+            quantidade = item.quantidade,
+            observacao = f'Estorno — Pedido {pedido.numero} cancelado',
+            usuario    = user,
+        )
 
 
 TRANSPORTADORA_CHOICES = [
@@ -147,6 +187,7 @@ def pedido_create(request):
         condicao_pagamento   = request.POST.get('condicao_pagamento', '')
         contato              = request.POST.get('contato', '')
         transportadora       = request.POST.get('transportadora', '')
+        local_saida_id       = request.POST.get('local_saida', '') or None
         frete                = _parse_decimal(request.POST.get('frete', '0'))
         percentual_entrada   = _parse_decimal(request.POST.get('percentual_entrada', '0'))
         total_desconto       = _parse_decimal(request.POST.get('total_desconto', '0'))
@@ -167,13 +208,16 @@ def pedido_create(request):
             if not items:
                 messages.error(request, 'Adicione pelo menos um produto ao pedido.')
             else:
-                cliente = get_object_or_404(Cliente, pk=cliente_id)
-                pedido  = Pedido.objects.create(
+                cliente     = get_object_or_404(Cliente, pk=cliente_id)
+                local_saida = Local.objects.filter(pk=local_saida_id).first() if local_saida_id else None
+
+                pedido = Pedido.objects.create(
                     cliente              = cliente,
                     tipo_venda           = tipo_venda,
                     condicao_pagamento   = condicao_pagamento,
                     contato              = contato,
                     transportadora       = transportadora,
+                    local_saida          = local_saida,
                     frete                = frete,
                     percentual_entrada   = percentual_entrada,
                     total_desconto       = total_desconto,
@@ -192,17 +236,19 @@ def pedido_create(request):
                 messages.success(request, f'Pedido {pedido.numero} criado com sucesso!')
                 return redirect('vendas:pedido_detail', pk=pedido.pk)
 
+    locais = Local.objects.all().order_by('nome')
     return render(request, 'vendas/pedido_form.html', {
         'titulo':                 'Novo Pedido',
         'tipo_venda_choices':     Pedido.TipoVenda.choices,
         'transportadora_choices': TRANSPORTADORA_CHOICES,
+        'locais':                 locais,
     })
 
 
 @acesso_vendas
 def pedido_detail(request, pk):
     pedido = get_object_or_404(
-        Pedido.objects.select_related('cliente', 'criado_por', 'responsavel')
+        Pedido.objects.select_related('cliente', 'criado_por', 'responsavel', 'local_saida')
                       .prefetch_related('itens__produto', 'pagamentos'),
         pk=pk
     )
@@ -233,28 +279,31 @@ def pedido_edit(request, pk):
                 return redirect('vendas:pedido_detail', pk=pedido.pk)
 
     if request.method == 'POST':
+        local_saida_id = request.POST.get('local_saida', '') or None
+        local_saida    = Local.objects.filter(pk=local_saida_id).first() if local_saida_id else None
+
         pedido.tipo_venda           = request.POST.get('tipo_venda', pedido.tipo_venda)
         pedido.condicao_pagamento   = request.POST.get('condicao_pagamento', '')
         pedido.contato              = request.POST.get('contato', '')
         pedido.transportadora       = request.POST.get('transportadora', '')
+        pedido.local_saida          = local_saida
         pedido.frete                = _parse_decimal(request.POST.get('frete', '0'))
         pedido.percentual_entrada   = _parse_decimal(request.POST.get('percentual_entrada', '0'))
         pedido.total_desconto       = _parse_decimal(request.POST.get('total_desconto', '0'))
         pedido.observacoes          = request.POST.get('observacoes', '')
         pedido.observacoes_internas = request.POST.get('observacoes_internas', '')
         pedido.save()
-
-        # Recalcula total_geral após alterar frete/desconto
         _recalcular_total_geral(pedido)
-
         messages.success(request, f'Pedido {pedido.numero} atualizado!')
         return redirect('vendas:pedido_detail', pk=pedido.pk)
 
+    locais = Local.objects.all().order_by('nome')
     return render(request, 'vendas/pedido_edit_form.html', {
         'titulo':                 f'Editar Pedido {pedido.numero}',
         'pedido':                 pedido,
         'tipo_venda_choices':     Pedido.TipoVenda.choices,
         'transportadora_choices': TRANSPORTADORA_CHOICES,
+        'locais':                 locais,
     })
 
 
@@ -265,6 +314,7 @@ def pedido_status(request, pk):
     if request.method == 'POST':
         novo_status = request.POST.get('status')
 
+        # ── Cancelamento ──
         if novo_status == 'canceled':
             grupos = request.user.groups.values_list('name', flat=True)
             pode_cancelar = (
@@ -282,6 +332,14 @@ def pedido_status(request, pk):
                 messages.error(request, 'Informe o motivo do cancelamento.')
                 return redirect('vendas:pedido_detail', pk=pedido.pk)
 
+            # Estorna estoque se já estava em picking, shipped ou delivered
+            if pedido.status in [
+                Pedido.Status.PICKING,
+                Pedido.Status.SHIPPED,
+                Pedido.Status.DELIVERED,
+            ]:
+                _estornar_estoque_pedido(pedido, request.user)
+
             pedido.status              = Pedido.Status.CANCELED
             pedido.cancelado_por       = request.user
             pedido.motivo_cancelamento = motivo
@@ -293,11 +351,12 @@ def pedido_status(request, pk):
 
             from core.models.notificacao import Notificacao
             Notificacao.objects.filter(pedido=pedido, tipo='pedido_cancelado').delete()
-
             messages.success(request, f'Pedido {pedido.numero} cancelado.')
             return redirect('vendas:pedido_detail', pk=pedido.pk)
 
         if novo_status in dict(Pedido.Status.choices):
+
+            # ── Reabrir pedido cancelado ──
             if pedido.status == Pedido.Status.CANCELED:
                 from core.models.notificacao import Notificacao
                 pedido.cancelado_por       = None
@@ -309,11 +368,50 @@ def pedido_status(request, pk):
                     'cancelado_em', 'atualizado_em'
                 ])
                 Notificacao.objects.filter(pedido=pedido, tipo='pedido_cancelado').delete()
-            else:
+                messages.success(request, f'Status atualizado para {pedido.get_status_display()}.')
+                return redirect('vendas:pedido_detail', pk=pedido.pk)
+
+            # ── Picking — baixa estoque ──
+            if novo_status == 'picking':
+                if pedido.status != Pedido.Status.ASSEMBLING:
+                    messages.error(request, 'O pedido precisa estar em montagem para ir para separação.')
+                    return redirect('vendas:pedido_detail', pk=pedido.pk)
+
+                pedido.status = Pedido.Status.PICKING
+                pedido.save(update_fields=['status', 'atualizado_em'])
+                _baixar_estoque_pedido(pedido, request.user)
+                messages.success(request, f'Pedido {pedido.numero} em separação — estoque baixado.')
+                return redirect('vendas:pedido_detail', pk=pedido.pk)
+
+            # ── Envio / Entrega — só a partir de picking ──
+            if novo_status in ['shipped', 'delivered']:
+                if pedido.status != Pedido.Status.PICKING:
+                    messages.error(request, 'O pedido precisa estar em separação para ser enviado ou entregue.')
+                    return redirect('vendas:pedido_detail', pk=pedido.pk)
+
+                if pedido.saldo_restante > 0 and not pedido.is_free_sale:
+                    messages.error(
+                        request,
+                        f'Não é possível enviar o pedido com saldo pendente de {pedido.saldo_restante}. '
+                        f'Quite o pagamento antes de prosseguir.'
+                    )
+                    return redirect('vendas:pedido_detail', pk=pedido.pk)
+
+                if novo_status == 'shipped' and pedido.transportadora == 'Retirada na Loja':
+                    novo_status = 'delivered'
+                    messages.success(request, f'Pedido {pedido.numero} marcado como entregue (retirada na loja).')
+                else:
+                    messages.success(request, f'Status atualizado para {pedido.get_status_display()}.')
+
                 pedido.status = novo_status
                 pedido.save(update_fields=['status', 'atualizado_em'])
+                return redirect('vendas:pedido_detail', pk=pedido.pk)
 
+            # ── Status normal ──
+            pedido.status = novo_status
+            pedido.save(update_fields=['status', 'atualizado_em'])
             messages.success(request, f'Status atualizado para {pedido.get_status_display()}.')
+
         else:
             messages.error(request, 'Status inválido.')
 

@@ -232,3 +232,19 @@ def producao_detail(request, pk):
         'q':    q,
         'page': page,
     })
+
+@montagem_ou_gerente
+def historico_montagem(request):
+    registros = RegistroMontagem.objects.select_related(
+        'operador', 'pedido__cliente'
+    ).prefetch_related(
+        'itens__produto'
+    ).order_by('-criado_em')
+
+    paginator = Paginator(registros, 20)
+    page_obj  = paginator.get_page(request.GET.get('page', 1))
+
+    return render(request, 'montagem/historico.html', {
+        'registros': page_obj,
+        'page_obj':  page_obj,
+    })

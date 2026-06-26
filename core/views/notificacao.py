@@ -112,6 +112,23 @@ def _gerar_notificacoes(user):
                 'pedido_pk': pedido.pk,
             })
 
+    # ── Logística — pedidos em separação ──
+    if is_staff or 'Logística' in grupos or 'Gerente' in grupos:
+        lidos   = _pedidos_lidos(user, 'picking')
+        pedidos = Pedido.objects.filter(
+            status='picking'
+        ).exclude(pk__in=lidos).select_related('cliente')
+
+        for pedido in pedidos:
+            notificacoes.append({
+                'tipo':      'picking',
+                'label':     'Aguardando separação',
+                'pedido':    pedido.numero,
+                'cliente':   pedido.cliente.nome,
+                'url':       '/vendas/logistica/',
+                'pedido_pk': pedido.pk,
+            })
+
     return notificacoes
 
 
@@ -143,6 +160,8 @@ def notificacoes_marcar_lida(request, pedido_pk):
             tipos.append('aguard_montagem')
         if is_staff or 'Financeiro' in grupos or 'Gerente' in grupos:
             tipos.append('pedido_cancelado')
+        if is_staff or 'Logística' in grupos or 'Gerente' in grupos:
+            tipos.append('picking')
 
         for tipo in tipos:
             Notificacao.objects.update_or_create(

@@ -3,6 +3,9 @@ from clientes import views as clientes_views
 from core.views import (
     dashboard,
     dashboard_financeiro,
+    dashboard_laser,
+    dashboard_logistica,
+    dashboard_montagem,
     dashboard_vendas,
     local_list, local_create, local_update, local_delete,
     fornecedor_list, fornecedor_create, fornecedor_update, fornecedor_delete,
@@ -31,4 +34,7 @@ urlpatterns = [
     path('notificacoes/<int:pedido_pk>/lida/', notificacoes_marcar_lida, name='notificacoes_marcar_lida'),
     path('dashboard/vendas/', dashboard_vendas, name='dashboard_vendas'),
     path('dashboard/financeiro/', dashboard_financeiro, name='dashboard_financeiro'),
+    path('dashboard/laser/', dashboard_laser, name='dashboard_laser'),
+    path('dashboard/montagem/', dashboard_montagem, name='dashboard_montagem'),
+    path('dashboard/logistica/', dashboard_logistica, name='dashboard_logistica'),
 ]

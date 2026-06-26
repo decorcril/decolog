@@ -15,17 +15,41 @@ import json
 
 @login_required
 def dashboard(request):
-    user          = request.user
-    is_vendedor   = user.groups.filter(name='Vendedor').exists()
-    is_gerente    = user.is_staff or user.groups.filter(name='Gerente').exists()
-    is_financeiro = user.groups.filter(name='Financeiro').exists()
+    user = request.user
 
-    if is_vendedor and not is_gerente and not is_financeiro:
-        return redirect('core:dashboard_vendas')
+    # ── Perfis ──
+    is_gerente             = user.is_staff or user.groups.filter(name='Gerente').exists()
+    is_vendedor            = user.groups.filter(name='Vendedor').exists()
+    is_financeiro          = user.groups.filter(name='Financeiro').exists()
+    is_operador_laser      = user.groups.filter(name='Operador de Laser').exists()
+    is_supervisor_laser    = user.groups.filter(name='Supervisor de Laser').exists()
+    is_laser               = is_operador_laser or is_supervisor_laser
+    is_operador_montagem   = user.groups.filter(name='Operador de Montagem').exists()
+    is_supervisor_montagem = user.groups.filter(name='Supervisor de Montagem').exists()
+    is_montagem            = is_operador_montagem or is_supervisor_montagem
+    is_estoquista          = user.groups.filter(name='Estoquista').exists()
+    is_logistica = user.groups.filter(name='Logística').exists()
 
-    if is_financeiro and not is_gerente:
-        return redirect('core:dashboard_financeiro')
-    
+
+    # ── Redirecionamentos por perfil ──
+    # Só redireciona se NÃO for gerente e NÃO for staff
+    if not is_gerente and not user.is_staff:
+        if is_vendedor and not is_financeiro and not is_laser and not is_montagem:
+            return redirect('core:dashboard_vendas')
+
+        if is_financeiro and not is_laser and not is_montagem:
+            return redirect('core:dashboard_financeiro')
+
+        if is_operador_laser and not is_supervisor_laser:
+            return redirect('core:dashboard_laser')
+
+        if is_montagem and not is_laser:
+            return redirect('core:dashboard_montagem')
+        
+        if is_logistica and not is_gerente:
+            return redirect('core:dashboard_logistica')
+
+    # ── Período ──
     periodo = request.GET.get('periodo', '30')
     try:
         dias = int(periodo)
@@ -34,18 +58,10 @@ def dashboard(request):
 
     data_inicio = timezone.now() - timedelta(days=dias)
 
-    user = request.user
-    is_gerente = user.is_staff or user.groups.filter(name='Gerente').exists()
-    is_estoquista = user.groups.filter(name='Estoquista').exists()
-    is_supervisor_laser = user.is_staff or user.groups.filter(name='Supervisor de Laser').exists()
-    is_operador_laser = user.groups.filter(name='Operador laser').exists()
-    is_laser = is_supervisor_laser or is_operador_laser
-    is_vendedor = user.groups.filter(name='Vendedor').exists()
-
     # ── Indicadores gerais ──
-    total_produtos = Produto.objects.filter(ativo=True).count()
+    total_produtos      = Produto.objects.filter(ativo=True).count()
     total_itens_estoque = Estoque.objects.filter(quantidade__gt=0).count()
-    total_criticos = Estoque.objects.filter(
+    total_criticos      = Estoque.objects.filter(
         estoque_minimo__gt=0, quantidade__lte=F('estoque_minimo')
     ).count()
     total_alerta = Estoque.objects.filter(
@@ -55,9 +71,7 @@ def dashboard(request):
     ).count()
 
     # ── Indicadores estoquista ──
-    total_em_transito = OrdemTransferencia.objects.filter(
-        status='em_transito'
-    ).count()
+    total_em_transito = OrdemTransferencia.objects.filter(status='em_transito').count()
 
     # ── Indicadores laser ──
     total_chapas_estoque = Estoque.objects.filter(
@@ -71,16 +85,11 @@ def dashboard(request):
     ).count()
 
     # ── Indicadores vendedor ──
-    meus_clientes_ativos = 0
+    meus_clientes_ativos  = 0
     meus_ultimos_clientes = None
-
     if is_vendedor and not is_gerente:
-        meus_clientes_ativos = Cliente.objects.filter(
-            criado_por=user, ativo=True
-        ).count()
-        meus_ultimos_clientes = Cliente.objects.filter(
-            criado_por=user
-        ).order_by('-criado_em')[:5]
+        meus_clientes_ativos  = Cliente.objects.filter(criado_por=user, ativo=True).count()
+        meus_ultimos_clientes = Cliente.objects.filter(criado_por=user).order_by('-criado_em')[:5]
 
     # ── Eixo de datas ──
     dias_labels = [
@@ -105,13 +114,13 @@ def dashboard(request):
     vendas_dict = {v['dia'].strftime('%d/%m'): v['total'] for v in vendas_qs}
     vendas_data = [vendas_dict.get(d, 0) for d in dias_labels]
 
-    # ── Gráfico 2: Saídas por motivo no período ──
+    # ── Gráfico 2: Saídas por motivo ──
     saidas_por_motivo = Movimentacao.objects.filter(
         tipo=Movimentacao.TIPO_SAIDA, data_hora__gte=data_inicio
     ).values('motivo').annotate(total=Count('id')).order_by('-total')
 
-    motivo_labels = []
-    motivo_data = []
+    motivo_labels  = []
+    motivo_data    = []
     motivo_display = dict(Movimentacao.MOTIVO_CHOICES)
     for s in saidas_por_motivo:
         motivo_labels.append(motivo_display.get(s['motivo'], s['motivo'] or 'Sem motivo'))
@@ -137,7 +146,7 @@ def dashboard(request):
         cortes_operador_labels.append(nome or c['operador__username'])
     cortes_operador_data = [c['total'] for c in cortes_por_operador]
 
-    # ── Estoque baixo para estoquista ──
+    # ── Estoque baixo ──
     estoque_baixo = Estoque.objects.filter(
         estoque_minimo__gt=0,
         quantidade__lte=F('estoque_minimo') * 2
@@ -149,7 +158,8 @@ def dashboard(request):
     ).order_by('-data_hora')[:8]
 
     # ── Cortes recentes ──
-    if is_gerente or is_supervisor_laser:
+    # Usa is_staff aqui para garantir que admin vê tudo
+    if user.is_staff or is_gerente or is_supervisor_laser:
         cortes_recentes = RegistroCorte.objects.prefetch_related(
             'itens__chapa', 'itens__produtos_cortados__produto'
         ).select_related('operador').order_by('-data', '-criado_em')[:8]
@@ -163,39 +173,39 @@ def dashboard(request):
         cortes_recentes = None
 
     return render(request, 'core/dashboard.html', {
-        'total_produtos': total_produtos,
-        'total_itens_estoque': total_itens_estoque,
-        'total_criticos': total_criticos,
-        'total_alerta': total_alerta,
-        'total_em_transito': total_em_transito,
-        'total_chapas_estoque': total_chapas_estoque,
-        'total_cortes_periodo': total_cortes_periodo,
-        'meus_cortes_periodo': meus_cortes_periodo,
-        'meus_clientes_ativos': meus_clientes_ativos,
-        'meus_ultimos_clientes': meus_ultimos_clientes,
-        'estoque_baixo': estoque_baixo,
-        'dias_labels': json.dumps(dias_labels),
-        'entradas_data': json.dumps(entradas_data),
-        'vendas_data': json.dumps(vendas_data),
-        'saidas_por_motivo': json.dumps({
-            'labels': motivo_labels,
-            'data': motivo_data,
-        }),
-        'top_produtos': json.dumps({
+        'total_produtos':         total_produtos,
+        'total_itens_estoque':    total_itens_estoque,
+        'total_criticos':         total_criticos,
+        'total_alerta':           total_alerta,
+        'total_em_transito':      total_em_transito,
+        'total_chapas_estoque':   total_chapas_estoque,
+        'total_cortes_periodo':   total_cortes_periodo,
+        'meus_cortes_periodo':    meus_cortes_periodo,
+        'meus_clientes_ativos':   meus_clientes_ativos,
+        'meus_ultimos_clientes':  meus_ultimos_clientes,
+        'estoque_baixo':          estoque_baixo,
+        'dias_labels':            json.dumps(dias_labels),
+        'entradas_data':          json.dumps(entradas_data),
+        'vendas_data':            json.dumps(vendas_data),
+        'saidas_por_motivo':      json.dumps({'labels': motivo_labels, 'data': motivo_data}),
+        'top_produtos':           json.dumps({
             'labels': [p['produto__nome'] for p in top_produtos],
-            'data': [float(p['total']) for p in top_produtos],
+            'data':   [float(p['total']) for p in top_produtos],
         }),
-        'cortes_por_operador': json.dumps({
+        'cortes_por_operador':    json.dumps({
             'labels': cortes_operador_labels,
-            'data': cortes_operador_data,
+            'data':   cortes_operador_data,
         }),
-        'ultimas_movimentacoes': ultimas_movimentacoes,
-        'cortes_recentes': cortes_recentes,
-        'periodo': periodo,
-        'is_gerente': is_gerente,
-        'is_estoquista': is_estoquista,
-        'is_supervisor_laser': is_supervisor_laser,
-        'is_operador_laser': is_operador_laser,
-        'is_laser': is_laser,
-        'is_vendedor': is_vendedor,
+        'ultimas_movimentacoes':  ultimas_movimentacoes,
+        'cortes_recentes':        cortes_recentes,
+        'periodo':                periodo,
+        'is_gerente':             is_gerente,
+        'is_estoquista':          is_estoquista,
+        'is_supervisor_laser':    is_supervisor_laser,
+        'is_operador_laser':      is_operador_laser,
+        'is_laser':               is_laser,
+        'is_vendedor':            is_vendedor,
+        'is_montagem':            is_montagem,
+        'is_supervisor_montagem': is_supervisor_montagem,
+        'is_operador_montagem':   is_operador_montagem,
     })

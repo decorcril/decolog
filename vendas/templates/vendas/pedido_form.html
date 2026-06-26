@@ -54,52 +54,64 @@
       </div>
 
       {# Comercial #}
-      <div class="card mb-4">
-        <div class="card-body p-4">
-          <p class="fw-semibold text-secondary small mb-3">DADOS COMERCIAIS</p>
-          <div class="row g-3">
-            <div class="col-md-4">
-              <label class="form-label fw-semibold text-secondary small">TIPO</label>
-              <select name="tipo_venda" class="form-select" required>
-                <option value="">Selecione...</option>
-                {% for value, label in tipo_venda_choices %}
-                  <option value="{{ value }}" {% if pedido and pedido.tipo_venda == value %}selected{% endif %}>
-                    {{ label }}
-                  </option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label fw-semibold text-secondary small">CONDIÇÃO DE PAGAMENTO</label>
-              <input type="text" name="condicao_pagamento" class="form-control"
-                     value="{{ pedido.condicao_pagamento|default:'' }}" placeholder="Ex: 30/60 dias">
-            </div>
-            <div class="col-md-4">
-              <label class="form-label fw-semibold text-secondary small">Tipo de Envio</label>
-              <select name="transportadora" class="form-select">
-                <option value="">Selecione...</option>
-                {% for op in transportadora_choices %}
-                  <option value="{{ op }}" {% if pedido and pedido.transportadora == op %}selected{% endif %}>
-                    {{ op }}
-                  </option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="col-md-3">
-              <label class="form-label fw-semibold text-secondary small">FRETE (R$)</label>
-              <input type="text" name="frete" id="id_frete" class="form-control"
-                     value="{{ pedido.frete|default:'0' }}" data-mask="moeda">
-            </div>
-            <div class="col-md-3">
-              <label class="form-label fw-semibold text-secondary small">SINAL (%)</label>
-              <input type="number" name="percentual_entrada" class="form-control"
-                     value="{{ pedido.percentual_entrada|default:'0' }}"
-                     min="0" max="100" step="0.01">
-            </div>
-          </div>
-        </div>
+      {# Comercial #}
+<div class="card mb-4">
+  <div class="card-body p-4">
+    <p class="fw-semibold text-secondary small mb-3">DADOS COMERCIAIS</p>
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label fw-semibold text-secondary small">TIPO</label>
+        <select name="tipo_venda" class="form-select" required>
+          <option value="">Selecione...</option>
+          {% for value, label in tipo_venda_choices %}
+            <option value="{{ value }}" {% if pedido and pedido.tipo_venda == value %}selected{% endif %}>
+              {{ label }}
+            </option>
+          {% endfor %}
+        </select>
       </div>
-
+      <div class="col-md-4">
+        <label class="form-label fw-semibold text-secondary small">CONDIÇÃO DE PAGAMENTO</label>
+        <input type="text" name="condicao_pagamento" class="form-control"
+               value="{{ pedido.condicao_pagamento|default:'' }}" placeholder="Ex: 30/60 dias">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-semibold text-secondary small">TIPO DE ENVIO</label>
+        <select name="transportadora" class="form-select">
+          <option value="">Selecione...</option>
+          {% for op in transportadora_choices %}
+            <option value="{{ op }}" {% if pedido and pedido.transportadora == op %}selected{% endif %}>
+              {{ op }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-semibold text-secondary small">LOCAL DE SAÍDA</label>
+        <select name="local_saida" class="form-select">
+          <option value="">Selecione o local...</option>
+          {% for local in locais %}
+            <option value="{{ local.pk }}"
+              {% if pedido and pedido.local_saida and pedido.local_saida.pk == local.pk %}selected{% endif %}>
+              {{ local.nome }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold text-secondary small">FRETE (R$)</label>
+        <input type="text" name="frete" id="id_frete" class="form-control"
+               value="{{ pedido.frete|default:'0' }}" data-mask="moeda">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold text-secondary small">SINAL (%)</label>
+        <input type="number" name="percentual_entrada" class="form-control"
+               value="{{ pedido.percentual_entrada|default:'0' }}"
+               min="0" max="100" step="0.01">
+      </div>
+    </div>
+  </div>
+</div>
     </form>
 
     {# Produtos — fora do form principal #}

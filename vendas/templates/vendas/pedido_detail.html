@@ -6,6 +6,7 @@
 
 {% block content %}
 
+
 <div class="d-flex justify-content-between align-items-start mb-4">
   <div>
     <h4 class="fw-bold mb-1">Pedido {{ pedido.numero }}</h4>
@@ -18,6 +19,8 @@
     </p>
   </div>
   <div class="d-flex gap-2">
+
+    {# Botão editar — só para vendedor dono do pedido em aberto, ou gerente #}
     {% if is_vendedor or is_gerente %}
       {% if pedido.status == 'open' %}
       <a href="{% url 'vendas:pedido_edit' pedido.pk %}" class="btn btn-outline-secondary">
@@ -25,14 +28,18 @@
       </a>
       {% endif %}
     {% endif %}
+
+    {# Dropdown de status — financeiro e gerente #}
     {% if is_financeiro or is_gerente %}
     <div class="dropdown">
       <button class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
         <i class="bi bi-arrow-repeat me-1"></i> Status
       </button>
       <ul class="dropdown-menu">
+
+        {# Status gerais — exclui shipped, delivered e canceled (tratados separado) #}
         {% for value, label in status_choices %}
-          {% if value != 'canceled' %}
+          {% if value != 'canceled' and value != 'shipped' and value != 'delivered' %}
           <li>
             <form method="post" action="{% url 'vendas:pedido_status' pedido.pk %}">
               {% csrf_token %}
@@ -44,6 +51,45 @@
           </li>
           {% endif %}
         {% endfor %}
+
+        {# Envio / Entrega — só aparece quando pedido está em picking #}
+        {% if pedido.status == 'picking' %}
+        <li><hr class="dropdown-divider"></li>
+        {% if pedido.transportadora == 'Retirada na Loja' %}
+        {# Retirada: pula shipped e vai direto para delivered #}
+        <li>
+          <form method="post" action="{% url 'vendas:pedido_status' pedido.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="status" value="shipped">
+            <button type="submit" class="dropdown-item text-success">
+              <i class="bi bi-check-circle me-1"></i> Confirmar Retirada
+            </button>
+          </form>
+        </li>
+        {% else %}
+        {# Envio pela Decorcril: shipped → delivered #}
+        <li>
+          <form method="post" action="{% url 'vendas:pedido_status' pedido.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="status" value="shipped">
+            <button type="submit" class="dropdown-item text-primary">
+              <i class="bi bi-truck me-1"></i> Marcar como Enviado
+            </button>
+          </form>
+        </li>
+        <li>
+          <form method="post" action="{% url 'vendas:pedido_status' pedido.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="status" value="delivered">
+            <button type="submit" class="dropdown-item text-success">
+              <i class="bi bi-check-circle me-1"></i> Confirmar Entrega
+            </button>
+          </form>
+        </li>
+        {% endif %}
+        {% endif %}
+
+        {# Cancelar — abre modal de confirmação com motivo #}
         {% if pedido.status != 'canceled' %}
         <li><hr class="dropdown-divider"></li>
         <li>
@@ -53,24 +99,27 @@
           </button>
         </li>
         {% endif %}
+
       </ul>
     </div>
     {% endif %}
 
-    {# Botão cancelar para vendedor dono do pedido #}
+    {# Botão cancelar — vendedor dono do pedido (sem ser gerente) #}
     {% if is_vendedor and not is_gerente and pedido.criado_por == request.user and pedido.status != 'canceled' %}
     <button type="button" class="btn btn-outline-danger"
             data-bs-toggle="modal" data-bs-target="#modal-cancelar">
       <i class="bi bi-x-circle me-1"></i> Cancelar Pedido
     </button>
     {% endif %}
+
   </div>
 </div>
+
 
 <div class="row g-4">
   <div class="col-lg-8">
 
-    {# Itens #}
+    {# ── Itens do pedido ── #}
     <div class="card mb-4">
       <div class="card-body p-4">
         <p class="fw-semibold text-secondary small mb-3">ITENS DO PEDIDO</p>
@@ -103,11 +152,13 @@
       </div>
     </div>
 
-    {# Pagamentos #}
+    {# ── Pagamentos — visível só para financeiro e gerente ── #}
     {% if is_financeiro or is_gerente %}
     <div class="card mb-4">
       <div class="card-body p-4">
         <p class="fw-semibold text-secondary small mb-3">PAGAMENTOS</p>
+
+        {# Lista de pagamentos #}
         {% if pedido.pagamentos.all %}
         <div class="table-responsive mb-3">
           <table class="table table-sm mb-0">
@@ -128,14 +179,14 @@
                 <td class="text-muted small">{{ pag.transacao|default:"—" }}</td>
                 <td class="text-end fw-semibold">{{ pag.valor|moeda }}</td>
                 <td class="text-end">
-                <form method="post" action="{% url 'vendas:pagamento_delete' pedido.pk pag.pk %}">
-                  {% csrf_token %}
-                  <button type="submit" class="btn btn-sm btn-link text-danger p-0"
-                          onclick="return confirm('Tem certeza que deseja remover o pagamento de {{ pag.valor|moeda }}?\nEsta ação não pode ser desfeita.')">
-                    <i class="bi bi-trash"></i>
-                  </button>
-                </form>
-              </td>
+                  <form method="post" action="{% url 'vendas:pagamento_delete' pedido.pk pag.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-link text-danger p-0"
+                            onclick="return confirm('Tem certeza que deseja remover o pagamento de {{ pag.valor|moeda }}?\nEsta ação não pode ser desfeita.')">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </form>
+                </td>
               </tr>
               {% endfor %}
             </tbody>
@@ -145,6 +196,7 @@
         <p class="text-muted small mb-3">Nenhum pagamento registrado.</p>
         {% endif %}
 
+        {# Formulário de novo pagamento #}
         <form method="post" action="{% url 'vendas:pagamento_add' pedido.pk %}" class="row g-2">
           {% csrf_token %}
           <div class="col-md-3">
@@ -158,7 +210,8 @@
             </select>
           </div>
           <div class="col-md-3">
-            <input type="text" name="valor" class="form-control form-select-sm"
+            <input type="text" name="valor" id="id_valor_pagamento"
+                   class="form-control form-select-sm"
                    placeholder="Valor" data-mask="moeda">
           </div>
           <div class="col-md-4">
@@ -166,17 +219,17 @@
                    placeholder="Nº Transação">
           </div>
           <div class="col-md-2">
-            <button type="submit" class="btn btn-success btn-sm w-100"
-              onclick="return confirm('Tem certeza que deseja registar o pagamento?')">
+            <button type="submit" id="btn-add-pagamento" class="btn btn-success btn-sm w-100">
               <i class="bi bi-plus-lg"></i> Registrar
             </button>
           </div>
         </form>
+
       </div>
     </div>
     {% endif %}
 
-    {# Cancelamento #}
+    {# ── Card de cancelamento — aparece quando pedido está cancelado ── #}
     {% if pedido.status == 'canceled' and pedido.cancelado_por %}
     <div class="card mb-4 border-danger">
       <div class="card-body p-4">
@@ -203,10 +256,10 @@
 
   </div>
 
-  {# Sidebar #}
+  
   <div class="col-lg-4">
 
-    {# Status #}
+    {# ── Status do pedido ── #}
     <div class="card mb-4">
       <div class="card-body p-4">
         <p class="fw-semibold text-secondary small mb-3">STATUS</p>
@@ -231,9 +284,29 @@
             <span class="text-muted small">Tipo</span>
             <span class="small fw-semibold">{{ pedido.get_tipo_venda_display }}</span>
           </div>
-          {% if pedido.data_entrega %}
+          {% if pedido.transportadora %}
           <div class="d-flex justify-content-between align-items-center">
             <span class="text-muted small">Entrega</span>
+            <span class="small fw-semibold">
+              {% if pedido.transportadora == 'Retirada na Loja' %}
+              <i class="bi bi-person-check me-1 text-success"></i>
+              {% else %}
+              <i class="bi bi-truck me-1 text-primary"></i>
+              {% endif %}
+              {{ pedido.transportadora }}
+            </span>
+          </div>
+          {% endif %}
+          {# ── Local de saída ── #}
+          {% if pedido.local_saida %}
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Local de Saída</span>
+            <span class="small fw-semibold">{{ pedido.local_saida.nome }}</span>
+          </div>
+          {% endif %}
+          {% if pedido.data_entrega %}
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Data Entrega</span>
             <span class="small fw-semibold">{{ pedido.data_entrega|date:"d/m/Y" }}</span>
           </div>
           {% endif %}
@@ -249,7 +322,7 @@
       </div>
     </div>
 
-    {# Cliente #}
+    {# ── Dados do cliente ── #}
     <div class="card mb-4">
       <div class="card-body p-4">
         <p class="fw-semibold text-secondary small mb-3">CLIENTE</p>
@@ -278,7 +351,7 @@
       </div>
     </div>
 
-    {# Financeiro #}
+    {# ── Resumo financeiro ── #}
     <div class="card mb-4">
       <div class="card-body p-4">
         <p class="fw-semibold text-secondary small mb-3">FINANCEIRO</p>
@@ -297,12 +370,6 @@
           <div class="d-flex justify-content-between align-items-center">
             <span class="text-muted small">Frete</span>
             <span class="fw-semibold">{{ pedido.frete|moeda }}</span>
-          </div>
-          {% endif %}
-          {% if pedido.transportadora %}
-          <div class="d-flex justify-content-between align-items-center">
-            <span class="text-muted small">Transportadora</span>
-            <span class="fw-semibold small">{{ pedido.transportadora }}</span>
           </div>
           {% endif %}
           <hr class="my-1" style="border-color: #f0f2f5;">
@@ -327,6 +394,7 @@
       </div>
     </div>
 
+    {# ── Observações do cliente ── #}
     {% if pedido.observacoes %}
     <div class="card mb-4">
       <div class="card-body p-4">
@@ -336,6 +404,7 @@
     </div>
     {% endif %}
 
+    {# ── Observações internas — só financeiro e gerente ── #}
     {% if pedido.observacoes_internas and is_financeiro or is_gerente %}
     <div class="card mb-4">
       <div class="card-body p-4">
@@ -348,7 +417,7 @@
   </div>
 </div>
 
-{# Modal de cancelamento #}
+
 {% if pedido.status != 'canceled' %}
 <div class="modal fade" id="modal-cancelar" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
@@ -367,7 +436,9 @@
             Esta ação não pode ser desfeita. Informe o motivo do cancelamento.
           </p>
           <div class="mb-3">
-            <label class="form-label fw-semibold">Motivo do cancelamento <span class="text-danger">*</span></label>
+            <label class="form-label fw-semibold">
+              Motivo do cancelamento <span class="text-danger">*</span>
+            </label>
             <textarea name="motivo_cancelamento" class="form-control" rows="3"
                       placeholder="Descreva o motivo..." required></textarea>
           </div>
@@ -386,6 +457,15 @@
 
 {% endblock %}
 
+
 {% block extra_js %}
 <script src="{% static 'js/pedido_detail.js' %}"></script>
+<script>
+document.getElementById('btn-add-pagamento')?.addEventListener('click', function (e) {
+  const valorInput = document.getElementById('id_valor_pagamento');
+  const valor      = valorInput ? valorInput.value : '';
+  if (!valor) return true;
+  return confirm(`Confirmar registro de pagamento no valor de R$ ${valor}?\nEsta ação não pode ser desfeita.`);
+});
+</script>
 {% endblock %}

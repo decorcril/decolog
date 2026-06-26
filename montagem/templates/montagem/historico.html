@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% load core_extras %}
+
+{% block title %}Histórico de Montagem — Decolog{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">Histórico de Montagem</h4>
+    <p class="text-muted small mb-0">{{ page_obj.paginator.count }} registro{{ page_obj.paginator.count|pluralize }}</p>
+  </div>
+  <a href="{% url 'montagem:registrar' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i> Registrar Montagem
+  </a>
+</div>
+
+{% if registros %}
+<div class="card">
+  <div class="card-body p-4">
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Data</th>
+            <th>Pedido</th>
+            <th>Cliente</th>
+            <th>Operador</th>
+            <th>Produtos</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for reg in registros %}
+          <tr>
+            <td class="small text-muted">{{ reg.criado_em|date:"d/m/Y H:i" }}</td>
+            {# DEPOIS #}
+<td class="small fw-semibold">
+  {% if reg.pedido %}
+  {% if is_gerente or is_financeiro %}
+  <a href="{% url 'vendas:pedido_detail' reg.pedido.pk %}" class="text-decoration-none">
+    {{ reg.pedido.numero }}
+  </a>
+  {% else %}
+  {{ reg.pedido.numero }}
+  {% endif %}
+  {% else %}—{% endif %}
+</td>
+            <td class="small">{% if reg.pedido %}{{ reg.pedido.cliente.nome }}{% else %}—{% endif %}</td>
+            <td class="small">{{ reg.operador.get_full_name|default:reg.operador.username }}</td>
+            <td class="small text-muted">
+              {% for item in reg.itens.all %}
+                {{ item.quantidade }}x {{ item.produto.nome }}{% if not forloop.last %}, {% endif %}
+              {% endfor %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{# Paginação #}
+{% if page_obj.has_other_pages %}
+<div class="d-flex justify-content-between align-items-center mt-4">
+  <span class="text-muted small">
+    Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+    — {{ page_obj.paginator.count }} registro(s)
+  </span>
+  <nav>
+    <ul class="pagination pagination-sm mb-0">
+      {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page=1">«</a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">‹</a>
+      </li>
+      {% endif %}
+      {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+          </li>
+        {% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.next_page_number }}">›</a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">»</a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+</div>
+{% endif %}
+
+{% else %}
+<div class="card">
+  <div class="card-body p-4 text-center text-muted">
+    <i class="bi bi-clock-history fs-3 mb-2 d-block"></i>
+    Nenhuma montagem registrada ainda.
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -10,6 +10,8 @@ class Notificacao(models.Model):
         AGUARD_PRODUCAO    = 'aguard_producao',     'Aguardando Corte'
         AGUARD_MONTAGEM    = 'aguard_montagem',     'Aguardando Montagem'
         PEDIDO_CANCELADO   = 'pedido_cancelado',    'Pedido Cancelado'
+        COBRANCA_30_DIAS   = 'cobranca_30_dias',    'Cobrança 30 Dias'
+        PICKING = 'picking', 'Em Separação'
 
 
     destinatario = models.ForeignKey(

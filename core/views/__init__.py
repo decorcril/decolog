@@ -6,3 +6,6 @@ from .fornecedor import (
 )
 from .dashboard_vendas import dashboard_vendas
 from .dashboard_financeiro import dashboard_financeiro
+from .dashboard_laser import dashboard_laser
+from .dashboard_montagem import dashboard_montagem
+from .dashboard_logistica import dashboard_logistica

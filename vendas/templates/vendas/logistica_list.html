@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+{% load core_extras %}
+
+{% block title %}Logística — Fila de Separação{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">Fila de Separação</h4>
+    <p class="text-muted small mb-0">
+      {{ pedidos|length }} pedido{{ pedidos|length|pluralize }} aguardando separação
+    </p>
+  </div>
+</div>
+
+{% if pedidos %}
+<div class="row g-3">
+  {% for item in pedidos %}
+  <div class="col-12">
+    <div class="card {% if item.is_retirada %}border-success{% else %}border-primary{% endif %}">
+      <div class="card-body p-4">
+
+        {# Cabeçalho #}
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div>
+            <h6 class="fw-bold mb-1">
+              <a href="{% url 'vendas:pedido_detail' item.pedido.pk %}" class="text-decoration-none">
+                {{ item.pedido.numero }}
+              </a>
+            </h6>
+            <p class="text-muted small mb-0">{{ item.pedido.cliente.nome }}</p>
+            <p class="text-muted small mb-0">{{ item.pedido.get_tipo_venda_display }}</p>
+          </div>
+          <div class="text-end">
+            {% if item.is_retirada %}
+            <span class="badge bg-success bg-opacity-10 text-success">
+              <i class="bi bi-person-check me-1"></i> Retirada na Loja
+            </span>
+            {% else %}
+            <span class="badge bg-primary bg-opacity-10 text-primary">
+              <i class="bi bi-truck me-1"></i> {{ item.pedido.transportadora|default:"Envio" }}
+            </span>
+            {% endif %}
+            {% if item.pedido.data_entrega %}
+            <p class="text-muted small mb-0 mt-1">
+              Entrega: {{ item.pedido.data_entrega|date:"d/m/Y" }}
+            </p>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="row g-3">
+
+          {# Produtos do pedido #}
+          <div class="col-md-4">
+            <p class="fw-semibold text-secondary small mb-2">PRODUTOS</p>
+            <table class="table table-sm mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Produto</th>
+                  <th class="text-center">Qtd</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item_pedido in item.pedido.itens.all %}
+                <tr>
+                  <td class="small fw-semibold">{{ item_pedido.produto.nome }}</td>
+                  <td class="text-center">{{ item_pedido.quantidade }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          {# Progresso de corte #}
+          <div class="col-md-4">
+            <p class="fw-semibold text-secondary small mb-2">CORTE</p>
+            {% for p in item.progresso_corte %}
+            <div class="mb-2">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="small">{{ p.nome }}</span>
+                <span class="small fw-semibold {% if p.completo %}text-success{% else %}text-warning{% endif %}">
+                  {{ p.cortado }}/{{ p.total }}
+                  {% if p.completo %}
+                  <i class="bi bi-check-circle-fill text-success"></i>
+                  {% else %}
+                  <i class="bi bi-exclamation-circle text-warning"></i>
+                  {% endif %}
+                </span>
+              </div>
+              <div class="progress" style="height:4px;">
+                <div class="progress-bar {% if p.completo %}bg-success{% else %}bg-warning{% endif %}"
+                     style="width: {% widthratio p.cortado p.total 100 %}%"></div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+          {# Progresso de montagem #}
+          <div class="col-md-4">
+            <p class="fw-semibold text-secondary small mb-2">MONTAGEM</p>
+            {% for p in item.progresso_montagem %}
+            <div class="mb-2">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="small">{{ p.nome }}</span>
+                <span class="small fw-semibold {% if p.completo %}text-success{% else %}text-warning{% endif %}">
+                  {{ p.montado }}/{{ p.total }}
+                  {% if p.completo %}
+                  <i class="bi bi-check-circle-fill text-success"></i>
+                  {% else %}
+                  <i class="bi bi-exclamation-circle text-warning"></i>
+                  {% endif %}
+                </span>
+              </div>
+              <div class="progress" style="height:4px;">
+                <div class="progress-bar {% if p.completo %}bg-success{% else %}bg-warning{% endif %}"
+                     style="width: {% widthratio p.montado p.total 100 %}%"></div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+        </div>
+
+        {# Botão de confirmação #}
+        {# Botões de ação #}
+<div class="mt-3 d-flex justify-content-end gap-2">
+  {# Imprimir ficha — abre PDF em nova aba #}
+  <a href="{% url 'vendas:pedido_pdf' item.pedido.pk %}" target="_blank"
+     class="btn btn-outline-secondary">
+    <i class="bi bi-printer me-1"></i> Imprimir Ficha
+  </a>
+</div>
+
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="card">
+  <div class="card-body p-4 text-center text-muted">
+    <i class="bi bi-box-seam fs-3 mb-2 d-block text-success"></i>
+    Nenhum pedido aguardando separação.
+  </div>
+</div>
+{% endif %}
+{# Paginação #}
+{% if page_obj.has_other_pages %}
+<div class="d-flex justify-content-between align-items-center mt-4">
+  <span class="text-muted small">
+    Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+    — {{ page_obj.paginator.count }} pedido(s)
+  </span>
+  <nav>
+    <ul class="pagination pagination-sm mb-0">
+      {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page=1">«</a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">‹</a>
+      </li>
+      {% endif %}
+      {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+          </li>
+        {% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.next_page_number }}">›</a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">»</a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+</div>
+{% endif %}
+
+{% endblock %}

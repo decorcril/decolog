@@ -14,8 +14,9 @@
     aguard_producao:    'bi-scissors text-primary',
     aguard_montagem:    'bi-tools text-warning',
     pedido_cancelado:   'bi-x-circle text-danger',
-
-  };
+    cobranca_30_dias:   'bi-alarm text-danger',
+    picking:            'bi-box-seam text-info',   // ← adiciona aqui
+};
 
   function getCsrf() {
     return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';

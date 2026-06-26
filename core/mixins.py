@@ -42,7 +42,7 @@ def financeiro_ou_gerente(view_func):
     return grupo_requerido('Financeiro', 'Gerente')(view_func)
 
 def acesso_vendas(view_func):
-    return grupo_requerido('Vendedor', 'Financeiro', 'Gerente')(view_func)
+    return grupo_requerido('Vendedor', 'Financeiro', 'Gerente', 'Logística', 'Supervisor de Montagem', 'Operador de Montagem')(view_func)
 
 def laser_ou_gerente(view_func):
     return grupo_requerido('Operador de Laser', 'Supervisor de Laser', 'Gerente')(view_func)
@@ -55,3 +55,6 @@ def supervisor_laser_ou_admin(view_func):
 
 def montagem_ou_gerente(view_func):
     return grupo_requerido('Operador de Montagem', 'Supervisor de Montagem', 'Gerente')(view_func)
+
+def logistica_ou_gerente(view_func):
+    return grupo_requerido('Logística', 'Gerente')(view_func)
