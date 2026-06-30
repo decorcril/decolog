@@ -4,6 +4,8 @@ from django.db.models import Sum
 from django.contrib.auth.models import User
 from clientes.models import Cliente
 from produtos.models import Produto
+import secrets
+
 
 TWO = Decimal("0.01")
 
@@ -69,6 +71,11 @@ class Pedido(models.Model):
     null=True, blank=True,
     related_name='pedidos_corte',
     verbose_name='Operador de Corte')
+    # dentro da classe Pedido
+    token_expedicao = models.CharField(
+    max_length=64, unique=True, blank=True,
+    verbose_name='Token de Expedição'
+    )
 
     class Meta:
         verbose_name        = 'Pedido'
@@ -88,6 +95,9 @@ class Pedido(models.Model):
             self.numero = Sequence.next_formatted('pedido', start=3000)
         if not self.responsavel:
             self.responsavel = self.criado_por
+        if not self.token_expedicao:
+            import secrets
+            self.token_expedicao = secrets.token_urlsafe(32)
         super().save(*args, **kwargs)
 
     @property

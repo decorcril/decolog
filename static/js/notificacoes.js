@@ -15,8 +15,8 @@
     aguard_montagem:    'bi-tools text-warning',
     pedido_cancelado:   'bi-x-circle text-danger',
     cobranca_30_dias:   'bi-alarm text-danger',
-    picking:            'bi-box-seam text-info',   // ← adiciona aqui
-};
+    picking:            'bi-box-seam text-info',
+  };
 
   function getCsrf() {
     return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
@@ -50,7 +50,7 @@
         lista.innerHTML = data.itens.map(n => `
           <li>
             <a href="${n.url}" class="dropdown-item px-3 py-2 border-bottom notif-item"
-               data-pedido-pk="${n.pedido_pk}">
+               data-pedido-pk="${n.pedido_pk}" data-tipo="${n.tipo}">
               <div class="d-flex align-items-start gap-2">
                 <i class="bi ${ICONS[n.tipo] || 'bi-bell'} mt-1"></i>
                 <div>
@@ -63,15 +63,22 @@
         `).join('');
 
         lista.querySelectorAll('.notif-item').forEach(item => {
-        item.addEventListener('click', function () {
-            fetch(`${URL_LIDA}${this.dataset.pedidoPk}/lida/`, {
-            method:  'POST',
-            headers: { 'X-CSRFToken': getCsrf() },
+          item.addEventListener('click', function () {
+            const pedidoPk = this.dataset.pedidoPk;
+            const tipo     = this.dataset.tipo;
+
+            fetch(`${URL_LIDA}${pedidoPk}/lida/`, {
+              method:  'POST',
+              headers: {
+                'X-CSRFToken':  getCsrf(),
+                'Content-Type': 'application/x-www-form-urlencoded',
+              },
+              body: `tipo=${encodeURIComponent(tipo)}`,
             }).then(() => {
-            // Recarrega a lista após marcar como lida
-            carregarNotificacoes();
+              // Recarrega a lista após marcar como lida
+              carregarNotificacoes();
             });
-        });
+          });
         });
       })
       .catch(() => {

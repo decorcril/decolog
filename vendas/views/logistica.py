@@ -30,25 +30,6 @@ def logistica_list(request):
         'page_obj': page_obj,
     })
 
-
-@logistica_ou_gerente
-def logistica_confirmar(request, pk):
-    pedido = get_object_or_404(Pedido, pk=pk, status=Pedido.Status.PICKING)
-
-    if request.method == 'POST':
-        if pedido.transportadora == 'Retirada na Loja':
-            pedido.status = Pedido.Status.DELIVERED
-            messages.success(request, f'Pedido {pedido.numero} entregue — retirada confirmada.')
-        else:
-            pedido.status = Pedido.Status.SHIPPED
-            messages.success(request, f'Pedido {pedido.numero} marcado como enviado.')
-
-        pedido.save(update_fields=['status', 'atualizado_em'])
-        return redirect('vendas:logistica_list')
-
-    return redirect('vendas:logistica_list')
-
-
 @logistica_ou_gerente
 def logistica_historico(request):
     q           = request.GET.get('q', '')

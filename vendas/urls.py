@@ -30,8 +30,9 @@ urlpatterns = [
     path('relatorio/comissoes/', views.relatorio_comissoes, name='relatorio_comissoes'),
     path('relatorio/comissoes/exportar/', views.exportar_comissoes_csv, name='exportar_comissoes_csv'),
     path('logistica/',                        views.logistica_list,      name='logistica_list'),
-    path('logistica/<int:pk>/confirmar/',     views.logistica_confirmar, name='logistica_confirmar'),
+   
     path('laser/<int:pk>/atribuir/', views.laser_atribuir, name='laser_atribuir'),
     path('<int:pk>/pdf/', views.pedido_pdf, name='pedido_pdf'),
     path('logistica/historico/', views.logistica_historico, name='logistica_historico'),
+    path('expedir/<str:token>/', views.expedir_pedido, name='expedir_pedido'),
 ]

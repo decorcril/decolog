@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% load core_extras %}
+
+{% block title %}Já Expedido — {{ pedido.numero }}{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+  <div class="col-md-6">
+
+    <div class="card border-success">
+      <div class="card-body p-4 text-center">
+        <i class="bi bi-check-circle-fill fs-1 mb-3 text-success"></i>
+
+        <h5 class="fw-bold mb-1">Pedido {{ pedido.numero }}</h5>
+        <p class="text-muted mb-3">{{ pedido.cliente.nome }}</p>
+
+        <div class="alert alert-success">
+          <strong>
+            {% if pedido.status == 'delivered' %}Já entregue{% else %}Já enviado{% endif %}
+          </strong>
+          <br>
+          <span class="small">{{ pedido.atualizado_em|date:"d/m/Y \à\s H:i" }}</span>
+        </div>
+
+        <a href="{% url 'vendas:pedido_detail' pedido.pk %}" class="btn btn-outline-secondary">
+          Ver detalhes do pedido
+        </a>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

@@ -94,7 +94,7 @@ def _gerar_notificacoes(user):
                 'url':       '/vendas/montagem/',
                 'pedido_pk': pedido.pk,
             })
-    
+
     # ── Financeiro / Gerente — pedidos cancelados ──
     if is_staff or 'Financeiro' in grupos or 'Gerente' in grupos:
         lidos   = _pedidos_lidos(user, 'pedido_cancelado')
@@ -112,8 +112,8 @@ def _gerar_notificacoes(user):
                 'pedido_pk': pedido.pk,
             })
 
-    # ── Logística — pedidos em separação ──
-    if is_staff or 'Logística' in grupos or 'Gerente' in grupos:
+    # ── Financeiro — pedidos em separação (prontos para envio) ──
+    if is_staff or 'Financeiro' in grupos or 'Gerente' in grupos:
         lidos   = _pedidos_lidos(user, 'picking')
         pedidos = Pedido.objects.filter(
             status='picking'
@@ -122,10 +122,10 @@ def _gerar_notificacoes(user):
         for pedido in pedidos:
             notificacoes.append({
                 'tipo':      'picking',
-                'label':     'Aguardando separação',
+                'label':     'Pronto para envio — imprimir ficha',
                 'pedido':    pedido.numero,
                 'cliente':   pedido.cliente.nome,
-                'url':       '/vendas/logistica/',
+                'url':       f'/vendas/{pedido.pk}/',
                 'pedido_pk': pedido.pk,
             })
 
@@ -145,25 +145,10 @@ def notificacoes_lista(request):
 @login_required
 def notificacoes_marcar_lida(request, pedido_pk):
     if request.method == 'POST':
-        pedido   = get_object_or_404(Pedido, pk=pedido_pk)
-        grupos   = _grupos(request.user)
-        is_staff = request.user.is_staff
+        pedido = get_object_or_404(Pedido, pk=pedido_pk)
+        tipo   = request.POST.get('tipo')
 
-        tipos = []
-        if is_staff or 'Financeiro' in grupos or 'Gerente' in grupos:
-            tipos.append('pagamento_pendente')
-        if is_staff or 'Vendedor' in grupos:
-            tipos.append('pedido_aberto')
-        if is_staff or 'Operador de Laser' in grupos or 'Supervisor de Laser' in grupos or 'Gerente' in grupos:
-            tipos.append('aguard_producao')
-        if is_staff or 'Operador de Montagem' in grupos or 'Supervisor de Montagem' in grupos or 'Gerente' in grupos:
-            tipos.append('aguard_montagem')
-        if is_staff or 'Financeiro' in grupos or 'Gerente' in grupos:
-            tipos.append('pedido_cancelado')
-        if is_staff or 'Logística' in grupos or 'Gerente' in grupos:
-            tipos.append('picking')
-
-        for tipo in tipos:
+        if tipo:
             Notificacao.objects.update_or_create(
                 destinatario=request.user,
                 pedido=pedido,
