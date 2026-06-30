@@ -122,11 +122,25 @@ def _section_title(text: str, s: dict) -> Paragraph:
 def _info_grid(rows: list, col_widths: list, s: dict) -> Table:
     table_rows = []
     for row_pair in rows:
+        # Filtra pares onde label e valor estão vazios
+        pares_validos = [(label, value) for label, value in row_pair if label and value]
+
+        if not pares_validos:
+            continue
+
         cells = []
-        for label, value in row_pair:
+        for label, value in pares_validos:
             cells.append(Paragraph(label, s['label']))
-            cells.append(Paragraph(str(value) if value else '—', s['value']))
+            cells.append(Paragraph(str(value), s['value']))
+
+        # Preenche células vazias se a linha ficou com só 1 par (mantém o layout)
+        while len(cells) < len(col_widths):
+            cells.append(Paragraph('', s['label']))
+
         table_rows.append(cells)
+
+    if not table_rows:
+        return Table([['']], colWidths=[sum(col_widths)])
 
     t = Table(table_rows, colWidths=col_widths)
     t.setStyle(TableStyle([
@@ -135,11 +149,10 @@ def _info_grid(rows: list, col_widths: list, s: dict) -> Table:
         ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
         ('LEFTPADDING',   (0, 0), (-1, -1), 5),
         ('RIGHTPADDING',  (0, 0), (-1, -1), 5),
-        ('GRID',          (0, 0), (-1, -1), 0.5, colors.HexColor('#94a3b8')),
+        ('GRID',          (0, 0), (-1, -1), 0.5, colors.HexColor('#000')),
         *[('BACKGROUND', (0, i), (-1, i), C_LIGHT_BG) for i in range(0, len(table_rows), 2)],
     ]))
     return t
-
 
 def _full_width_row(label: str, value: str, col_lbl: float, content_w: float, s: dict, bg=None) -> Table:
     t = Table(
@@ -152,8 +165,8 @@ def _full_width_row(label: str, value: str, col_lbl: float, content_w: float, s:
         ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
         ('LEFTPADDING',   (0, 0), (-1, -1), 5),
         ('RIGHTPADDING',  (0, 0), (-1, -1), 5),
-        ('BOX',           (0, 0), (-1, -1), 0.5, colors.HexColor('#94a3b8')),
-        ('INNERGRID',     (0, 0), (-1, -1), 0.5, colors.HexColor('#94a3b8')),
+        ('BOX',           (0, 0), (-1, -1), 0.5, colors.HexColor('#000')),
+        ('INNERGRID',     (0, 0), (-1, -1), 0.5, colors.HexColor('#000')),
     ]
     if bg:
         style.append(('BACKGROUND', (0, 0), (-1, -1), bg))
@@ -208,7 +221,7 @@ def _build_items_table(pedido, content_w: float, s: dict) -> list:
         ('TOPPADDING',     (0, 0), (-1, 0),  5),
         ('BOTTOMPADDING',  (0, 0), (-1, 0),  5),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [C_WHITE, C_LIGHT_BG]),
-        ('GRID',           (0, 0), (-1, -1), 0.8, colors.HexColor('#94a3b8')),
+        ('GRID',           (0, 0), (-1, -1), 0.8, colors.HexColor('#000')),
         ('VALIGN',         (0, 0), (-1, -1), 'TOP'),
         ('ALIGN',          (0, 0), (0, -1),  'CENTER'),
         ('ALIGN',          (2, 0), (-1, -1), 'RIGHT'),
@@ -254,7 +267,7 @@ def _build_totals_table(pedido, content_w: float, s: dict) -> Table:
         ('TOPPADDING',    (0, 0),           (-1, -1),           2),
         ('BOTTOMPADDING', (0, 0),           (-1, -1),           2),
         ('RIGHTPADDING',  (1, 0),           (1, -1),            2),
-        ('GRID',          (1, 0),           (-1, -1),           0.5, colors.HexColor('#94a3b8')),
+        ('GRID',          (1, 0),           (-1, -1),           0.5, colors.HexColor('#000')),
         ('BACKGROUND',    (1, grand_idx),   (2, grand_idx),     C_TOTAL_BG),
         ('LINEABOVE',     (1, grand_idx),   (2, grand_idx),     0.7, C_PRIMARY),
         ('LINEBELOW',     (1, grand_idx),   (2, grand_idx),     0.7, C_PRIMARY),
@@ -330,8 +343,7 @@ def pedido_pdf(request, pk):
          ('Data',       pedido.criado_em.strftime('%d/%m/%Y'))],
         [('Telefone',   cliente.telefone or '—'),
          ('WhatsApp',   cliente.whatsapp or '—')],
-        [('Situação',   pedido.get_status_display()),
-         ('Contato',    pedido.contato)],
+        [('Contato',    pedido.contato )],
     ], cw, s))
     el.append(_full_width_row('Endereço', _build_address(cliente), col_lbl, CONTENT_W, s, bg=C_LIGHT_BG))
     el.append(Spacer(1, 4 * mm))
