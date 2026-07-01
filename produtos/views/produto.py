@@ -188,19 +188,88 @@ def produto_delete(request, pk):
 @login_required
 def produto_detail(request, pk):
     produto = get_object_or_404(Produto, pk=pk)
-    saldos = Estoque.objects.filter(
+    saldos  = Estoque.objects.filter(
         produto=produto, quantidade__gt=0
     ).select_related('local')
 
-    q = request.GET.get('q', '')
+    aba = request.GET.get('aba', 'estoque')
+
+    q         = request.GET.get('q', '')
     categoria = request.GET.get('categoria', '')
-    page = request.GET.get('page', '')
+    page      = request.GET.get('page', '')
+
+    # Ficha técnica
+    from produtos.models import FichaTecnica
+    ficha = FichaTecnica.objects.filter(produto=produto).prefetch_related('itens__material').first()
+
+    # Produtos disponíveis para composição
+    produtos_finais = Produto.objects.filter(
+        categoria='produto_final', ativo=True
+    ).exclude(pk=pk).order_by('nome')
 
     return render(request, 'produtos/produto/detail.html', {
-        'produto': produto,
-        'saldos': saldos,
-        'pode_gerir': pode_gerir_produtos(request.user),
-        'q': q,
-        'categoria': categoria,
-        'page': page,
+        'produto':        produto,
+        'saldos':         saldos,
+        'pode_gerir':     pode_gerir_produtos(request.user),
+        'aba':            aba,
+        'ficha':          ficha,
+        'produtos_finais': produtos_finais,
+        'q':              q,
+        'categoria':      categoria,
+        'page':           page,
     })
+
+@login_required
+def ficha_tecnica_edit(request, pk):
+    if not pode_gerir_produtos(request.user):
+        messages.error(request, 'Você não tem permissão para editar fichas técnicas.')
+        return redirect('produtos:detalhe', pk=pk)
+
+    produto = get_object_or_404(Produto, pk=pk)
+
+    if produto.categoria != 'produto_final':
+        messages.error(request, 'Somente produtos finais podem ter ficha técnica.')
+        return redirect('produtos:detalhe', pk=pk)
+
+    from produtos.models import FichaTecnica, ItemFichaTecnica
+
+    ficha, _ = FichaTecnica.objects.get_or_create(produto=produto)
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        # ── Adicionar componente ──
+        if action == 'add':
+            material_id = request.POST.get('material')
+            quantidade  = request.POST.get('quantidade', '1').replace(',', '.')
+            observacao  = request.POST.get('observacao', '')
+
+            if not material_id:
+                messages.error(request, 'Selecione um material.')
+            elif material_id == str(pk):
+                messages.error(request, 'Um produto não pode ser componente de si mesmo.')
+            else:
+                try:
+                    from decimal import Decimal
+                    material = get_object_or_404(Produto, pk=material_id)
+                    ItemFichaTecnica.objects.update_or_create(
+                        ficha=ficha,
+                        material=material,
+                        defaults={
+                            'quantidade':  Decimal(quantidade),
+                            'observacao':  observacao,
+                        }
+                    )
+                    messages.success(request, f'{material.nome} adicionado à composição.')
+                except Exception as e:
+                    messages.error(request, f'Erro ao adicionar: {e}')
+
+        # ── Remover componente ──
+        elif action == 'remove':
+            item_pk = request.POST.get('item_pk')
+            ItemFichaTecnica.objects.filter(pk=item_pk, ficha=ficha).delete()
+            messages.success(request, 'Componente removido.')
+
+        return redirect('produtos:detalhe', pk=pk)
+
+    return redirect('produtos:detalhe', pk=pk)

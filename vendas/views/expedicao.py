@@ -1,7 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.utils import timezone
 
 from vendas.models import Pedido
 
@@ -28,12 +27,15 @@ def expedir_pedido(request, token):
 
         if pedido.transportadora == 'Retirada na Loja':
             pedido.status = Pedido.Status.DELIVERED
+            pedido.save(update_fields=['status', 'atualizado_em'])
+            _baixar_estoque_pedido(pedido, request.user)
             messages.success(request, f'Retirada do pedido {pedido.numero} confirmada!')
         else:
             pedido.status = Pedido.Status.SHIPPED
+            pedido.save(update_fields=['status', 'atualizado_em'])
+            _baixar_estoque_pedido(pedido, request.user)
             messages.success(request, f'Envio do pedido {pedido.numero} confirmado!')
 
-        pedido.save(update_fields=['status', 'atualizado_em'])
         return redirect('vendas:expedir_pedido', token=token)
 
     return render(request, 'vendas/expedicao_confirmar.html', {

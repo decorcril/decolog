@@ -65,24 +65,46 @@ def _recalcular_total_geral(pedido):
 
 
 def _baixar_estoque_pedido(pedido, user):
-    """Registra saída de estoque quando pedido entra em picking."""
+    """Registra saída de estoque quando pedido é enviado/entregue."""
     local = pedido.local_saida
     if not local:
         local = Local.objects.filter(tipo='fabrica').first()
     if not local:
         return
 
-    for item in pedido.itens.select_related('produto').all():
-        Movimentacao.objects.create(
-            produto    = item.produto,
-            local      = local,
-            tipo       = Movimentacao.TIPO_SAIDA,
-            motivo     = 'venda',
-            quantidade = item.quantidade,
-            observacao = f'Separação — Pedido {pedido.numero}',
-            usuario    = user,
-        )
+    fabrica = Local.objects.filter(tipo='fabrica').first()
 
+    for item in pedido.itens.select_related('produto').all():
+        try:
+            ficha = item.produto.ficha_tecnica
+            for componente in ficha.itens.select_related('material').all():
+                quantidade_total = componente.quantidade * item.quantidade
+                # Usa local_saida se tiver estoque suficiente, senão usa fábrica
+                from estoque.models import Estoque
+                saldo = Estoque.objects.filter(produto=componente.material, local=local).first()
+                local_usar = local if saldo and saldo.quantidade >= quantidade_total else fabrica
+                Movimentacao.objects.create(
+                    produto    = componente.material,
+                    local      = local_usar,
+                    tipo       = Movimentacao.TIPO_SAIDA,
+                    motivo     = 'venda',
+                    quantidade = quantidade_total,
+                    observacao = f'Separação — Pedido {pedido.numero} ({item.produto.nome})',
+                    usuario    = user,
+                )
+        except item.produto.__class__.ficha_tecnica.RelatedObjectDoesNotExist:
+            from estoque.models import Estoque
+            saldo = Estoque.objects.filter(produto=item.produto, local=local).first()
+            local_usar = local if saldo and saldo.quantidade >= item.quantidade else fabrica
+            Movimentacao.objects.create(
+                produto    = item.produto,
+                local      = local_usar,
+                tipo       = Movimentacao.TIPO_SAIDA,
+                motivo     = 'venda',
+                quantidade = item.quantidade,
+                observacao = f'Separação — Pedido {pedido.numero}',
+                usuario    = user,
+            )
 
 def _estornar_estoque_pedido(pedido, user):
     """Estorna saída de estoque ao cancelar pedido em picking/shipped/delivered."""
@@ -332,9 +354,8 @@ def pedido_status(request, pk):
                 messages.error(request, 'Informe o motivo do cancelamento.')
                 return redirect('vendas:pedido_detail', pk=pedido.pk)
 
-            # Estorna estoque se já estava em picking, shipped ou delivered
+            # Estorna estoque se já estava em shipped ou delivered
             if pedido.status in [
-                Pedido.Status.PICKING,
                 Pedido.Status.SHIPPED,
                 Pedido.Status.DELIVERED,
             ]:
@@ -371,7 +392,7 @@ def pedido_status(request, pk):
                 messages.success(request, f'Status atualizado para {pedido.get_status_display()}.')
                 return redirect('vendas:pedido_detail', pk=pedido.pk)
 
-            # ── Picking — baixa estoque ──
+            # ── Picking — só muda status, sem baixar estoque ──
             if novo_status == 'picking':
                 if pedido.status != Pedido.Status.ASSEMBLING:
                     messages.error(request, 'O pedido precisa estar em montagem para ir para separação.')
@@ -379,11 +400,10 @@ def pedido_status(request, pk):
 
                 pedido.status = Pedido.Status.PICKING
                 pedido.save(update_fields=['status', 'atualizado_em'])
-                _baixar_estoque_pedido(pedido, request.user)
-                messages.success(request, f'Pedido {pedido.numero} em separação — estoque baixado.')
+                messages.success(request, f'Pedido {pedido.numero} em separação.')
                 return redirect('vendas:pedido_detail', pk=pedido.pk)
 
-            # ── Envio / Entrega — só a partir de picking ──
+            # ── Envio / Entrega — baixa estoque ──
             if novo_status in ['shipped', 'delivered']:
                 if pedido.status != Pedido.Status.PICKING:
                     messages.error(request, 'O pedido precisa estar em separação para ser enviado ou entregue.')
@@ -405,6 +425,7 @@ def pedido_status(request, pk):
 
                 pedido.status = novo_status
                 pedido.save(update_fields=['status', 'atualizado_em'])
+                _baixar_estoque_pedido(pedido, request.user)
                 return redirect('vendas:pedido_detail', pk=pedido.pk)
 
             # ── Status normal ──

@@ -120,8 +120,30 @@
   </div>
 
   <div class="col-lg-8">
-    <div class="card">
+
+    {# Abas #}
+    <ul class="nav nav-tabs mb-0" id="produtoTabs">
+      <li class="nav-item">
+        <a class="nav-link {% if not aba or aba == 'estoque' %}active{% endif %}"
+           href="{% url 'produtos:detalhe' produto.pk %}?q={{ q }}&categoria={{ categoria }}&page={{ page }}&aba=estoque">
+          <i class="bi bi-archive me-1"></i> Estoque
+        </a>
+      </li>
+      {% if produto.is_produto_final %}
+      <li class="nav-item">
+        <a class="nav-link {% if aba == 'composicao' %}active{% endif %}"
+           href="{% url 'produtos:detalhe' produto.pk %}?q={{ q }}&categoria={{ categoria }}&page={{ page }}&aba=composicao">
+          <i class="bi bi-diagram-3 me-1"></i> Composição
+        </a>
+      </li>
+      {% endif %}
+    </ul>
+
+    <div class="card" style="border-top-left-radius:0; border-top-right-radius:0;">
       <div class="card-body p-4">
+
+        {# ── Aba Estoque ── #}
+        {% if not aba or aba == 'estoque' %}
         <p class="fw-semibold text-secondary small mb-3">ESTOQUE POR LOCAL</p>
         {% if saldos %}
         <div class="table-responsive">
@@ -144,9 +166,7 @@
                 <td class="text-center text-muted small">
                   {% if saldo.estoque_minimo %}
                     {{ saldo.estoque_minimo|floatformat:"-3" }} {{ produto|unidade_abrev }}
-                  {% else %}
-                    —
-                  {% endif %}
+                  {% else %}—{% endif %}
                 </td>
                 <td class="text-center">
                   {% if saldo.status_estoque == 'critico' %}
@@ -170,6 +190,89 @@
           <p class="text-muted small mt-2 mb-0">Sem estoque em nenhum local.</p>
         </div>
         {% endif %}
+        {% endif %}
+
+        {# ── Aba Composição ── #}
+        {% if aba == 'composicao' %}
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <p class="fw-semibold text-secondary small mb-0">COMPOSIÇÃO DO PRODUTO</p>
+        </div>
+
+        {# Lista de componentes #}
+        {% if ficha and ficha.itens.all %}
+        <div class="table-responsive mb-4">
+          <table class="table table-sm mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Componente</th>
+                <th class="text-center">Quantidade</th>
+                <th>Observação</th>
+                {% if pode_gerir %}<th></th>{% endif %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in ficha.itens.all %}
+              <tr>
+                <td class="fw-semibold small">{{ item.material.nome }}</td>
+                <td class="text-center small">{{ item.quantidade|floatformat:"-3" }}</td>
+                <td class="text-muted small">{{ item.observacao|default:"—" }}</td>
+                {% if pode_gerir %}
+                <td class="text-end">
+                  <form method="post" action="{% url 'produtos:ficha_tecnica_edit' produto.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="remove">
+                    <input type="hidden" name="item_pk" value="{{ item.pk }}">
+                    <button type="submit" class="btn btn-sm btn-link text-danger p-0"
+                            onclick="return confirm('Remover {{ item.material.nome }}?')">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </form>
+                </td>
+                {% endif %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-3 mb-4">
+          <i class="bi bi-diagram-3 fs-2 text-muted opacity-50"></i>
+          <p class="text-muted small mt-2 mb-0">Nenhum componente cadastrado.</p>
+        </div>
+        {% endif %}
+
+        {# Formulário para adicionar componente #}
+        {% if pode_gerir %}
+        <p class="fw-semibold text-secondary small mb-2">ADICIONAR COMPONENTE</p>
+        <form method="post" action="{% url 'produtos:ficha_tecnica_edit' produto.pk %}" class="row g-2">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="add">
+          <div class="col-md-5">
+            <select name="material" class="form-select form-select-sm" required>
+              <option value="">Selecione o produto...</option>
+              {% for p in produtos_finais %}
+              <option value="{{ p.pk }}">{{ p.nome }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-2">
+            <input type="text" name="quantidade" class="form-control form-select-sm"
+                   placeholder="Qtd" value="1" required>
+          </div>
+          <div class="col-md-3">
+            <input type="text" name="observacao" class="form-control form-select-sm"
+                   placeholder="Observação (opcional)">
+          </div>
+          <div class="col-md-2">
+            <button type="submit" class="btn btn-primary btn-sm w-100">
+              <i class="bi bi-plus-lg me-1"></i> Adicionar
+            </button>
+          </div>
+        </form>
+        {% endif %}
+
+        {% endif %}
+
       </div>
     </div>
   </div>

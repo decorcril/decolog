@@ -13,6 +13,33 @@ from core.models import Local
 from montagem.models import RegistroMontagem, ItemMontagem
 
 
+def _registrar_entrada_producao(produto, qty, fabrica, observacao, user):
+    """Registra entrada de produção — explode ficha técnica se existir."""
+    try:
+        ficha = produto.ficha_tecnica
+        for componente in ficha.itens.select_related('material').all():
+            quantidade_total = componente.quantidade * qty
+            Movimentacao.objects.create(
+                produto    = componente.material,
+                local      = fabrica,
+                tipo       = 'entrada',
+                motivo     = 'producao',
+                quantidade = quantidade_total,
+                observacao = observacao,
+                usuario    = user,
+            )
+    except produto.__class__.ficha_tecnica.RelatedObjectDoesNotExist:
+        Movimentacao.objects.create(
+            produto    = produto,
+            local      = fabrica,
+            tipo       = 'entrada',
+            motivo     = 'producao',
+            quantidade = qty,
+            observacao = observacao,
+            usuario    = user,
+        )
+
+
 @montagem_ou_gerente
 def registrar_producao(request):
     from vendas.models import Pedido
@@ -66,14 +93,13 @@ def registrar_producao(request):
                         produto=item.produto,
                         quantidade=qty,
                     )
-                    Movimentacao.objects.create(
-                        produto=item.produto,
-                        local=fabrica,
-                        tipo='entrada',
-                        motivo='producao',
-                        quantidade=qty,
-                        observacao=f'Montagem — Pedido {pedido.numero}',
-                        usuario=request.user,
+
+                    _registrar_entrada_producao(
+                        produto    = item.produto,
+                        qty        = qty,
+                        fabrica    = fabrica,
+                        observacao = f'Montagem — Pedido {pedido.numero} ({item.produto.nome})',
+                        user       = request.user,
                     )
 
                 # Verifica progresso
@@ -121,15 +147,15 @@ def registrar_producao(request):
                         produto=produto,
                         quantidade=Decimal(quantidade),
                     )
-                    Movimentacao.objects.create(
-                        produto=produto,
-                        local=fabrica,
-                        tipo='entrada',
-                        motivo='producao',
-                        quantidade=Decimal(quantidade),
-                        observacao=observacao,
-                        usuario=request.user,
+
+                    _registrar_entrada_producao(
+                        produto    = produto,
+                        qty        = Decimal(quantidade),
+                        fabrica    = fabrica,
+                        observacao = observacao or f'Produção de {produto.nome}',
+                        user       = request.user,
                     )
+
                     messages.success(request, f'Produção de {produto.nome} registrada!')
                     return redirect('montagem:registrar')
                 except Exception as e:
@@ -153,6 +179,7 @@ def registrar_producao(request):
         'pedido_pk':       pedido_pk or '',
         'produtos_pedido': produtos_pedido,
     })
+
 
 @montagem_ou_gerente
 def montagem_list(request):
@@ -232,6 +259,7 @@ def producao_detail(request, pk):
         'q':    q,
         'page': page,
     })
+
 
 @montagem_ou_gerente
 def historico_montagem(request):

@@ -43,6 +43,8 @@ class Estoque(models.Model):
     def subtrair(self, qtd):
         if qtd <= 0:
             raise ValueError('Quantidade deve ser positiva.')
+        # Recarrega do banco para garantir saldo atualizado
+        self.refresh_from_db()
         if self.quantidade - qtd < 0:
             raise ValidationError(
                 f'Estoque insuficiente. Disponível: {self.quantidade}. Solicitado: {qtd}.'
