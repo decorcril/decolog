@@ -153,18 +153,27 @@
     </div>
 
     {# ── Pagamentos — visível só para financeiro e gerente ── #}
-    {# ── Pagamentos — visível só para financeiro e gerente ── #}
-{% if is_financeiro or is_gerente %}
-<div class="card mb-4">
-  <div class="card-body p-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <p class="fw-semibold text-secondary small mb-0">PAGAMENTOS</p>
-      <a href="{% url 'vendas:pedido_pdf' pedido.pk %}" target="_blank" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-printer me-1"></i> Imprimir Ficha
-      </a>
+   {# ── Ficha de envio — financeiro, gerente e logistica loja ── #}
+    {% if is_financeiro or is_gerente or is_logistica_loja %}
+    <div class="card mb-4">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <p class="fw-semibold text-secondary small mb-0">FICHA DE ENVIO</p>
+          <a href="{% url 'vendas:pedido_pdf' pedido.pk %}" target="_blank" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-printer me-1"></i> Imprimir Ficha
+          </a>
+        </div>
+      </div>
     </div>
+    {% endif %}
 
-    {# resto do conteúdo de pagamentos continua igual #}
+    {# ── Pagamentos — visível só para financeiro e gerente ── #}
+    {% if is_financeiro or is_gerente %}
+    <div class="card mb-4">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <p class="fw-semibold text-secondary small mb-0">PAGAMENTOS</p>
+        </div>
 
         {# Lista de pagamentos #}
         {% if pedido.pagamentos.all %}

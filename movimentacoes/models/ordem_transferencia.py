@@ -1,17 +1,18 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.db import transaction
+import secrets
 
 
 class OrdemTransferencia(models.Model):
 
-    STATUS_TRANSITO = 'em_transito'
-    STATUS_RECEBIDO = 'recebido'
+    STATUS_TRANSITO  = 'em_transito'
+    STATUS_RECEBIDO  = 'recebido'
     STATUS_CANCELADO = 'cancelado'
 
     STATUS_CHOICES = [
-        (STATUS_TRANSITO, 'Em Trânsito'),
-        (STATUS_RECEBIDO, 'Recebido'),
+        (STATUS_TRANSITO,  'Em Trânsito'),
+        (STATUS_RECEBIDO,  'Recebido'),
         (STATUS_CANCELADO, 'Cancelado'),
     ]
 
@@ -36,8 +37,8 @@ class OrdemTransferencia(models.Model):
         default=STATUS_TRANSITO,
         verbose_name='Status'
     )
-    observacao = models.TextField(blank=True, verbose_name='Observação')
-    criado_por = models.ForeignKey(
+    observacao  = models.TextField(blank=True, verbose_name='Observação')
+    criado_por  = models.ForeignKey(
         User,
         on_delete=models.PROTECT,
         related_name='ordens_criadas',
@@ -50,26 +51,32 @@ class OrdemTransferencia(models.Model):
         related_name='ordens_recebidas',
         verbose_name='Recebido por'
     )
-    data_envio = models.DateTimeField(auto_now_add=True, verbose_name='Data de Envio')
-    data_recebimento = models.DateTimeField(null=True, blank=True, verbose_name='Data de Recebimento')
+    data_envio        = models.DateTimeField(auto_now_add=True, verbose_name='Data de Envio')
+    data_recebimento  = models.DateTimeField(null=True, blank=True, verbose_name='Data de Recebimento')
+    token_confirmacao = models.CharField(
+        max_length=64, unique=True, blank=True,
+        verbose_name='Token de Confirmação'
+    )
 
     class Meta:
-        verbose_name = 'Ordem de Transferência'
+        verbose_name        = 'Ordem de Transferência'
         verbose_name_plural = 'Ordens de Transferência'
-        ordering = ['-data_envio']
+        ordering            = ['-data_envio']
 
     def __str__(self):
         return f'OT-{self.numero} | {self.local_origem} → {self.local_destino} | {self.get_status_display()}'
+
+    def save(self, *args, **kwargs):
+        if not self.token_confirmacao:
+            self.token_confirmacao = secrets.token_urlsafe(32)
+        super().save(*args, **kwargs)
 
     @classmethod
     def gerar_numero(cls):
         from django.utils import timezone
         prefixo = timezone.now().strftime('%Y%m')
-        ultima = cls.objects.filter(numero__startswith=prefixo).order_by('-numero').first()
-        if ultima:
-            seq = int(ultima.numero[-4:]) + 1
-        else:
-            seq = 1
+        ultima  = cls.objects.filter(numero__startswith=prefixo).order_by('-numero').first()
+        seq     = int(ultima.numero[-4:]) + 1 if ultima else 1
         return f'{prefixo}{seq:04d}'
 
     @transaction.atomic
@@ -84,8 +91,8 @@ class OrdemTransferencia(models.Model):
             saldo_destino = Estoque.get_or_create_saldo(item.produto, self.local_destino)
             saldo_destino.adicionar(item.quantidade)
 
-        self.status = self.STATUS_RECEBIDO
-        self.recebido_por = usuario
+        self.status          = self.STATUS_RECEBIDO
+        self.recebido_por    = usuario
         self.data_recebimento = timezone.now()
         self.save()
 
@@ -122,7 +129,7 @@ class ItemOrdemTransferencia(models.Model):
     )
 
     class Meta:
-        verbose_name = 'Item da Ordem'
+        verbose_name        = 'Item da Ordem'
         verbose_name_plural = 'Itens da Ordem'
 
     def __str__(self):

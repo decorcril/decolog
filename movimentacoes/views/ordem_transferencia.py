@@ -141,9 +141,55 @@ def ordem_cancelar(request, pk):
 
 @login_required
 def ordem_imprimir(request, pk):
+    import qrcode
+    from io import BytesIO
+    import base64
+
     ordem = get_object_or_404(OrdemTransferencia, pk=pk)
     itens = ordem.itens.select_related('produto')
+
+    # Gera QR Code
+    url    = request.build_absolute_uri(f'/movimentacoes/ordem/{ordem.token_confirmacao}/confirmar-qr/')
+    qr     = qrcode.QRCode(version=None, error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=6, border=2)
+    qr.add_data(url)
+    qr.make(fit=True)
+    img    = qr.make_image(fill_color='black', back_color='white')
+    buf    = BytesIO()
+    img.save(buf, format='PNG')
+    qr_b64 = base64.b64encode(buf.getvalue()).decode()
+
     return render(request, 'movimentacoes/ordem_transferencia/imprimir.html', {
+        'ordem':  ordem,
+        'itens':  itens,
+        'qr_b64': qr_b64,
+    })
+
+@login_required
+def ordem_confirmar_qr(request, token):
+    ordem = get_object_or_404(OrdemTransferencia, token_confirmacao=token)
+
+    # ── Já foi confirmada ──
+    if ordem.status == OrdemTransferencia.STATUS_RECEBIDO:
+        return render(request, 'movimentacoes/ordem_transferencia/qr_ja_confirmada.html', {
+            'ordem': ordem,
+        })
+
+    # ── Cancelada ──
+    if ordem.status == OrdemTransferencia.STATUS_CANCELADO:
+        return render(request, 'movimentacoes/ordem_transferencia/qr_status_invalido.html', {
+            'ordem': ordem,
+        })
+
+    # ── Confirmação ──
+    if request.method == 'POST':
+        try:
+            ordem.confirmar_recebimento(request.user)
+            messages.success(request, f'Ordem {ordem.numero} confirmada!')
+        except ValueError as e:
+            messages.error(request, str(e))
+        return redirect('movimentacoes:ordem_confirmar_qr', token=token)
+
+    return render(request, 'movimentacoes/ordem_transferencia/qr_confirmar.html', {
         'ordem': ordem,
-        'itens': itens,
+        'itens': ordem.itens.select_related('produto'),
     })

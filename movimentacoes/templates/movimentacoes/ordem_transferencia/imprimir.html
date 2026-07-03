@@ -266,7 +266,15 @@
   <div class="titulo-secao">Observação</div>
   <div class="observacao">{{ ordem.observacao }}</div>
   {% endif %}
-
+{# ==================== QR CODE ==================== #}
+  <div style="margin: 32px 0; display: flex; align-items: center; gap: 24px; background: #f8f9fa; border-radius: 8px; padding: 16px;">
+    <img src="data:image/png;base64,{{ qr_b64 }}" style="width: 100px; height: 100px;">
+    <div>
+      <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #888; margin-bottom: 4px;">Confirmação Digital</div>
+      <div style="font-weight: 600; color: #1a2535; font-size: 13px;">Escaneie para confirmar o recebimento</div>
+      <div style="font-size: 11px; color: #888; margin-top: 4px;">{{ ordem.numero }} — {{ ordem.local_destino.nome }}</div>
+    </div>
+  </div>
   {# ==================== ASSINATURAS ==================== #}
   <div class="assinaturas">
     <div class="assinatura">

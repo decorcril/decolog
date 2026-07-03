@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block title %}Já Separado — {{ pedido.numero }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card border-success">
+      <div class="card-body p-4 text-center">
+        <i class="bi bi-check-circle-fill fs-1 mb-3 text-success"></i>
+        <h5 class="fw-bold mb-1">Pedido {{ pedido.numero }}</h5>
+        <p class="text-muted mb-3">{{ pedido.cliente.nome }}</p>
+        <div class="alert alert-success">
+          <strong>Separação já confirmada!</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

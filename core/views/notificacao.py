@@ -112,8 +112,8 @@ def _gerar_notificacoes(user):
                 'pedido_pk': pedido.pk,
             })
 
-    # ── Financeiro — pedidos em separação (prontos para envio) ──
-    if is_staff or 'Financeiro' in grupos or 'Gerente' in grupos:
+    # ── Financeiro / Logística Loja — pedidos prontos para envio ──
+    if is_staff or 'Financeiro' in grupos or 'Gerente' in grupos or 'Logistica Loja' in grupos or 'Logística' in grupos:
         lidos   = _pedidos_lidos(user, 'picking')
         pedidos = Pedido.objects.filter(
             status='picking'

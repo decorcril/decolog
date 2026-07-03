@@ -32,7 +32,7 @@ class Pedido(models.Model):
         ADVERTISING = "advertising", "Publicidade"
         COMODATO    = "comodato",    "Comodato"
 
-    numero = models.CharField(max_length=10, unique=True, blank=True, verbose_name='Número do Pedido', db_index=True)
+    numero             = models.CharField(max_length=10, unique=True, blank=True, verbose_name='Número do Pedido', db_index=True)
     cliente            = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='pedidos', verbose_name='Cliente')
     criado_por         = models.ForeignKey(User, on_delete=models.PROTECT, related_name='pedidos_criados', verbose_name='Criado por')
     responsavel        = models.ForeignKey(User, on_delete=models.PROTECT, related_name='pedidos_responsavel', null=True, blank=True, verbose_name='Responsável')
@@ -42,11 +42,12 @@ class Pedido(models.Model):
     condicao_pagamento = models.CharField(max_length=100, blank=True, verbose_name='Condição de Pagamento')
     contato            = models.CharField(max_length=100, blank=True, verbose_name='Contato')
     transportadora     = models.CharField(max_length=50, blank=True, verbose_name='Transportadora')
-    local_saida = models.ForeignKey(
-    'core.Local', on_delete=models.SET_NULL,
-    null=True, blank=True,
-    related_name='pedidos_saida',
-    verbose_name='Local de Saída')
+    local_saida        = models.ForeignKey(
+        'core.Local', on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='pedidos_saida',
+        verbose_name='Local de Saída'
+    )
     frete              = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Frete')
     percentual_entrada = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0.00"), blank=True, verbose_name='Entrada (%)')
     data_entrega       = models.DateField(null=True, blank=True, verbose_name='Data de Entrega')
@@ -58,24 +59,29 @@ class Pedido(models.Model):
     total_geral        = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Total Geral')
     criado_em          = models.DateTimeField(auto_now_add=True)
     atualizado_em      = models.DateTimeField(auto_now=True)
-    cancelado_por       = models.ForeignKey(
-    User, on_delete=models.SET_NULL,
-    null=True, blank=True,
-    related_name='pedidos_cancelados',
-    verbose_name='Cancelado por'
-)
+    cancelado_por      = models.ForeignKey(
+        User, on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='pedidos_cancelados',
+        verbose_name='Cancelado por'
+    )
     motivo_cancelamento = models.TextField(blank=True, verbose_name='Motivo do Cancelamento')
     cancelado_em        = models.DateTimeField(null=True, blank=True, verbose_name='Cancelado em')
-    operador_corte = models.ForeignKey(
-    User, on_delete=models.SET_NULL,
-    null=True, blank=True,
-    related_name='pedidos_corte',
-    verbose_name='Operador de Corte')
-    # dentro da classe Pedido
-    token_expedicao = models.CharField(
-    max_length=64, unique=True, blank=True,
-    verbose_name='Token de Expedição'
+    operador_corte      = models.ForeignKey(
+        User, on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='pedidos_corte',
+        verbose_name='Operador de Corte'
     )
+    token_expedicao  = models.CharField(
+        max_length=64, unique=True, blank=True,
+        verbose_name='Token de Expedição'
+    )
+    token_separacao  = models.CharField(
+        max_length=64,  blank=True,
+        verbose_name='Token de Separação'
+    )
+    separado         = models.BooleanField(default=False, verbose_name='Separado')
 
     class Meta:
         verbose_name        = 'Pedido'
@@ -96,8 +102,9 @@ class Pedido(models.Model):
         if not self.responsavel:
             self.responsavel = self.criado_por
         if not self.token_expedicao:
-            import secrets
             self.token_expedicao = secrets.token_urlsafe(32)
+        if not self.token_separacao:
+            self.token_separacao = secrets.token_urlsafe(32)
         super().save(*args, **kwargs)
 
     @property

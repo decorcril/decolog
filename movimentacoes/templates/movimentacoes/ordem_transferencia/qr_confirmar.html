@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}Confirmar Recebimento — {{ ordem.numero }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-body p-4 text-center">
+        <i class="bi bi-box-arrow-in-down fs-1 mb-3 text-primary"></i>
+        <h5 class="fw-bold mb-1">Ordem {{ ordem.numero }}</h5>
+        <p class="text-muted mb-1">{{ ordem.local_origem.nome }} → {{ ordem.local_destino.nome }}</p>
+
+        <div class="text-start mb-4 mt-3">
+          <p class="fw-semibold text-secondary small mb-2">PRODUTOS</p>
+          {% for item in itens %}
+          <p class="small mb-1">{{ item.quantidade|floatformat:"-3" }}x {{ item.produto.nome }}</p>
+          {% endfor %}
+        </div>
+
+        <p class="text-muted mb-4">Confirma o recebimento desta transferência?</p>
+
+        <form method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary btn-lg w-100">
+            <i class="bi bi-check-circle me-1"></i> Confirmar Recebimento
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

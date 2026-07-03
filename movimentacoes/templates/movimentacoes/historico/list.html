@@ -89,14 +89,14 @@
           <td class="text-muted small">{{ mov.data_hora|date:"d/m/Y H:i" }}</td>
           <td class="text-center">
             <span class="badge
-            {% if mov.motivo == 'producao' or mov.tipo == 'entrada' %}bg-success bg-opacity-10 text-success
-            {% elif mov.motivo == 'venda' %}bg-primary bg-opacity-10 text-primary
-            {% elif mov.motivo == 'perda' %}bg-danger bg-opacity-10 text-danger
-            {% elif mov.motivo == 'uso_interno' %}bg-warning bg-opacity-10 text-dark
-            {% elif mov.tipo == 'transferencia' %}bg-info bg-opacity-10 text-info
-            {% else %}bg-secondary bg-opacity-10 text-dark{% endif %}">
-            {% if mov.motivo %}{{ mov.get_motivo_display }}{% else %}{{ mov.get_tipo_display }}{% endif %}
-          </span>
+              {% if mov.motivo == 'producao' or mov.tipo == 'entrada' %}bg-success bg-opacity-10 text-success
+              {% elif mov.motivo == 'venda' %}bg-primary bg-opacity-10 text-primary
+              {% elif mov.motivo == 'perda' %}bg-danger bg-opacity-10 text-danger
+              {% elif mov.motivo == 'uso_interno' %}bg-warning bg-opacity-10 text-dark
+              {% elif mov.tipo == 'transferencia' %}bg-info bg-opacity-10 text-info
+              {% else %}bg-secondary bg-opacity-10 text-dark{% endif %}">
+              {% if mov.motivo %}{{ mov.get_motivo_display }}{% else %}{{ mov.get_tipo_display }}{% endif %}
+            </span>
           </td>
           <td class="text-center">
             <span class="fw-semibold">{{ mov.produto.nome }}</span>
@@ -121,20 +121,14 @@
           <td class="text-center text-muted small">{{ mov.observacao|default:"—" }}</td>
           <td class="text-center text-muted small">{{ mov.usuario.get_full_name|default:mov.usuario.username }}</td>
           <td>
-              {% if is_gerente or is_estoquista %}
-              <a href="{% url 'movimentacoes:editar_motivo' mov.pk %}"
-                class="btn btn-sm btn-outline-secondary me-1"
-                title="Editar motivo">
-                <i class="bi bi-pencil"></i>
-              </a>
-              {% endif %}
-              {% if mov.tipo == 'transferencia' %}
-                <a href="{% url 'movimentacoes:transferencia_imprimir' mov.pk %}"
-                  class="btn btn-sm btn-outline-secondary" target="_blank">
-                  <i class="bi bi-printer"></i>
-                </a>
-              {% endif %}
-            </td>
+            {% if is_gerente or is_estoquista %}
+            <a href="{% url 'movimentacoes:editar_motivo' mov.pk %}"
+               class="btn btn-sm btn-outline-secondary"
+               title="Editar motivo">
+              <i class="bi bi-pencil"></i>
+            </a>
+            {% endif %}
+          </td>
         </tr>
         {% empty %}
         <tr>
@@ -188,112 +182,124 @@
     </nav>
   </div>
   {% endif %}
-
 </div>
 
 {# ── Ordens de Transferência ── #}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <p class="fw-semibold text-secondary small mb-0">ORDENS DE TRANSFERÊNCIA EM LOTE</p>
+  <a href="{% url 'movimentacoes:ordem_list' %}" class="btn btn-sm btn-outline-secondary">
+    Ver todas <i class="bi bi-arrow-right ms-1"></i>
+  </a>
+</div>
+
+{% if ordens %}
+<div class="row g-3 mb-3">
+  {% for ordem in ordens %}
+  <div class="col-md-6 col-lg-4">
+    <div class="card h-100">
+      <div class="card-body p-4">
+
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div>
+            <p class="fw-bold mb-0">{{ ordem.numero }}</p>
+            <p class="text-muted small mb-0">{{ ordem.data_envio|date:"d/m/Y H:i" }}</p>
+            <p class="text-muted small mb-0">
+              {{ ordem.local_origem.nome }} → {{ ordem.local_destino.nome }}
+            </p>
+          </div>
+          <span class="badge
+            {% if ordem.status == 'em_transito' %}bg-warning bg-opacity-10 text-warning
+            {% elif ordem.status == 'recebido' %}bg-success bg-opacity-10 text-success
+            {% else %}bg-secondary bg-opacity-10 text-secondary{% endif %}">
+            {{ ordem.get_status_display }}
+          </span>
+        </div>
+
+        <p class="fw-semibold text-secondary small mb-2">PRODUTOS</p>
+        <table class="table table-sm mb-3">
+          <thead class="table-light">
+            <tr>
+              <th>Produto</th>
+              <th class="text-center">Qtd</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in ordem.itens.all %}
+            <tr>
+              <td class="small">{{ item.produto.nome }}</td>
+              <td class="text-center small">{{ item.quantidade|floatformat:"-3" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="text-muted small">
+            {{ ordem.criado_por.get_full_name|default:ordem.criado_por.username }}
+          </span>
+          <div class="d-flex gap-1">
+            <a href="{% url 'movimentacoes:ordem_detalhe' ordem.pk %}"
+               class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-eye"></i>
+            </a>
+            <a href="{% url 'movimentacoes:ordem_imprimir' ordem.pk %}"
+               class="btn btn-sm btn-outline-secondary" target="_blank">
+              <i class="bi bi-printer"></i>
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if page_obj_ord.has_other_pages %}
+<div class="d-flex justify-content-between align-items-center mt-2">
+  <span class="text-muted small">
+    Página {{ page_obj_ord.number }} de {{ page_obj_ord.paginator.num_pages }}
+    — {{ page_obj_ord.paginator.count }} ordem(ns)
+  </span>
+  <nav>
+    <ul class="pagination pagination-sm mb-0">
+      {% if page_obj_ord.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page_ord=1&q={{ q }}&local={{ local_id }}&data_inicio={{ data_inicio }}&data_fim={{ data_fim }}">«</a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="?page_ord={{ page_obj_ord.previous_page_number }}&q={{ q }}&local={{ local_id }}&data_inicio={{ data_inicio }}&data_fim={{ data_fim }}">‹</a>
+      </li>
+      {% endif %}
+      {% for num in page_obj_ord.paginator.page_range %}
+        {% if page_obj_ord.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > page_obj_ord.number|add:'-3' and num < page_obj_ord.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?page_ord={{ num }}&q={{ q }}&local={{ local_id }}&data_inicio={{ data_inicio }}&data_fim={{ data_fim }}">{{ num }}</a>
+          </li>
+        {% endif %}
+      {% endfor %}
+      {% if page_obj_ord.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page_ord={{ page_obj_ord.next_page_number }}&q={{ q }}&local={{ local_id }}&data_inicio={{ data_inicio }}&data_fim={{ data_fim }}">›</a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="?page_ord={{ page_obj_ord.paginator.num_pages }}&q={{ q }}&local={{ local_id }}&data_inicio={{ data_inicio }}&data_fim={{ data_fim }}">»</a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+</div>
+{% endif %}
+
+{% else %}
 <div class="card">
-  <div class="card-body p-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <p class="fw-semibold text-secondary small mb-0">ORDENS DE TRANSFERÊNCIA EM LOTE</p>
-      <a href="{% url 'movimentacoes:ordem_list' %}" class="btn btn-sm btn-outline-secondary">
-        Ver todas <i class="bi bi-arrow-right ms-1"></i>
-      </a>
-    </div>
-    <div class="table-responsive">
-      <table class="table mb-0">
-        <thead class="table-light">
-          <tr>
-            <th>Data</th>
-            <th>Nº Ordem</th>
-            <th class="text-center">Status</th>
-            <th class="text-center">Origem</th>
-            <th class="text-center">Destino</th>
-            <th class="text-center">Itens</th>
-            <th class="text-center">Criado por</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for ordem in ordens %}
-          <tr>
-            <td class="text-muted small">{{ ordem.data_envio|date:"d/m/Y H:i" }}</td>
-            <td class="fw-semibold">{{ ordem.numero }}</td>
-            <td class="text-center">
-              <span class="badge
-                {% if ordem.status == 'em_transito' %}bg-warning bg-opacity-10 text-warning
-                {% elif ordem.status == 'recebido' %}bg-success bg-opacity-10 text-success
-                {% else %}bg-secondary bg-opacity-10 text-secondary{% endif %}">
-                {{ ordem.get_status_display }}
-              </span>
-            </td>
-            <td class="text-center text-muted small">{{ ordem.local_origem.nome }}</td>
-            <td class="text-center text-muted small">{{ ordem.local_destino.nome }}</td>
-            <td class="text-center text-muted small">{{ ordem.itens.count }} produto(s)</td>
-            <td class="text-center text-muted small">
-              {{ ordem.criado_por.get_full_name|default:ordem.criado_por.username }}
-            </td>
-            <td class="text-end">
-              <a href="{% url 'movimentacoes:ordem_detalhe' ordem.pk %}"
-                class="btn btn-sm btn-outline-secondary me-1">
-                <i class="bi bi-eye"></i>
-              </a>
-              <a href="{% url 'movimentacoes:ordem_imprimir' ordem.pk %}"
-                class="btn btn-sm btn-outline-secondary" target="_blank">
-                <i class="bi bi-printer"></i>
-              </a>
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="8" class="text-center text-muted py-4">
-              Nenhuma ordem de transferência registrada.
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
-    {% if page_obj_ord.has_other_pages %}
-    <div class="d-flex justify-content-between align-items-center px-2 py-3 border-top mt-2">
-      <span class="text-muted small">
-        Página {{ page_obj_ord.number }} de {{ page_obj_ord.paginator.num_pages }}
-        — {{ page_obj_ord.paginator.count }} ordem(ns)
-      </span>
-      <nav>
-        <ul class="pagination pagination-sm mb-0">
-          {% if page_obj_ord.has_previous %}
-          <li class="page-item">
-            <a class="page-link" href="?page_ord=1&q={{ q }}&local={{ local_id }}&data_inicio={{ data_inicio }}&data_fim={{ data_fim }}">«</a>
-          </li>
-          <li class="page-item">
-            <a class="page-link" href="?page_ord={{ page_obj_ord.previous_page_number }}&q={{ q }}&local={{ local_id }}&data_inicio={{ data_inicio }}&data_fim={{ data_fim }}">‹</a>
-          </li>
-          {% endif %}
-          {% for num in page_obj_ord.paginator.page_range %}
-            {% if page_obj_ord.number == num %}
-              <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-            {% elif num > page_obj_ord.number|add:'-3' and num < page_obj_ord.number|add:'3' %}
-              <li class="page-item">
-                <a class="page-link" href="?page_ord={{ num }}&q={{ q }}&local={{ local_id }}&data_inicio={{ data_inicio }}&data_fim={{ data_fim }}">{{ num }}</a>
-              </li>
-            {% endif %}
-          {% endfor %}
-          {% if page_obj_ord.has_next %}
-          <li class="page-item">
-            <a class="page-link" href="?page_ord={{ page_obj_ord.next_page_number }}&q={{ q }}&local={{ local_id }}&data_inicio={{ data_inicio }}&data_fim={{ data_fim }}">›</a>
-          </li>
-          <li class="page-item">
-            <a class="page-link" href="?page_ord={{ page_obj_ord.paginator.num_pages }}&q={{ q }}&local={{ local_id }}&data_inicio={{ data_inicio }}&data_fim={{ data_fim }}">»</a>
-          </li>
-          {% endif %}
-        </ul>
-      </nav>
-    </div>
-    {% endif %}
-
+  <div class="card-body p-4 text-center text-muted">
+    <i class="bi bi-arrow-left-right fs-3 mb-2 d-block"></i>
+    Nenhuma ordem de transferência registrada.
   </div>
 </div>
+{% endif %}
 
 {% endblock %}

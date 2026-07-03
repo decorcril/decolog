@@ -40,3 +40,5 @@ from .producao import laser_list, laser_confirmar, laser_finalizar, laser_atribu
 from .logistica import logistica_list, logistica_historico
 from .pdf import pedido_pdf
 from .expedicao import expedir_pedido
+from .etiqueta import etiquetas_pedido
+from .separacao import separar_pedido

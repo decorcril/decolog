@@ -1,18 +1,120 @@
 {% extends 'base.html' %}
 {% load core_extras %}
 
-{% block title %}Logística — Fila de Separação{% endblock %}
+{% block title %}Logística — Fila{% endblock %}
 
 {% block content %}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
-    <h4 class="fw-bold mb-1">Fila de Separação</h4>
-    <p class="text-muted small mb-0">
-      {{ pedidos|length }} pedido{{ pedidos|length|pluralize }} aguardando separação
-    </p>
+    <h4 class="fw-bold mb-1">Logística</h4>
+    <p class="text-muted small mb-0">Fila de separação e pedidos aguardando produção</p>
   </div>
 </div>
+
+{# ── Pedidos aguardando produção — verificar estoque ── #}
+{% if pedidos_aguardando %}
+<p class="fw-semibold text-secondary small mb-3">AGUARDANDO PRODUÇÃO — VERIFICAR ESTOQUE</p>
+<div class="row g-3 mb-4">
+  {% for item in pedidos_aguardando %}
+  <div class="col-12">
+    <div class="card {% if item.tudo_ok %}border-success{% else %}border-warning{% endif %}">
+      <div class="card-body p-4">
+
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div>
+            <h6 class="fw-bold mb-1">{{ item.pedido.numero }}</h6>
+            <p class="text-muted small mb-0">{{ item.pedido.cliente.nome }}</p>
+            <p class="text-muted small mb-0">
+              Local de saída: <strong>{{ item.local.nome }}</strong>
+            </p>
+          </div>
+          {% if item.tudo_ok %}
+          <span class="badge bg-success bg-opacity-10 text-success">
+            <i class="bi bi-check-circle me-1"></i> Estoque disponível
+          </span>
+          {% else %}
+          <span class="badge bg-warning bg-opacity-10 text-warning">
+            <i class="bi bi-exclamation-triangle me-1"></i> Estoque insuficiente
+          </span>
+          {% endif %}
+        </div>
+
+        {# Tabela de itens com status de estoque #}
+        <table class="table table-sm mb-3">
+          <thead class="table-light">
+            <tr>
+              <th>Produto</th>
+              <th class="text-center">Necessário</th>
+              <th class="text-center">Disponível</th>
+              <th class="text-center">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for i in item.itens_status %}
+            {% if i.composto %}
+              <tr class="table-secondary">
+                <td class="small fw-semibold" colspan="4">{{ i.nome }} (composto)</td>
+              </tr>
+              {% for c in i.componentes %}
+              <tr>
+                <td class="small ps-4">↳ {{ c.nome }}</td>
+                <td class="text-center small">{{ c.necessario|floatformat:"-3" }}</td>
+                <td class="text-center small">{{ c.disponivel|floatformat:"-3" }}</td>
+                <td class="text-center">
+                  {% if c.ok %}
+                  <span class="badge bg-success bg-opacity-10 text-success">OK</span>
+                  {% else %}
+                  <span class="badge bg-danger bg-opacity-10 text-danger">Falta {{ c.necessario|floatformat:"-3"|add:"-"|add:c.disponivel|floatformat:"-3" }}</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+            <tr>
+              <td class="small fw-semibold">{{ i.nome }}</td>
+              <td class="text-center small">{{ i.quantidade }}</td>
+              <td class="text-center small">{{ i.disponivel|floatformat:"-3" }}</td>
+              <td class="text-center">
+                {% if i.ok %}
+                <span class="badge bg-success bg-opacity-10 text-success">OK</span>
+                {% else %}
+                <span class="badge bg-danger bg-opacity-10 text-danger">Insuficiente</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+
+        {% if item.tudo_ok %}
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="pedido_pk" value="{{ item.pedido.pk }}">
+          <button type="submit" class="btn btn-success btn-sm"
+                  onclick="return confirm('Usar estoque disponível para o pedido {{ item.pedido.numero }}?')">
+            <i class="bi bi-box-seam me-1"></i> Usar Estoque — Enviar para Separação
+          </button>
+        </form>
+        {% else %}
+        <p class="text-muted small mb-0">
+          <i class="bi bi-info-circle me-1"></i>
+          Estoque insuficiente — pedido seguirá para produção normalmente.
+        </p>
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── Fila de separação ── #}
+<p class="fw-semibold text-secondary small mb-3">
+  FILA DE SEPARAÇÃO — {{ pedidos|length }} pedido{{ pedidos|length|pluralize }}
+</p>
 
 {% if pedidos %}
 <div class="row g-3">
@@ -21,7 +123,6 @@
     <div class="card {% if item.is_retirada %}border-success{% else %}border-primary{% endif %}">
       <div class="card-body p-4">
 
-        {# Cabeçalho #}
         <div class="d-flex justify-content-between align-items-start mb-3">
           <div>
             <h6 class="fw-bold mb-1">{{ item.pedido.numero }}</h6>
@@ -41,28 +142,23 @@
           </div>
         </div>
 
-        <div class="row g-3">
-          {# Produtos do pedido #}
-          <div class="col-md-12">
-            <p class="fw-semibold text-secondary small mb-2">PRODUTOS PARA SEPARAR</p>
-            <table class="table table-sm mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th>Produto</th>
-                  <th class="text-center">Qtd</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for item_pedido in item.pedido.itens.all %}
-                <tr>
-                  <td class="small fw-semibold">{{ item_pedido.produto.nome }}</td>
-                  <td class="text-center">{{ item_pedido.quantidade }}</td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <p class="fw-semibold text-secondary small mb-2">PRODUTOS PARA SEPARAR</p>
+        <table class="table table-sm mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Produto</th>
+              <th class="text-center">Qtd</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item_pedido in item.pedido.itens.all %}
+            <tr>
+              <td class="small fw-semibold">{{ item_pedido.produto.nome }}</td>
+              <td class="text-center">{{ item_pedido.quantidade }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
 
       </div>
     </div>
@@ -79,7 +175,7 @@
 </div>
 {% endif %}
 
-{# Paginação #}
+{# Paginação fila de separação #}
 {% if page_obj.has_other_pages %}
 <div class="d-flex justify-content-between align-items-center mt-4">
   <span class="text-muted small">
@@ -89,29 +185,19 @@
   <nav>
     <ul class="pagination pagination-sm mb-0">
       {% if page_obj.has_previous %}
-      <li class="page-item">
-        <a class="page-link" href="?page=1">«</a>
-      </li>
-      <li class="page-item">
-        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">‹</a>
-      </li>
+      <li class="page-item"><a class="page-link" href="?page_picking=1">«</a></li>
+      <li class="page-item"><a class="page-link" href="?page_picking={{ page_obj.previous_page_number }}">‹</a></li>
       {% endif %}
       {% for num in page_obj.paginator.page_range %}
         {% if page_obj.number == num %}
           <li class="page-item active"><span class="page-link">{{ num }}</span></li>
         {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-          <li class="page-item">
-            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
-          </li>
+          <li class="page-item"><a class="page-link" href="?page_picking={{ num }}">{{ num }}</a></li>
         {% endif %}
       {% endfor %}
       {% if page_obj.has_next %}
-      <li class="page-item">
-        <a class="page-link" href="?page={{ page_obj.next_page_number }}">›</a>
-      </li>
-      <li class="page-item">
-        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">»</a>
-      </li>
+      <li class="page-item"><a class="page-link" href="?page_picking={{ page_obj.next_page_number }}">›</a></li>
+      <li class="page-item"><a class="page-link" href="?page_picking={{ page_obj.paginator.num_pages }}">»</a></li>
       {% endif %}
     </ul>
   </nav>

@@ -112,6 +112,7 @@ def registrar_producao(request):
                     pedido.status = Pedido.Status.PICKING
                     pedido.save(update_fields=['status', 'atualizado_em'])
                     messages.success(request, f'Montagem completa! Pedido {pedido.numero} enviado para separação.')
+                    return redirect('vendas:etiquetas_pedido', pk=pedido.pk)
                 else:
                     pedido.status = Pedido.Status.ASSEMBLING
                     pedido.save(update_fields=['status', 'atualizado_em'])

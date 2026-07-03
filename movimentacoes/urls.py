@@ -12,7 +12,7 @@ from movimentacoes.views import (
     ordem_cancelar,
 )
 from movimentacoes.views.historico import movimentacao_editar_motivo
-from movimentacoes.views.ordem_transferencia import ordem_imprimir
+from movimentacoes.views.ordem_transferencia import ordem_imprimir, ordem_confirmar_qr
 from movimentacoes.views.transferencia import transferencia_imprimir
 from movimentacoes.views.ordem_saida import ordem_saida_criar, ordem_saida_list, ordem_saida_detalhe
 app_name = 'movimentacoes'
@@ -34,4 +34,5 @@ urlpatterns = [
     path('saida/lote/', ordem_saida_list, name='ordem_saida_list'),
     path('saida/lote/<int:pk>/', ordem_saida_detalhe, name='ordem_saida_detalhe'),
     path('historico/<int:pk>/editar-motivo/', movimentacao_editar_motivo, name='editar_motivo'),
+    path('ordem/<str:token>/confirmar-qr/', ordem_confirmar_qr, name='ordem_confirmar_qr'),
 ]

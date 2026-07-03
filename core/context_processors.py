@@ -13,6 +13,7 @@ def perfis_usuario(request):
     is_vendedor            = 'Vendedor' in grupos
     is_financeiro          = 'Financeiro' in grupos
     is_logistica           = 'Logística' in grupos
+    is_logistica_loja      = 'Logistica Loja' in grupos
 
     return {
         'is_gerente':             is_gerente,
@@ -26,4 +27,5 @@ def perfis_usuario(request):
         'is_vendedor':            is_vendedor,
         'is_financeiro':          is_financeiro,
         'is_logistica':           is_logistica,
+        'is_logistica_loja':      is_logistica_loja,
     }

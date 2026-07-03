@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block title %}Já Confirmada — {{ ordem.numero }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card border-success">
+      <div class="card-body p-4 text-center">
+        <i class="bi bi-check-circle-fill fs-1 mb-3 text-success"></i>
+        <h5 class="fw-bold mb-1">Ordem {{ ordem.numero }}</h5>
+        <p class="text-muted mb-3">{{ ordem.local_origem.nome }} → {{ ordem.local_destino.nome }}</p>
+        <div class="alert alert-success">
+          <strong>Recebimento já confirmado</strong><br>
+          <span class="small">{{ ordem.data_recebimento|date:"d/m/Y \à\s H:i" }}</span><br>
+          <span class="small">por {{ ordem.recebido_por.get_full_name|default:ordem.recebido_por.username }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
