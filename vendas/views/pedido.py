@@ -269,6 +269,8 @@ def pedido_create(request):
 
 @acesso_vendas
 def pedido_detail(request, pk):
+    from vendas.models import UnidadePedido
+
     pedido = get_object_or_404(
         Pedido.objects.select_related('cliente', 'criado_por', 'responsavel', 'local_saida')
                       .prefetch_related('itens__produto', 'pagamentos'),
@@ -281,9 +283,17 @@ def pedido_detail(request, pk):
             if pedido.criado_por != request.user:
                 raise PermissionDenied
 
+    # ── Progresso de separação ──
+    total_unidades     = UnidadePedido.objects.filter(item__pedido=pedido).count()
+    separadas          = UnidadePedido.objects.filter(item__pedido=pedido, separada=True).count()
+    tudo_separado      = total_unidades > 0 and separadas >= total_unidades
+
     return render(request, 'vendas/pedido_detail.html', {
-        'pedido':         pedido,
-        'status_choices': Pedido.Status.choices,
+        'pedido':          pedido,
+        'status_choices':  Pedido.Status.choices,
+        'total_unidades':  total_unidades,
+        'separadas':       separadas,
+        'tudo_separado':   tudo_separado,
     })
 
 

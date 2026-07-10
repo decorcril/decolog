@@ -3,8 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from datetime import timedelta
 
-from vendas.models import Pedido
-from montagem.models import RegistroMontagem
+from vendas.models import Pedido, UnidadePedido
 
 
 @login_required
@@ -26,22 +25,24 @@ def dashboard_montagem(request):
         })
 
     # ── Montagens do dia ──
-    montagens_hoje = RegistroMontagem.objects.filter(
-        criado_em__date=hoje,
+    montagens_hoje = UnidadePedido.objects.filter(
+        montada=True,
+        montada_em__date=hoje,
     ).count()
 
     # ── Montagens da semana ──
-    montagens_semana = RegistroMontagem.objects.filter(
-        criado_em__date__gte=semana,
-        criado_em__date__lte=hoje,
+    montagens_semana = UnidadePedido.objects.filter(
+        montada=True,
+        montada_em__date__gte=semana,
+        montada_em__date__lte=hoje,
     ).count()
 
     # ── Histórico recente ──
-    historico = RegistroMontagem.objects.select_related(
-        'operador', 'pedido__cliente'
-    ).prefetch_related(
-        'itens__produto'
-    ).order_by('-criado_em')[:10]
+    historico = UnidadePedido.objects.filter(
+        montada=True,
+    ).select_related(
+        'montada_por', 'item__pedido__cliente', 'item__produto'
+    ).order_by('-montada_em')[:10]
 
     return render(request, 'core/dashboard_montagem.html', {
         'pedidos':          pedidos_com_progresso,

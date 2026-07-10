@@ -7,23 +7,43 @@
   <div class="col-md-6">
     <div class="card">
       <div class="card-body p-4 text-center">
-        <i class="bi bi-box-seam fs-1 mb-3 text-primary"></i>
-        <h5 class="fw-bold mb-1">Pedido {{ pedido.numero }}</h5>
-        <p class="text-muted mb-4">{{ pedido.cliente.nome }}</p>
+        <i class="bi bi-box-seam fs-1 mb-3 {% if unidade.separada %}text-success{% else %}text-primary{% endif %}"></i>
 
-        <div class="text-start mb-4">
-          <p class="fw-semibold text-secondary small mb-2">PRODUTOS</p>
-          {% for item in pedido.itens.all %}
-          <p class="small mb-1">{{ item.quantidade }}x {{ item.produto.nome }}</p>
-          {% endfor %}
+        <h5 class="fw-bold mb-1">Pedido {{ pedido.numero }}</h5>
+        <p class="text-muted mb-1">{{ pedido.cliente.nome }}</p>
+        <p class="text-muted small mb-4">
+          {{ unidade.item.produto.nome }} — Unidade {{ unidade.numero }} de {{ unidade.item.quantidade }}
+        </p>
+
+        <div class="mb-4">
+          <div class="d-flex justify-content-between small mb-1">
+            <span class="text-muted">Progresso da separação</span>
+            <span class="fw-semibold">{{ separadas }}/{{ total }}</span>
+          </div>
+          <div class="progress" style="height: 8px;">
+            <div class="progress-bar {% if separadas == total %}bg-success{% else %}bg-primary{% endif %}"
+                 style="width: {% widthratio separadas total 100 %}%"></div>
+          </div>
+          {% if separadas == total %}
+          <p class="text-success small mt-2 mb-0">
+            <i class="bi bi-check-circle me-1"></i> Todas separadas — pronto para envio!
+          </p>
+          {% endif %}
         </div>
 
-        <p class="text-muted mb-4">Confirma a <strong>separação</strong> deste pedido?</p>
+        {% if unidade.separada %}
+        <div class="alert alert-success mb-4">
+          <i class="bi bi-check-circle me-1"></i>
+          Já separada por {{ unidade.separada_por.get_full_name|default:unidade.separada_por.username }}
+          em {{ unidade.separada_em|date:"d/m/Y H:i" }}.
+        </div>
+        {% endif %}
 
         <form method="post">
           {% csrf_token %}
           <button type="submit" class="btn btn-primary btn-lg w-100">
-            <i class="bi bi-check-circle me-1"></i> Confirmar Separação
+            <i class="bi bi-check-circle me-1"></i>
+            {% if unidade.separada %}Confirmar Novamente{% else %}Confirmar Separação{% endif %}
           </button>
         </form>
       </div>

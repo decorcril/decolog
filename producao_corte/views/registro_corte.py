@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from django.db import transaction
 from django.db.models import Sum
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
@@ -77,6 +77,7 @@ def registro_corte_create(request):
             return redirect(reverse('producao_corte:create') + (f'?pedido_pk={pedido_pk}' if pedido_pk else ''))
 
         try:
+            from django.db import transaction
             with transaction.atomic():
                 for _, prod_id, quantidade in chapas:
                     produto       = Produto.objects.get(pk=prod_id)
@@ -126,11 +127,28 @@ def registro_corte_create(request):
                     )
 
                     for prod_id_saida, qty_saida in produtos_por_chapa.get(chapa_idx, []):
+                        produto_cortado = Produto.objects.get(pk=prod_id_saida)
                         ProdutoCortado.objects.create(
                             item_corte=item_corte,
-                            produto=Produto.objects.get(pk=prod_id_saida),
+                            produto=produto_cortado,
                             quantidade=qty_saida,
                         )
+
+                        # ── Gera unidades por produto cortado vinculado ao pedido ──
+                        if pedido:
+                            from vendas.models import UnidadePedido, ItemPedido
+                            try:
+                                item_pedido   = pedido.itens.get(produto=produto_cortado)
+                                ja_existentes = item_pedido.unidades.count()
+                                for n in range(int(qty_saida)):
+                                    numero = ja_existentes + n + 1
+                                    if numero <= item_pedido.quantidade:
+                                        UnidadePedido.objects.get_or_create(
+                                            item=item_pedido,
+                                            numero=numero,
+                                        )
+                            except ItemPedido.DoesNotExist:
+                                pass
 
                 if pedido:
                     pedido.refresh_from_db()
@@ -150,10 +168,12 @@ def registro_corte_create(request):
                             for p in incompletos
                         )
                         messages.warning(request, f'Corte parcial registrado. Faltam: {faltam}')
+
+                    return redirect('vendas:laser_list')
+
                 else:
                     messages.success(request, 'Registro de corte salvo com sucesso!')
-
-                return redirect('vendas:laser_list' if pedido else 'producao_corte:list')
+                    return redirect('producao_corte:list')
 
         except ValueError as e:
             messages.error(request, str(e))
@@ -167,8 +187,9 @@ def registro_corte_create(request):
                 produtos_pedido.append({
                     'id':         str(pedido.itens.get(produto__nome=p['nome']).produto.pk),
                     'nome':       p['nome'],
-                    'quantidade': float(p['falta']),  # só o que falta
+                    'quantidade': float(p['falta']),
                 })
+
     return render(request, 'producao_corte/registro_corte_form.html', {
         'hoje':           timezone.localdate().isoformat(),
         'materiais_json': json.dumps([
@@ -226,13 +247,13 @@ def registro_corte_list(request):
     ).distinct() if is_supervisor else None
 
     return render(request, 'producao_corte/registro_corte_list.html', {
-        'registros':    page_obj,
+        'registros':     page_obj,
         'is_supervisor': is_supervisor,
-        'operadores':   operadores,
-        'operador_id':  operador_id,
-        'data_inicio':  data_inicio,
-        'data_fim':     data_fim,
-        'page_obj':     page_obj,
+        'operadores':    operadores,
+        'operador_id':   operador_id,
+        'data_inicio':   data_inicio,
+        'data_fim':      data_fim,
+        'page_obj':      page_obj,
     })
 
 
@@ -242,6 +263,7 @@ def registro_corte_delete(request, pk):
 
     if request.method == 'POST':
         try:
+            from django.db import transaction
             with transaction.atomic():
                 for mov in registro.movimentacoes.all():
                     Movimentacao.objects.create(
@@ -283,8 +305,8 @@ def registro_corte_detail(request, pk):
     page        = request.GET.get('page', '')
 
     return render(request, 'producao_corte/registro_corte_detail.html', {
-        'registro':     registro,
+        'registro':      registro,
         'is_supervisor': is_supervisor,
-        'operador_id':  operador_id,
-        'page':         page,
+        'operador_id':   operador_id,
+        'page':          page,
     })

@@ -15,12 +15,20 @@
   </p>
   <div class="d-flex justify-content-between align-items-start">
     <h4 class="fw-bold mb-0">Registro de Corte</h4>
-    {% if is_supervisor %}
-    <a href="{% url 'producao_corte:delete' registro.pk %}?page={{ page }}{% if operador_id %}&operador={{ operador_id }}{% endif %}"
-       class="btn btn-sm btn-outline-danger">
-      <i class="bi bi-trash me-1"></i> Excluir
-    </a>
-    {% endif %}
+    <div class="d-flex gap-2">
+      {% if registro.pedido %}
+      <a href="{% url 'vendas:etiquetas_pedido' registro.pedido.pk %}" target="_blank"
+         class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-tag me-1"></i> Imprimir Etiquetas
+      </a>
+      {% endif %}
+      {% if is_supervisor %}
+      <a href="{% url 'producao_corte:delete' registro.pk %}?page={{ page }}{% if operador_id %}&operador={{ operador_id }}{% endif %}"
+         class="btn btn-sm btn-outline-danger">
+        <i class="bi bi-trash me-1"></i> Excluir
+      </a>
+      {% endif %}
+    </div>
   </div>
 </div>
 
@@ -45,6 +53,13 @@
           <span class="text-muted small">Registrado em</span>
           <div class="fw-semibold">{{ registro.criado_em|date:"d/m/Y H:i" }}</div>
         </div>
+
+        {% if registro.pedido %}
+        <div class="mb-3">
+          <span class="text-muted small">Pedido</span>
+          <div class="fw-semibold">{{ registro.pedido.numero }}</div>
+        </div>
+        {% endif %}
 
         {% if registro.observacao %}
         <div>

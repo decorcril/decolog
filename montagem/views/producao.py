@@ -76,7 +76,6 @@ def registrar_producao(request):
                     if qty <= 0:
                         continue
 
-                    # Não permite montar mais do que o total do pedido
                     ja_montado = ItemMontagem.objects.filter(
                         registro__pedido=pedido,
                         produto=item.produto,
@@ -102,26 +101,7 @@ def registrar_producao(request):
                         user       = request.user,
                     )
 
-                # Verifica progresso
-                pedido.refresh_from_db()
-                progresso       = pedido.progresso_montagem
-                todos_completos = all(p['completo'] for p in progresso)
-                incompletos     = [p for p in progresso if not p['completo']]
-
-                if todos_completos:
-                    pedido.status = Pedido.Status.PICKING
-                    pedido.save(update_fields=['status', 'atualizado_em'])
-                    messages.success(request, f'Montagem completa! Pedido {pedido.numero} enviado para separação.')
-                    return redirect('vendas:etiquetas_pedido', pk=pedido.pk)
-                else:
-                    pedido.status = Pedido.Status.ASSEMBLING
-                    pedido.save(update_fields=['status', 'atualizado_em'])
-                    faltam = ', '.join(
-                        f"{p['nome']} ({p['falta']} restante{'s' if p['falta'] > 1 else ''})"
-                        for p in incompletos
-                    )
-                    messages.warning(request, f'Montagem parcial registrada. Faltam: {faltam}')
-
+                messages.success(request, f'Produção registrada para o pedido {pedido.numero}.')
                 return redirect('vendas:montagem_list')
 
             except Exception as e:
@@ -162,7 +142,6 @@ def registrar_producao(request):
                 except Exception as e:
                     messages.error(request, f'Erro ao registrar: {e}')
 
-    # Pré-preenche produtos do pedido para o template
     produtos_pedido = []
     if pedido:
         produtos_pedido = [

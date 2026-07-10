@@ -23,22 +23,18 @@ def expedir_pedido(request, token):
 
     # ── Confirmação ──
     if request.method == 'POST':
-        from vendas.views.pedido import _baixar_estoque_pedido
-
         if pedido.transportadora == 'Retirada na Loja':
             pedido.status = Pedido.Status.DELIVERED
             pedido.save(update_fields=['status', 'atualizado_em'])
-            _baixar_estoque_pedido(pedido, request.user)
             messages.success(request, f'Retirada do pedido {pedido.numero} confirmada!')
         else:
             pedido.status = Pedido.Status.SHIPPED
             pedido.save(update_fields=['status', 'atualizado_em'])
-            _baixar_estoque_pedido(pedido, request.user)
             messages.success(request, f'Envio do pedido {pedido.numero} confirmado!')
 
         return redirect('vendas:expedir_pedido', token=token)
 
     return render(request, 'vendas/expedicao_confirmar.html', {
-        'pedido': pedido,
+        'pedido':      pedido,
         'is_retirada': pedido.transportadora == 'Retirada na Loja',
     })

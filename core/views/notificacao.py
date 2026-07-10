@@ -113,7 +113,7 @@ def _gerar_notificacoes(user):
             })
 
     # ── Financeiro / Logística Loja — pedidos prontos para envio ──
-    if is_staff or 'Financeiro' in grupos or 'Gerente' in grupos or 'Logistica Loja' in grupos or 'Logística' in grupos:
+    if is_staff or 'Financeiro' in grupos or 'Gerente' in grupos or 'Logistica Loja' in grupos:
         lidos   = _pedidos_lidos(user, 'picking')
         pedidos = Pedido.objects.filter(
             status='picking'
@@ -126,6 +126,26 @@ def _gerar_notificacoes(user):
                 'pedido':    pedido.numero,
                 'cliente':   pedido.cliente.nome,
                 'url':       f'/vendas/{pedido.pk}/',
+                'pedido_pk': pedido.pk,
+            })
+
+    # ── Logística — produtos aguardando separação ──
+    if is_staff or 'Logística' in grupos or 'Gerente' in grupos:
+        from vendas.models import UnidadePedido
+        lidos   = _pedidos_lidos(user, 'picking')
+        pedidos = Pedido.objects.filter(
+            status='picking',
+        ).exclude(pk__in=lidos).filter(
+            itens__unidades__separada=False
+        ).distinct().select_related('cliente')
+
+        for pedido in pedidos:
+            notificacoes.append({
+                'tipo':      'picking',
+                'label':     'Produtos aguardando separação',
+                'pedido':    pedido.numero,
+                'cliente':   pedido.cliente.nome,
+                'url':       '/vendas/logistica/',
                 'pedido_pk': pedido.pk,
             })
 

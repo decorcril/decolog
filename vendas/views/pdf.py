@@ -111,7 +111,7 @@ def _styles() -> dict:
         'grand_label': s('grand_label', fontSize=11, textColor=C_PRIMARY, fontName='Helvetica-Bold', leading=15, alignment=TA_RIGHT),
         'grand_value': s('grand_value', fontSize=11, textColor=C_PRIMARY, fontName='Helvetica-Bold', leading=15, alignment=TA_LEFT),
         'obs':         s('obs', fontSize=8.5, textColor=colors.black, fontName='Helvetica', leading=13),
-        'qr_hint':     s('qr_hint', fontSize=6.5, textColor=C_TEXT_MUTED, fontName='Helvetica', leading=9, alignment=TA_CENTER),
+        'qr_hint':     s('qr_hint', fontSize=8, textColor=C_TEXT_MUTED, fontName='Helvetica', leading=9, alignment=TA_CENTER),
     }
 
 
@@ -176,10 +176,10 @@ def _full_width_row(label: str, value: str, col_lbl: float, content_w: float, s:
 
 def _build_compact_qr(pedido, request, qr_width: float, s: dict) -> Table:
     url    = request.build_absolute_uri(f'/vendas/expedir/{pedido.token_expedicao}/')
-    qr_img = _build_qr(url, size_mm=22)
+    qr_img = _build_qr(url, size_mm=30)
 
     inner = Table(
-        [[qr_img], [Paragraph('escaneie para confirmar envio', s['qr_hint'])]],
+        [[qr_img], [Paragraph('escaneie para confirmar', s['qr_hint'])]],
         colWidths=[qr_width],
     )
     inner.setStyle(TableStyle([
@@ -387,7 +387,7 @@ def pedido_pdf(request, pk):
     el.append(_section_title('Resumo Financeiro', s))
     el.append(Spacer(1, 2 * mm))
 
-    qr_width     = 35 * mm
+    qr_width     = 40 * mm
     totals_width = CONTENT_W - qr_width - 5 * mm
 
     side_by_side = Table(

@@ -31,7 +31,7 @@
   <div class="col-md-4">
     <div class="card h-100">
       <div class="card-body p-4">
-        <p class="text-muted small mb-1">Montagens Hoje</p>
+        <p class="text-muted small mb-1">Unidades Montadas Hoje</p>
         <p class="fw-bold fs-4 mb-0">{{ montagens_hoje }}</p>
         <p class="text-muted small mb-0">{{ hoje|date:"d/m/Y" }}</p>
       </div>
@@ -40,7 +40,7 @@
   <div class="col-md-4">
     <div class="card h-100">
       <div class="card-body p-4">
-        <p class="text-muted small mb-1">Montagens na Semana</p>
+        <p class="text-muted small mb-1">Unidades Montadas na Semana</p>
         <p class="fw-bold fs-4 mb-0">{{ montagens_semana }}</p>
         <p class="text-muted small mb-0">esta semana</p>
       </div>
@@ -90,9 +90,9 @@
         {% endfor %}
 
         <div class="mt-3">
-          <a href="{% url 'vendas:montagem_finalizar' item.pedido.pk %}" class="btn btn-sm btn-warning w-100">
-            <i class="bi bi-tools me-1"></i> Registrar Montagem
-          </a>
+          <p class="text-muted small mb-0 text-center">
+            <i class="bi bi-qr-code me-1"></i> Escaneie a etiqueta para confirmar a montagem
+          </p>
         </div>
 
       </div>
@@ -123,23 +123,21 @@
             <th>Pedido</th>
             <th>Cliente</th>
             <th>Operador</th>
-            <th>Produtos</th>
+            <th>Produto</th>
+            <th class="text-center">Unidade</th>
           </tr>
         </thead>
         <tbody>
           {% for reg in historico %}
           <tr>
-            <td class="small text-muted">{{ reg.criado_em|date:"d/m/Y" }}</td>
+            <td class="small text-muted">{{ reg.montada_em|date:"d/m/Y H:i" }}</td>
             <td class="small fw-semibold">
-              {% if reg.pedido %}{{ reg.pedido.numero }}{% else %}—{% endif %}
+              {% if reg.item.pedido %}{{ reg.item.pedido.numero }}{% else %}—{% endif %}
             </td>
-            <td class="small">{% if reg.pedido %}{{ reg.pedido.cliente.nome }}{% else %}—{% endif %}</td>
-            <td class="small">{{ reg.operador.get_full_name|default:reg.operador.username }}</td>
-            <td class="small text-muted">
-              {% for item in reg.itens.all %}
-                {{ item.quantidade }}x {{ item.produto.nome }}{% if not forloop.last %}, {% endif %}
-              {% endfor %}
-            </td>
+            <td class="small">{% if reg.item.pedido %}{{ reg.item.pedido.cliente.nome }}{% else %}—{% endif %}</td>
+            <td class="small">{{ reg.montada_por.get_full_name|default:reg.montada_por.username }}</td>
+            <td class="small">{{ reg.item.produto.nome }}</td>
+            <td class="small text-center">{{ reg.numero }}/{{ reg.item.quantidade }}</td>
           </tr>
           {% endfor %}
         </tbody>

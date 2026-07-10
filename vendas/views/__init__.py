@@ -41,4 +41,5 @@ from .logistica import logistica_list, logistica_historico
 from .pdf import pedido_pdf
 from .expedicao import expedir_pedido
 from .etiqueta import etiquetas_pedido
-from .separacao import separar_pedido
+from .separacao import separar_unidade
+from .unidade import unidade_pedido

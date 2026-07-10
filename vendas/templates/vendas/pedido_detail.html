@@ -1,159 +1,91 @@
 {% extends 'base.html' %}
-{% load static %}
 {% load core_extras %}
 
 {% block title %}Pedido {{ pedido.numero }} — Decolog{% endblock %}
 
 {% block content %}
 
-
-<div class="d-flex justify-content-between align-items-start mb-4">
-  <div>
-    <h4 class="fw-bold mb-1">Pedido {{ pedido.numero }}</h4>
-    <p class="text-muted small mb-0">
-      <a href="{% url 'vendas:pedido_list' %}" class="text-muted text-decoration-none">
-        <i class="bi bi-cart3 me-1"></i>Pedidos
-      </a>
-      <i class="bi bi-chevron-right mx-1" style="font-size: 0.7rem;"></i>
-      {{ pedido.numero }}
-    </p>
-  </div>
-  <div class="d-flex gap-2">
-
-    {# Botão editar — só para vendedor dono do pedido em aberto, ou gerente #}
-    {% if is_vendedor or is_gerente %}
-      {% if pedido.status == 'open' %}
-      <a href="{% url 'vendas:pedido_edit' pedido.pk %}" class="btn btn-outline-secondary">
+<div class="mb-4">
+  <p class="text-muted small mb-1">
+    <a href="{% url 'vendas:pedido_list' %}" class="text-muted text-decoration-none">
+      <i class="bi bi-cart3 me-1"></i>Pedidos
+    </a>
+    <i class="bi bi-chevron-right mx-1" style="font-size: 0.7rem;"></i>
+    {{ pedido.numero }}
+  </p>
+  <div class="d-flex justify-content-between align-items-start">
+    <h4 class="fw-bold mb-0">Pedido {{ pedido.numero }}</h4>
+    <div class="d-flex gap-2">
+      {% if is_gerente or is_financeiro or pedido.criado_por == request.user %}
+      <a href="{% url 'vendas:pedido_edit' pedido.pk %}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-pencil me-1"></i> Editar
       </a>
       {% endif %}
-    {% endif %}
-
-    {# Dropdown de status — financeiro e gerente #}
-    {% if is_financeiro or is_gerente %}
-    <div class="dropdown">
-      <button class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
-        <i class="bi bi-arrow-repeat me-1"></i> Status
-      </button>
-      <ul class="dropdown-menu">
-
-        {# Status gerais — exclui shipped, delivered e canceled (tratados separado) #}
-        {% for value, label in status_choices %}
-          {% if value != 'canceled' and value != 'shipped' and value != 'delivered' %}
-          <li>
-            <form method="post" action="{% url 'vendas:pedido_status' pedido.pk %}">
-              {% csrf_token %}
-              <input type="hidden" name="status" value="{{ value }}">
-              <button type="submit" class="dropdown-item {% if pedido.status == value %}fw-bold{% endif %}">
-                {{ label }}
-              </button>
-            </form>
-          </li>
-          {% endif %}
-        {% endfor %}
-
-        {# Envio / Entrega — só aparece quando pedido está em picking #}
-        {% if pedido.status == 'picking' %}
-        <li><hr class="dropdown-divider"></li>
-        {% if pedido.transportadora == 'Retirada na Loja' %}
-        {# Retirada: pula shipped e vai direto para delivered #}
-        <li>
-          <form method="post" action="{% url 'vendas:pedido_status' pedido.pk %}">
-            {% csrf_token %}
-            <input type="hidden" name="status" value="shipped">
-            <button type="submit" class="dropdown-item text-success">
-              <i class="bi bi-check-circle me-1"></i> Confirmar Retirada
-            </button>
-          </form>
-        </li>
-        {% else %}
-        {# Envio pela Decorcril: shipped → delivered #}
-        <li>
-          <form method="post" action="{% url 'vendas:pedido_status' pedido.pk %}">
-            {% csrf_token %}
-            <input type="hidden" name="status" value="shipped">
-            <button type="submit" class="dropdown-item text-primary">
-              <i class="bi bi-truck me-1"></i> Marcar como Enviado
-            </button>
-          </form>
-        </li>
-        <li>
-          <form method="post" action="{% url 'vendas:pedido_status' pedido.pk %}">
-            {% csrf_token %}
-            <input type="hidden" name="status" value="delivered">
-            <button type="submit" class="dropdown-item text-success">
-              <i class="bi bi-check-circle me-1"></i> Confirmar Entrega
-            </button>
-          </form>
-        </li>
-        {% endif %}
-        {% endif %}
-
-        {# Cancelar — abre modal de confirmação com motivo #}
-        {% if pedido.status != 'canceled' %}
-        <li><hr class="dropdown-divider"></li>
-        <li>
-          <button type="button" class="dropdown-item text-danger"
-                  data-bs-toggle="modal" data-bs-target="#modal-cancelar">
-            <i class="bi bi-x-circle me-1"></i> Cancelar Pedido
-          </button>
-        </li>
-        {% endif %}
-
-      </ul>
     </div>
-    {% endif %}
-
-    {# Botão cancelar — vendedor dono do pedido (sem ser gerente) #}
-    {% if is_vendedor and not is_gerente and pedido.criado_por == request.user and pedido.status != 'canceled' %}
-    <button type="button" class="btn btn-outline-danger"
-            data-bs-toggle="modal" data-bs-target="#modal-cancelar">
-      <i class="bi bi-x-circle me-1"></i> Cancelar Pedido
-    </button>
-    {% endif %}
-
   </div>
 </div>
-
 
 <div class="row g-4">
   <div class="col-lg-8">
 
-    {# ── Itens do pedido ── #}
+    {# ── Itens ── #}
     <div class="card mb-4">
       <div class="card-body p-4">
         <p class="fw-semibold text-secondary small mb-3">ITENS DO PEDIDO</p>
-        {% if pedido.itens.all %}
         <div class="table-responsive">
-          <table class="table table-sm mb-0">
+          <table class="table mb-0">
             <thead class="table-light">
               <tr>
                 <th>Produto</th>
                 <th class="text-center">Qtd</th>
                 <th class="text-end">Preço Unit.</th>
                 <th class="text-end">Subtotal</th>
+                {% if is_gerente or is_financeiro or pedido.criado_por == request.user %}
+                <th></th>
+                {% endif %}
               </tr>
             </thead>
             <tbody>
               {% for item in pedido.itens.all %}
               <tr>
-                <td class="fw-semibold small">{{ item.produto.nome }}</td>
+                <td class="fw-semibold">{{ item.produto.nome }}</td>
                 <td class="text-center">{{ item.quantidade }}</td>
-                <td class="text-end text-muted small">{{ item.preco_unitario|moeda }}</td>
+                <td class="text-end">{{ item.preco_unitario|moeda }}</td>
                 <td class="text-end fw-semibold">{{ item.subtotal|moeda }}</td>
+                {% if is_gerente or is_financeiro or pedido.criado_por == request.user %}
+                <td class="text-end">
+                  {% if pedido.status == 'open' or pedido.status == 'aguard_producao' %}
+                  <div class="d-flex gap-1 justify-content-end">
+                    <button type="button"
+                            class="btn btn-sm btn-outline-secondary btn-edit-item"
+                            data-item-pk="{{ item.pk }}"
+                            data-quantidade="{{ item.quantidade }}"
+                            data-preco="{{ item.preco_unitario }}">
+                      <i class="bi bi-pencil"></i>
+                    </button>
+                    <form method="post" action="{% url 'vendas:item_remove' pedido.pk item.pk %}">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-outline-danger"
+                              onclick="return confirm('Remover {{ item.produto.nome }}?')">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </form>
+                  </div>
+                  {% endif %}
+                </td>
+                {% endif %}
               </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
-        {% else %}
-        <p class="text-muted small mb-0">Nenhum item adicionado.</p>
-        {% endif %}
+
+        
+
       </div>
     </div>
 
-    {# ── Pagamentos — visível só para financeiro e gerente ── #}
-   {# ── Ficha de envio — financeiro, gerente e logistica loja ── #}
+    {# ── Ficha de envio ── #}
     {% if is_financeiro or is_gerente or is_logistica_loja %}
     <div class="card mb-4">
       <div class="card-body p-4">
@@ -163,19 +95,39 @@
             <i class="bi bi-printer me-1"></i> Imprimir Ficha
           </a>
         </div>
+
+        {% if pedido.status == 'picking' %}
+          {% if tudo_separado %}
+          <span class="badge bg-success bg-opacity-10 text-success">
+            <i class="bi bi-check-circle me-1"></i> Todas as unidades separadas — pronto para envio
+          </span>
+          {% elif total_unidades > 0 %}
+          <div>
+            <span class="badge bg-warning bg-opacity-10 text-warning mb-2">
+              <i class="bi bi-hourglass-split me-1"></i> Aguardando separação — {{ separadas }}/{{ total_unidades }} unidades
+            </span>
+            <div class="progress mt-2" style="height:5px;">
+              <div class="progress-bar bg-warning"
+                   style="width:{% widthratio separadas total_unidades 100 %}%"></div>
+            </div>
+          </div>
+          {% else %}
+          <span class="badge bg-secondary bg-opacity-10 text-secondary">
+            <i class="bi bi-info-circle me-1"></i> Sem unidades registradas
+          </span>
+          {% endif %}
+        {% endif %}
+
       </div>
     </div>
     {% endif %}
 
-    {# ── Pagamentos — visível só para financeiro e gerente ── #}
+    {# ── Pagamentos ── #}
     {% if is_financeiro or is_gerente %}
     <div class="card mb-4">
       <div class="card-body p-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <p class="fw-semibold text-secondary small mb-0">PAGAMENTOS</p>
-        </div>
+        <p class="fw-semibold text-secondary small mb-3">PAGAMENTOS</p>
 
-        {# Lista de pagamentos #}
         {% if pedido.pagamentos.all %}
         <div class="table-responsive mb-3">
           <table class="table table-sm mb-0">
@@ -213,7 +165,6 @@
         <p class="text-muted small mb-3">Nenhum pagamento registrado.</p>
         {% endif %}
 
-        {# Formulário de novo pagamento #}
         <form method="post" action="{% url 'vendas:pagamento_add' pedido.pk %}" class="row g-2">
           {% csrf_token %}
           <div class="col-md-3">
@@ -236,7 +187,8 @@
                    placeholder="Nº Transação">
           </div>
           <div class="col-md-2">
-            <button type="submit" id="btn-add-pagamento" class="btn btn-success btn-sm w-100">
+            <button type="submit" id="btn-add-pagamento" class="btn btn-success btn-sm w-100"
+            onclick="return confirm('Tem certeza que deseja registar o pagamento?')">
               <i class="bi bi-plus-lg"></i> Registrar
             </button>
           </div>
@@ -245,9 +197,8 @@
       </div>
     </div>
     {% endif %}
-    
 
-    {# ── Card de cancelamento — aparece quando pedido está cancelado ── #}
+    {# ── Card de cancelamento ── #}
     {% if pedido.status == 'canceled' and pedido.cancelado_por %}
     <div class="card mb-4 border-danger">
       <div class="card-body p-4">
@@ -274,161 +225,187 @@
 
   </div>
 
-  
   <div class="col-lg-4">
 
-    {# ── Status do pedido ── #}
+    {# ── Status ── #}
     <div class="card mb-4">
       <div class="card-body p-4">
         <p class="fw-semibold text-secondary small mb-3">STATUS</p>
-        <div class="d-flex flex-column gap-2">
-          <div class="d-flex justify-content-between align-items-center">
-            <span class="text-muted small">Status</span>
+
+        <div class="mb-3">
+          <span class="text-muted small">Status</span>
+          <div>
+            {% if pedido.status == 'picking' %}
+              {% if tudo_separado %}
+              <span class="badge bg-primary bg-opacity-10 text-primary">
+                Aguardando Envio
+              </span>
+              {% else %}
+              <span class="badge bg-warning bg-opacity-10 text-warning">
+                Em Separação ({{ separadas }}/{{ total_unidades }})
+              </span>
+              {% endif %}
+            {% else %}
             <span class="badge
-              {% if pedido.status == 'open' %}bg-secondary bg-opacity-10 text-secondary
-              {% elif pedido.status == 'aguard_pagamento' %}bg-warning bg-opacity-10 text-warning
-              {% elif pedido.status == 'aguard_producao' %}bg-info bg-opacity-10 text-info
-              {% elif pedido.status == 'cutting' %}bg-primary bg-opacity-10 text-primary
-              {% elif pedido.status == 'assembling' %}bg-warning bg-opacity-10 text-warning
-              {% elif pedido.status == 'picking' %}bg-info bg-opacity-10 text-info
-              {% elif pedido.status == 'shipped' %}bg-primary bg-opacity-10 text-primary
-              {% elif pedido.status == 'delivered' %}bg-success bg-opacity-10 text-success
-              {% elif pedido.status == 'canceled' %}bg-danger bg-opacity-10 text-danger
+              {% if pedido.status == 'open' %}bg-secondary
+              {% elif pedido.status == 'aguard_producao' %}bg-warning text-dark
+              {% elif pedido.status == 'cutting' %}bg-primary
+              {% elif pedido.status == 'assembling' %}bg-info text-dark
+              {% elif pedido.status == 'shipped' %}bg-success
+              {% elif pedido.status == 'delivered' %}bg-success
+              {% elif pedido.status == 'canceled' %}bg-danger
               {% endif %}">
               {{ pedido.get_status_display }}
             </span>
-          </div>
-          <div class="d-flex justify-content-between align-items-center">
-            <span class="text-muted small">Tipo</span>
-            <span class="small fw-semibold">{{ pedido.get_tipo_venda_display }}</span>
-          </div>
-          {% if pedido.transportadora %}
-          <div class="d-flex justify-content-between align-items-center">
-            <span class="text-muted small">Entrega</span>
-            <span class="small fw-semibold">
-              {% if pedido.transportadora == 'Retirada na Loja' %}
-              <i class="bi bi-person-check me-1 text-success"></i>
-              {% else %}
-              <i class="bi bi-truck me-1 text-primary"></i>
-              {% endif %}
-              {{ pedido.transportadora }}
-            </span>
-          </div>
-          {% endif %}
-          {# ── Local de saída ── #}
-          {% if pedido.local_saida %}
-          <div class="d-flex justify-content-between align-items-center">
-            <span class="text-muted small">Local de Saída</span>
-            <span class="small fw-semibold">{{ pedido.local_saida.nome }}</span>
-          </div>
-          {% endif %}
-          {% if pedido.data_entrega %}
-          <div class="d-flex justify-content-between align-items-center">
-            <span class="text-muted small">Data Entrega</span>
-            <span class="small fw-semibold">{{ pedido.data_entrega|date:"d/m/Y" }}</span>
-          </div>
-          {% endif %}
-          <div class="d-flex justify-content-between align-items-center">
-            <span class="text-muted small">Criado em</span>
-            <span class="small fw-semibold">{{ pedido.criado_em|date:"d/m/Y" }}</span>
-          </div>
-          <div class="d-flex justify-content-between align-items-center">
-            <span class="text-muted small">Criado por</span>
-            <span class="small fw-semibold">{{ pedido.criado_por.get_full_name|default:pedido.criado_por.username }}</span>
+            {% endif %}
           </div>
         </div>
+
+        <div class="mb-3">
+          <span class="text-muted small">Tipo</span>
+          <div class="fw-semibold">{{ pedido.get_tipo_venda_display|default:"—" }}</div>
+        </div>
+
+        <div class="mb-3">
+          <span class="text-muted small">Entrega</span>
+          <div class="fw-semibold">{{ pedido.transportadora|default:"—" }}</div>
+        </div>
+
+        <div class="mb-3">
+          <span class="text-muted small">Local de Saída</span>
+          <div class="fw-semibold">{{ pedido.local_saida|default:"—" }}</div>
+        </div>
+
+        <div class="mb-3">
+          <span class="text-muted small">Criado em</span>
+          <div class="fw-semibold">{{ pedido.criado_em|date:"d/m/Y" }}</div>
+        </div>
+
+        <div class="mb-3">
+          <span class="text-muted small">Criado por</span>
+          <div class="fw-semibold">{{ pedido.criado_por.get_full_name|default:pedido.criado_por.username }}</div>
+        </div>
+
+        {% if pedido.data_entrega %}
+        <div class="mb-3">
+          <span class="text-muted small">Data de Entrega</span>
+          <div class="fw-semibold">{{ pedido.data_entrega|date:"d/m/Y" }}</div>
+        </div>
+        {% endif %}
+
+        {% if pedido.observacoes %}
+        <div class="mb-3">
+          <span class="text-muted small">Observações</span>
+          <div class="fw-semibold">{{ pedido.observacoes }}</div>
+        </div>
+        {% endif %}
+
+        {# Mudar status #}
+        {% if is_gerente or is_financeiro %}
+        <div class="mt-3 pt-3 border-top">
+          <div class="dropdown">
+            <button class="btn btn-outline-secondary btn-sm dropdown-toggle w-100"
+                    type="button" data-bs-toggle="dropdown">
+              <i class="bi bi-arrow-repeat me-1"></i> Mudar Status
+            </button>
+            <ul class="dropdown-menu w-100">
+              {% for value, label in status_choices %}
+              {% if value != pedido.status and value != 'canceled' %}
+              <li>
+                <form method="post" action="{% url 'vendas:pedido_status' pedido.pk %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="status" value="{{ value }}">
+                  <button type="submit" class="dropdown-item">{{ label }}</button>
+                </form>
+              </li>
+              {% endif %}
+              {% endfor %}
+
+              {% if pedido.status != 'canceled' %}
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <a class="dropdown-item text-danger" href="#"
+                   data-bs-toggle="modal" data-bs-target="#modalCancelar">
+                  <i class="bi bi-x-circle me-1"></i> Cancelar Pedido
+                </a>
+              </li>
+              {% endif %}
+            </ul>
+          </div>
+        </div>
+        {% endif %}
+
       </div>
     </div>
 
-    {# ── Dados do cliente ── #}
+    {# ── Cliente ── #}
     <div class="card mb-4">
       <div class="card-body p-4">
         <p class="fw-semibold text-secondary small mb-3">CLIENTE</p>
-        <div class="d-flex flex-column gap-2">
-          <div>
-            <p class="text-muted small mb-0">Nome</p>
-            <p class="fw-semibold mb-0">
-              <a href="{% url 'clientes:detail' pedido.cliente.pk %}" class="text-decoration-none">
-                {{ pedido.cliente.nome }}
-              </a>
-            </p>
+        <div class="mb-2">
+          <span class="text-muted small">Nome</span>
+          <div class="fw-semibold">
+            <a href="{% url 'clientes:detail' pedido.cliente.pk %}" class="text-decoration-none">
+              {{ pedido.cliente.nome }}
+            </a>
           </div>
-          {% if pedido.contato %}
-          <div>
-            <p class="text-muted small mb-0">Contato</p>
-            <p class="fw-semibold mb-0">{{ pedido.contato }}</p>
-          </div>
-          {% endif %}
-          {% if pedido.condicao_pagamento %}
-          <div>
-            <p class="text-muted small mb-0">Condição de Pagamento</p>
-            <p class="fw-semibold mb-0">{{ pedido.condicao_pagamento }}</p>
-          </div>
-          {% endif %}
         </div>
+        {% if pedido.contato %}
+        <div class="mb-2">
+          <span class="text-muted small">Contato</span>
+          <div class="fw-semibold">{{ pedido.contato }}</div>
+        </div>
+        {% endif %}
+        {% if pedido.cliente.telefone %}
+        <div class="mb-2">
+          <span class="text-muted small">Telefone</span>
+          <div class="fw-semibold">{{ pedido.cliente.telefone }}</div>
+        </div>
+        {% endif %}
+        {% if pedido.cliente.email %}
+        <div class="mb-2">
+          <span class="text-muted small">Email</span>
+          <div class="fw-semibold">{{ pedido.cliente.email }}</div>
+        </div>
+        {% endif %}
       </div>
     </div>
 
-    {# ── Resumo financeiro ── #}
+    {# ── Financeiro ── #}
+    {% if is_financeiro or is_gerente %}
     <div class="card mb-4">
       <div class="card-body p-4">
         <p class="fw-semibold text-secondary small mb-3">FINANCEIRO</p>
-        <div class="d-flex flex-column gap-2">
-          <div class="d-flex justify-content-between align-items-center">
-            <span class="text-muted small">Total Produtos</span>
-            <span class="fw-semibold">{{ pedido.total_produtos|moeda }}</span>
-          </div>
-          {% if pedido.total_desconto %}
-          <div class="d-flex justify-content-between align-items-center">
-            <span class="text-muted small">Desconto</span>
-            <span class="fw-semibold text-danger">- {{ pedido.total_desconto|moeda }}</span>
-          </div>
-          {% endif %}
-          {% if pedido.frete %}
-          <div class="d-flex justify-content-between align-items-center">
-            <span class="text-muted small">Frete</span>
-            <span class="fw-semibold">{{ pedido.frete|moeda }}</span>
-          </div>
-          {% endif %}
-          <hr class="my-1" style="border-color: #f0f2f5;">
-          <div class="d-flex justify-content-between align-items-center">
-            <span class="text-muted small">Total Geral</span>
-            <span class="fw-bold fs-6">{{ pedido.total_geral|moeda }}</span>
-          </div>
-          {% if is_financeiro or is_gerente %}
-          <hr class="my-1" style="border-color: #f0f2f5;">
-          <div class="d-flex justify-content-between align-items-center">
-            <span class="text-muted small">Total Pago</span>
-            <span class="fw-semibold text-success">{{ pedido.total_pago|moeda }}</span>
-          </div>
-          <div class="d-flex justify-content-between align-items-center">
-            <span class="text-muted small">Saldo Restante</span>
-            <span class="fw-semibold {% if pedido.saldo_restante > 0 %}text-danger{% else %}text-success{% endif %}">
-              {{ pedido.saldo_restante|moeda }}
-            </span>
-          </div>
-          {% endif %}
-          
+        <div class="mb-2">
+          <span class="text-muted small">Total Produtos</span>
+          <div class="fw-semibold">{{ pedido.total_produtos|moeda }}</div>
         </div>
-      </div>
-    </div>
-
-    {# ── Observações do cliente ── #}
-    {% if pedido.observacoes %}
-    <div class="card mb-4">
-      <div class="card-body p-4">
-        <p class="fw-semibold text-secondary small mb-2">OBSERVAÇÕES</p>
-        <p class="text-muted small mb-0">{{ pedido.observacoes }}</p>
-      </div>
-    </div>
-    {% endif %}
-
-    {# ── Observações internas — só financeiro e gerente ── #}
-    {% if pedido.observacoes_internas and is_financeiro or is_gerente %}
-    <div class="card mb-4">
-      <div class="card-body p-4">
-        <p class="fw-semibold text-secondary small mb-2">OBSERVAÇÕES INTERNAS</p>
-        <p class="text-muted small mb-0">{{ pedido.observacoes_internas }}</p>
+        {% if pedido.total_desconto %}
+        <div class="mb-2">
+          <span class="text-muted small">Desconto</span>
+          <div class="fw-semibold text-danger">- {{ pedido.total_desconto|moeda }}</div>
+        </div>
+        {% endif %}
+        {% if pedido.frete %}
+        <div class="mb-2">
+          <span class="text-muted small">Frete</span>
+          <div class="fw-semibold">{{ pedido.frete|moeda }}</div>
+        </div>
+        {% endif %}
+        <div class="mb-2">
+          <span class="text-muted small">Total Geral</span>
+          <div class="fw-bold fs-5">{{ pedido.total_geral|moeda }}</div>
+        </div>
+        <div class="mb-2">
+          <span class="text-muted small">Total Pago</span>
+          <div class="fw-semibold text-success">{{ pedido.total_pago|moeda }}</div>
+        </div>
+        <div class="mb-2">
+          <span class="text-muted small">Saldo Restante</span>
+          <div class="fw-semibold {% if pedido.saldo_restante > 0 %}text-danger{% else %}text-success{% endif %}">
+            {{ pedido.saldo_restante|moeda }}
+          </div>
+        </div>
       </div>
     </div>
     {% endif %}
@@ -436,14 +413,45 @@
   </div>
 </div>
 
-
-{% if pedido.status != 'canceled' %}
-<div class="modal fade" id="modal-cancelar" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
+{# ── Modal editar item ── #}
+<div class="modal fade" id="modalEditItem" tabindex="-1">
+  <div class="modal-dialog">
     <div class="modal-content">
-      <div class="modal-header border-0 pb-0">
-        <h5 class="modal-title fw-bold text-danger">
-          <i class="bi bi-x-circle me-1"></i> Cancelar Pedido {{ pedido.numero }}
+      <div class="modal-header">
+        <h5 class="modal-title">Editar Item</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="form-edit-item">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Quantidade</label>
+            <input type="number" name="quantidade" id="edit-quantidade"
+                   class="form-control" min="1" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Preço Unitário</label>
+            <input type="text" name="preco_unitario" id="edit-preco"
+                   class="form-control" data-mask="moeda" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# ── Modal cancelar ── #}
+{% if is_gerente or is_financeiro %}
+<div class="modal fade" id="modalCancelar" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-danger">
+          <i class="bi bi-x-circle me-1"></i> Cancelar Pedido
         </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
@@ -452,17 +460,16 @@
         <input type="hidden" name="status" value="canceled">
         <div class="modal-body">
           <p class="text-muted small mb-3">
-            Esta ação não pode ser desfeita. Informe o motivo do cancelamento.
+            Tem certeza que deseja cancelar o pedido <strong>{{ pedido.numero }}</strong>?
+            Esta ação não pode ser desfeita.
           </p>
           <div class="mb-3">
-            <label class="form-label fw-semibold">
-              Motivo do cancelamento <span class="text-danger">*</span>
-            </label>
-            <textarea name="motivo_cancelamento" class="form-control" rows="3"
-                      placeholder="Descreva o motivo..." required></textarea>
+            <label class="form-label fw-semibold small">Motivo do cancelamento</label>
+            <input type="text" name="motivo_cancelamento" class="form-control"
+                   placeholder="Informe o motivo..." required>
           </div>
         </div>
-        <div class="modal-footer border-0 pt-0">
+        <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Voltar</button>
           <button type="submit" class="btn btn-danger">
             <i class="bi bi-x-circle me-1"></i> Confirmar Cancelamento
@@ -474,17 +481,44 @@
 </div>
 {% endif %}
 
-{% endblock %}
-
-
-{% block extra_js %}
-<script src="{% static 'js/pedido_detail.js' %}"></script>
 <script>
-document.getElementById('btn-add-pagamento')?.addEventListener('click', function (e) {
-  const valorInput = document.getElementById('id_valor_pagamento');
-  const valor      = valorInput ? valorInput.value : '';
-  if (!valor) return true;
-  return confirm(`Confirmar registro de pagamento no valor de R$ ${valor}?\nEsta ação não pode ser desfeita.`);
+document.querySelectorAll('.btn-edit-item').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const itemPk     = this.dataset.itemPk;
+    const quantidade = this.dataset.quantidade;
+    const preco      = this.dataset.preco;
+
+    document.getElementById('edit-quantidade').value = quantidade;
+    document.getElementById('edit-preco').value      = preco;
+    document.getElementById('form-edit-item').action = `/vendas/{{ pedido.pk }}/itens/${itemPk}/atualizar/`;
+
+    new bootstrap.Modal(document.getElementById('modalEditItem')).show();
+  });
 });
+
+const selectProduto = document.getElementById('select-produto-add');
+const precoAdd      = document.getElementById('preco-add');
+
+if (selectProduto) {
+  fetch("{% url 'vendas:autocomplete_produto' %}")
+    .then(r => r.json())
+    .then(data => {
+      data.forEach(p => {
+        const opt       = document.createElement('option');
+        opt.value       = p.id;
+        opt.textContent = p.nome;
+        opt.dataset.preco = p.preco;
+        selectProduto.appendChild(opt);
+      });
+    });
+
+  selectProduto.addEventListener('change', function() {
+    const opt = this.options[this.selectedIndex];
+    if (opt && opt.dataset.preco) {
+      precoAdd.value = parseFloat(opt.dataset.preco).toFixed(2).replace('.', ',');
+    }
+  });
+}
 </script>
+
 {% endblock %}

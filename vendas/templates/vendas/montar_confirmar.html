@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}Confirmar Montagem — {{ pedido.numero }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-body p-4 text-center">
+        <i class="bi bi-tools fs-1 mb-3 {% if unidade.montada %}text-success{% else %}text-warning{% endif %}"></i>
+
+        <h5 class="fw-bold mb-1">Pedido {{ pedido.numero }}</h5>
+        <p class="text-muted mb-1">{{ pedido.cliente.nome }}</p>
+        <p class="text-muted small mb-4">
+          {{ unidade.item.produto.nome }} — Unidade {{ unidade.numero }} de {{ unidade.item.quantidade }}
+        </p>
+
+        <div class="mb-4">
+          <div class="d-flex justify-content-between small mb-1">
+            <span class="text-muted">Progresso da montagem</span>
+            <span class="fw-semibold">{{ montadas }}/{{ total }}</span>
+          </div>
+          <div class="progress" style="height: 8px;">
+            <div class="progress-bar {% if montadas == total %}bg-success{% else %}bg-warning{% endif %}"
+                 style="width: {% widthratio montadas total 100 %}%"></div>
+          </div>
+        </div>
+
+        {% if unidade.montada %}
+        <div class="alert alert-success mb-4">
+          <i class="bi bi-check-circle me-1"></i>
+          Já montada por {{ unidade.montada_por.get_full_name|default:unidade.montada_por.username }}
+          em {{ unidade.montada_em|date:"d/m/Y H:i" }}.
+        </div>
+        {% endif %}
+
+        <form method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-warning btn-lg w-100">
+            <i class="bi bi-check-circle me-1"></i>
+            {% if unidade.montada %}Confirmar Novamente{% else %}Confirmar Montagem{% endif %}
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

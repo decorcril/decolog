@@ -20,15 +20,26 @@
   <div class="col-md-4">
     <div class="card h-100">
       <div class="card-body p-4">
-        <p class="text-muted small mb-1">Em Separação</p>
-        <p class="fw-bold fs-4 mb-0 {% if pedidos %}text-primary{% else %}text-success{% endif %}">
-          {{ pedidos|length }}
+        <p class="text-muted small mb-1">Aguardando Separação</p>
+        <p class="fw-bold fs-4 mb-0 {% if aguardando_separacao %}text-warning{% else %}text-success{% endif %}">
+          {{ aguardando_separacao|length }}
         </p>
-        <p class="text-muted small mb-0">aguardando envio</p>
+        <p class="text-muted small mb-0">pedidos em separação</p>
       </div>
     </div>
   </div>
   <div class="col-md-4">
+    <div class="card h-100">
+      <div class="card-body p-4">
+        <p class="text-muted small mb-1">Prontos para Envio</p>
+        <p class="fw-bold fs-4 mb-0 {% if aguardando_envio %}text-primary{% else %}text-success{% endif %}">
+          {{ aguardando_envio|length }}
+        </p>
+        <p class="text-muted small mb-0">separados, aguardando envio</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2">
     <div class="card h-100">
       <div class="card-body p-4">
         <p class="text-muted small mb-1">Enviados Hoje</p>
@@ -37,7 +48,7 @@
       </div>
     </div>
   </div>
-  <div class="col-md-4">
+  <div class="col-md-2">
     <div class="card h-100">
       <div class="card-body p-4">
         <p class="text-muted small mb-1">Enviados na Semana</p>
@@ -48,11 +59,62 @@
   </div>
 </div>
 
-{# ── Pedidos em separação ── #}
-{% if pedidos %}
-<p class="fw-semibold text-secondary small mb-3">EM SEPARAÇÃO</p>
+{# ── Aguardando separação ── #}
+{% if aguardando_separacao %}
+<p class="fw-semibold text-secondary small mb-3">AGUARDANDO SEPARAÇÃO</p>
 <div class="row g-3 mb-4">
-  {% for item in pedidos %}
+  {% for item in aguardando_separacao %}
+  <div class="col-md-6 col-lg-4">
+    <div class="card h-100 border-warning">
+      <div class="card-body p-4">
+
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div>
+            <p class="fw-bold mb-0">{{ item.pedido.numero }}</p>
+            <p class="text-muted small mb-0">{{ item.pedido.cliente.nome }}</p>
+            <p class="text-muted small mb-0">{{ item.pedido.criado_em|date:"d/m/Y" }}</p>
+          </div>
+          <span class="badge bg-warning bg-opacity-10 text-warning">
+            <i class="bi bi-hourglass-split me-1"></i> Separando
+          </span>
+        </div>
+
+        <div class="mb-3">
+          <p class="fw-semibold text-secondary small mb-1">PRODUTOS</p>
+          {% for item_pedido in item.pedido.itens.all %}
+          <p class="small mb-0">{{ item_pedido.quantidade }}x {{ item_pedido.produto.nome }}</p>
+          {% endfor %}
+        </div>
+
+        {% if item.total > 0 %}
+        <div class="mb-3">
+          <div class="d-flex justify-content-between small mb-1">
+            <span class="text-muted">Unidades separadas</span>
+            <span class="fw-semibold text-warning">{{ item.separadas }}/{{ item.total }}</span>
+          </div>
+          <div class="progress" style="height:5px;">
+            <div class="progress-bar bg-warning"
+                 style="width:{% widthratio item.separadas item.total 100 %}%"></div>
+          </div>
+        </div>
+        {% endif %}
+
+        <p class="text-muted small mb-0 text-center">
+          <i class="bi bi-qr-code me-1"></i> Escaneie a etiqueta para confirmar a separação
+        </p>
+
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── Prontos para envio ── #}
+{% if aguardando_envio %}
+<p class="fw-semibold text-secondary small mb-3">PRONTOS PARA ENVIO</p>
+<div class="row g-3 mb-4">
+  {% for item in aguardando_envio %}
   <div class="col-md-6 col-lg-4">
     <div class="card h-100 {% if item.is_retirada %}border-success{% else %}border-primary{% endif %}">
       <div class="card-body p-4">
@@ -81,22 +143,26 @@
           {% endfor %}
         </div>
 
-        <a href="{% url 'vendas:logistica_list' %}" class="btn btn-sm w-100
-          {% if item.is_retirada %}btn-success{% else %}btn-primary{% endif %}">
-          <i class="bi bi-box-seam me-1"></i> Ver na Fila
-        </a>
+        <div class="alert alert-success py-2 px-3 mb-3 small">
+          <i class="bi bi-check-circle me-1"></i> Todas as unidades separadas!
+        </div>
+
+        <p class="text-muted small mb-0 text-center">
+          <i class="bi bi-qr-code me-1"></i> Escaneie a ficha para confirmar o envio
+        </p>
 
       </div>
     </div>
   </div>
   {% endfor %}
 </div>
+{% endif %}
 
-{% else %}
+{% if not aguardando_separacao and not aguardando_envio %}
 <div class="card mb-4">
   <div class="card-body p-4 text-center text-muted">
     <i class="bi bi-box-seam fs-3 mb-2 d-block text-success"></i>
-    Nenhum pedido aguardando separação.
+    Nenhum pedido aguardando separação ou envio.
   </div>
 </div>
 {% endif %}
@@ -136,6 +202,11 @@
           {% endfor %}
         </tbody>
       </table>
+    </div>
+    <div class="mt-3">
+      <a href="{% url 'vendas:logistica_historico' %}" class="btn btn-outline-secondary btn-sm">
+        Ver histórico completo
+      </a>
     </div>
   </div>
 </div>

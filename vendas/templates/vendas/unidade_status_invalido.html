@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}Status Inválido — {{ pedido.numero }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card border-warning">
+      <div class="card-body p-4 text-center">
+        <i class="bi bi-exclamation-triangle-fill fs-1 mb-3 text-warning"></i>
+        <h5 class="fw-bold mb-1">Pedido {{ pedido.numero }}</h5>
+        <p class="text-muted mb-3">{{ pedido.cliente.nome }}</p>
+        <div class="alert alert-warning">
+          Esta etiqueta não pode ser escaneada no momento.<br>
+          Status atual: <strong>{{ pedido.get_status_display }}</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from datetime import timedelta
 
-from vendas.models import Pedido
+from vendas.models import Pedido, UnidadePedido
 
 
 @login_required
@@ -16,15 +16,24 @@ def dashboard_logistica(request):
     pedidos_picking = Pedido.objects.filter(
         status='picking',
     ).select_related('cliente', 'criado_por').prefetch_related(
-        'itens__produto'
+        'itens__produto', 'itens__unidades'
     ).order_by('criado_em')
 
     pedidos_com_info = []
     for pedido in pedidos_picking:
+        total         = UnidadePedido.objects.filter(item__pedido=pedido).count()
+        separadas     = UnidadePedido.objects.filter(item__pedido=pedido, separada=True).count()
+        tudo_separado = total > 0 and separadas >= total
         pedidos_com_info.append({
-            'pedido':      pedido,
-            'is_retirada': pedido.transportadora == 'Retirada na Loja',
+            'pedido':        pedido,
+            'is_retirada':   pedido.transportadora == 'Retirada na Loja',
+            'total':         total,
+            'separadas':     separadas,
+            'tudo_separado': tudo_separado,
         })
+
+    aguardando_separacao = [p for p in pedidos_com_info if not p['tudo_separado']]
+    aguardando_envio     = [p for p in pedidos_com_info if p['tudo_separado']]
 
     # ── Enviados hoje ──
     enviados_hoje = Pedido.objects.filter(
@@ -45,9 +54,10 @@ def dashboard_logistica(request):
     ).select_related('cliente', 'criado_por').order_by('-atualizado_em')[:10]
 
     return render(request, 'core/dashboard_logistica.html', {
-        'pedidos':          pedidos_com_info,
-        'enviados_hoje':    enviados_hoje,
-        'enviados_semana':  enviados_semana,
-        'historico':        historico,
-        'hoje':             hoje,
+        'aguardando_separacao': aguardando_separacao,
+        'aguardando_envio':     aguardando_envio,
+        'enviados_hoje':        enviados_hoje,
+        'enviados_semana':      enviados_semana,
+        'historico':            historico,
+        'hoje':                 hoje,
     })

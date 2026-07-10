@@ -60,7 +60,7 @@
         </p>
 
         {# Ações #}
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap">
           {% if is_supervisor %}
           <div class="dropdown">
             <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
@@ -167,7 +167,7 @@
         </div>
 
         {# Ações #}
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap">
           {% if is_supervisor %}
           <div class="dropdown">
             <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
@@ -191,6 +191,10 @@
           {% if pedido.operador_corte == request.user or is_supervisor %}
           <a href="{% url 'vendas:laser_confirmar' pedido.pk %}" class="btn btn-sm btn-warning">
             <i class="bi bi-scissors me-1"></i> Continuar Corte
+          </a>
+          <a href="{% url 'vendas:etiquetas_pedido' pedido.pk %}" target="_blank"
+             class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-tag me-1"></i> Imprimir Etiquetas
           </a>
           {% endif %}
         </div>

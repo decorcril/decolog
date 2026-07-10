@@ -35,5 +35,5 @@ urlpatterns = [
     path('logistica/historico/', views.logistica_historico, name='logistica_historico'),
     path('expedir/<str:token>/', views.expedir_pedido, name='expedir_pedido'),
     path('<int:pk>/etiquetas/', views.etiquetas_pedido, name='etiquetas_pedido'),
-    path('separar/<str:token>/', views.separar_pedido, name='separar_pedido'),
+    path('unidade/<str:token>/', views.unidade_pedido, name='unidade_pedido'),
 ]

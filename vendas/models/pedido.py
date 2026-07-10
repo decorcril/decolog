@@ -148,19 +148,17 @@ class Pedido(models.Model):
 
     @property
     def progresso_montagem(self):
-        from montagem.models import ItemMontagem
+        from vendas.models.unidade_pedido import UnidadePedido
         resultado = []
         for item in self.itens.select_related('produto').all():
-            montado = ItemMontagem.objects.filter(
-                registro__pedido=self,
-                produto=item.produto,
-            ).aggregate(total=Sum('quantidade'))['total'] or Decimal('0')
+            total   = UnidadePedido.objects.filter(item=item).count()
+            montado = UnidadePedido.objects.filter(item=item, montada=True).count()
             resultado.append({
                 'nome':     item.produto.nome,
                 'montado':  montado,
-                'total':    item.quantidade,
-                'completo': montado >= item.quantidade,
-                'falta':    max(Decimal('0'), Decimal(str(item.quantidade)) - Decimal(str(montado))),
+                'total':    total if total > 0 else item.quantidade,
+                'completo': total > 0 and montado >= total,
+                'falta':    max(0, (total if total > 0 else item.quantidade) - montado),
             })
         return resultado
 
