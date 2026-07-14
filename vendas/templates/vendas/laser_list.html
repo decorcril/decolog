@@ -51,7 +51,9 @@
         <div class="mb-3">
           <p class="text-muted small mb-1 fw-semibold">PRODUTOS</p>
           {% for item in pedido.itens.all %}
+          {% if item.produto.categoria != 'insumo' %}
           <p class="small mb-0">{{ item.quantidade }}x {{ item.produto.nome }}</p>
+          {% endif %}
           {% endfor %}
         </div>
 

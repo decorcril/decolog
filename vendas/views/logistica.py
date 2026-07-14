@@ -2,6 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
+from django.utils import timezone
 
 from core.mixins import logistica_ou_gerente
 from vendas.models import Pedido, UnidadePedido
@@ -60,25 +61,45 @@ def _verificar_estoque_pedido(pedido):
     return resultado, tudo_ok, local
 
 
+def _todos_insumos(pedido):
+    return all(
+        item.produto.categoria == 'insumo'
+        for item in pedido.itens.select_related('produto').all()
+    )
+
+
 @logistica_ou_gerente
 def logistica_list(request):
-    # ── Ação de usar estoque ──
+
     if request.method == 'POST':
+        action    = request.POST.get('action', 'usar_estoque')
         pedido_pk = request.POST.get('pedido_pk')
-        pedido    = get_object_or_404(Pedido, pk=pedido_pk, status=Pedido.Status.AGUARD_PRODUCAO)
 
-        _, tudo_ok, _ = _verificar_estoque_pedido(pedido)
+        # ── Usar estoque — insumos aguardando produção ──
+        if action == 'usar_estoque':
+            pedido = get_object_or_404(Pedido, pk=pedido_pk, status=Pedido.Status.AGUARD_PRODUCAO)
+            _, tudo_ok, _ = _verificar_estoque_pedido(pedido)
+            if tudo_ok:
+                pedido.status = Pedido.Status.PICKING
+                pedido.save(update_fields=['status', 'atualizado_em'])
+                messages.success(request, f'Pedido {pedido.numero} enviado para separação!')
+            else:
+                messages.error(request, f'Estoque insuficiente para o pedido {pedido.numero}.')
 
-        if tudo_ok:
-            pedido.status = Pedido.Status.PICKING
-            pedido.save(update_fields=['status', 'atualizado_em'])
-            messages.success(request, f'Pedido {pedido.numero} enviado para separação usando estoque disponível!')
-        else:
-            messages.error(request, f'Estoque insuficiente para o pedido {pedido.numero}.')
+        # ── Separar insumos ──
+        elif action == 'separar_insumos':
+            pedido   = get_object_or_404(Pedido, pk=pedido_pk, status=Pedido.Status.PICKING)
+            unidades = UnidadePedido.objects.filter(item__pedido=pedido, separada=False)
+            unidades.update(
+                separada=True,
+                separada_em=timezone.now(),
+                separada_por=request.user,
+            )
+            messages.success(request, f'Todas as unidades do pedido {pedido.numero} foram separadas!')
 
         return redirect('vendas:logistica_list')
 
-    # ── Pedidos aguardando produção — verificar estoque ──
+    # ── Pedidos aguardando produção ──
     pedidos_aguardando_qs = Pedido.objects.filter(
         status=Pedido.Status.AGUARD_PRODUCAO
     ).select_related('cliente', 'local_saida').prefetch_related('itens__produto')
@@ -87,10 +108,11 @@ def logistica_list(request):
     for pedido in pedidos_aguardando_qs:
         itens_status, tudo_ok, local = _verificar_estoque_pedido(pedido)
         pedidos_aguardando.append({
-            'pedido':       pedido,
-            'itens_status': itens_status,
-            'tudo_ok':      tudo_ok,
-            'local':        local,
+            'pedido':        pedido,
+            'itens_status':  itens_status,
+            'tudo_ok':       tudo_ok,
+            'local':         local,
+            'todos_insumos': _todos_insumos(pedido),
         })
 
     # ── Pedidos em picking ──
@@ -114,6 +136,7 @@ def logistica_list(request):
             'total':         total,
             'separadas':     separadas,
             'tudo_separado': tudo_separado,
+            'todos_insumos': _todos_insumos(pedido),
         }
 
         if tudo_separado:

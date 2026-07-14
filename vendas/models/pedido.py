@@ -12,17 +12,42 @@ TWO = Decimal("0.01")
 FREE_SALE_TYPES = {"exchange", "maintenance", "advertising", "replacement", "comodato"}
 
 
+def _criar_unidades_insumos(pedido):
+    """Cria UnidadePedido automaticamente para itens do tipo insumo."""
+    from vendas.models.unidade_pedido import UnidadePedido
+    for item in pedido.itens.select_related('produto').all():
+        if item.produto.categoria == 'insumo':
+            ja_existentes = item.unidades.count()
+            for n in range(item.quantidade):
+                numero = ja_existentes + n + 1
+                if numero <= item.quantidade:
+                    UnidadePedido.objects.get_or_create(
+                        item=item,
+                        numero=numero,
+                        defaults={'montada': True, 'separada': False}
+                    )
+
+    # Se todos os itens são insumos, pula direto para picking
+    todos_insumos = all(
+        item.produto.categoria == 'insumo'
+        for item in pedido.itens.select_related('produto').all()
+    )
+    if todos_insumos and pedido.itens.exists():
+        pedido.status = pedido.Status.PICKING
+        pedido.save(update_fields=['status', 'atualizado_em'])
+
+
 class Pedido(models.Model):
 
     class Status(models.TextChoices):
-        OPEN              = "open",              "Em aberto"
-        AGUARD_PRODUCAO   = "aguard_producao",   "Aguardando Produção"
-        CUTTING           = "cutting",           "Em Corte"
-        ASSEMBLING        = "assembling",        "Em Montagem"
-        PICKING           = "picking",           "Em Separação"
-        SHIPPED           = "shipped",           "Enviado"
-        DELIVERED         = "delivered",         "Entregue"
-        CANCELED          = "canceled",          "Cancelado"
+        OPEN            = "open",            "Em aberto"
+        AGUARD_PRODUCAO = "aguard_producao", "Aguardando Produção"
+        CUTTING         = "cutting",         "Em Corte"
+        ASSEMBLING      = "assembling",      "Em Montagem"
+        PICKING         = "picking",         "Em Separação"
+        SHIPPED         = "shipped",         "Enviado"
+        DELIVERED       = "delivered",       "Entregue"
+        CANCELED        = "canceled",        "Cancelado"
 
     class TipoVenda(models.TextChoices):
         DIRECT      = "direct",      "Venda direta"
@@ -78,7 +103,7 @@ class Pedido(models.Model):
         verbose_name='Token de Expedição'
     )
     token_separacao  = models.CharField(
-        max_length=64,  blank=True,
+        max_length=64, unique=True, blank=True,
         verbose_name='Token de Separação'
     )
     separado         = models.BooleanField(default=False, verbose_name='Separado')
@@ -129,6 +154,9 @@ class Pedido(models.Model):
         from producao_corte.models import ProdutoCortado
         resultado = []
         for item in self.itens.select_related('produto').all():
+            # Insumos não passam por corte
+            if item.produto.categoria == 'insumo':
+                continue
             cortado = ProdutoCortado.objects.filter(
                 item_corte__registro__pedido=self,
                 produto=item.produto,
@@ -151,6 +179,9 @@ class Pedido(models.Model):
         from vendas.models.unidade_pedido import UnidadePedido
         resultado = []
         for item in self.itens.select_related('produto').all():
+            # Insumos não passam por montagem
+            if item.produto.categoria == 'insumo':
+                continue
             total   = UnidadePedido.objects.filter(item=item).count()
             montado = UnidadePedido.objects.filter(item=item, montada=True).count()
             resultado.append({
@@ -196,6 +227,8 @@ class Pedido(models.Model):
         if self.status != new_status:
             self.status = new_status
             self.save(update_fields=['status', 'atualizado_em'])
+            if new_status == self.Status.AGUARD_PRODUCAO:
+                _criar_unidades_insumos(self)
 
 
 class ItemPedido(models.Model):

@@ -364,7 +364,6 @@ def pedido_status(request, pk):
                 messages.error(request, 'Informe o motivo do cancelamento.')
                 return redirect('vendas:pedido_detail', pk=pedido.pk)
 
-            # Estorna estoque se já estava em shipped ou delivered
             if pedido.status in [
                 Pedido.Status.SHIPPED,
                 Pedido.Status.DELIVERED,
@@ -402,7 +401,7 @@ def pedido_status(request, pk):
                 messages.success(request, f'Status atualizado para {pedido.get_status_display()}.')
                 return redirect('vendas:pedido_detail', pk=pedido.pk)
 
-            # ── Picking — só muda status, sem baixar estoque ──
+            # ── Picking — só muda status ──
             if novo_status == 'picking':
                 if pedido.status != Pedido.Status.ASSEMBLING:
                     messages.error(request, 'O pedido precisa estar em montagem para ir para separação.')
@@ -411,6 +410,15 @@ def pedido_status(request, pk):
                 pedido.status = Pedido.Status.PICKING
                 pedido.save(update_fields=['status', 'atualizado_em'])
                 messages.success(request, f'Pedido {pedido.numero} em separação.')
+                return redirect('vendas:pedido_detail', pk=pedido.pk)
+
+            # ── Aguard producao — cria unidades de insumos ──
+            if novo_status == 'aguard_producao':
+                pedido.status = Pedido.Status.AGUARD_PRODUCAO
+                pedido.save(update_fields=['status', 'atualizado_em'])
+                from vendas.models.pedido import _criar_unidades_insumos
+                _criar_unidades_insumos(pedido)
+                messages.success(request, f'Status atualizado para {pedido.get_status_display()}.')
                 return redirect('vendas:pedido_detail', pk=pedido.pk)
 
             # ── Envio / Entrega — baixa estoque ──
@@ -435,7 +443,6 @@ def pedido_status(request, pk):
 
                 pedido.status = novo_status
                 pedido.save(update_fields=['status', 'atualizado_em'])
-                _baixar_estoque_pedido(pedido, request.user)
                 return redirect('vendas:pedido_detail', pk=pedido.pk)
 
             # ── Status normal ──

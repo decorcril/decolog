@@ -12,7 +12,7 @@
   </div>
 </div>
 
-{# ── Pedidos aguardando produção — verificar estoque ── #}
+{# ── Pedidos aguardando produção ── #}
 {% if pedidos_aguardando %}
 <p class="fw-semibold text-secondary small mb-3">AGUARDANDO PRODUÇÃO — VERIFICAR ESTOQUE</p>
 <div class="row g-3 mb-4">
@@ -85,19 +85,25 @@
           </tbody>
         </table>
 
-        {% if item.tudo_ok %}
+        {% if item.tudo_ok and item.todos_insumos %}
         <form method="post">
           {% csrf_token %}
+          <input type="hidden" name="action" value="usar_estoque">
           <input type="hidden" name="pedido_pk" value="{{ item.pedido.pk }}">
           <button type="submit" class="btn btn-success btn-sm"
                   onclick="return confirm('Usar estoque disponível para o pedido {{ item.pedido.numero }}?')">
             <i class="bi bi-box-seam me-1"></i> Usar Estoque — Enviar para Separação
           </button>
         </form>
+        {% elif not item.todos_insumos %}
+        <p class="text-muted small mb-0">
+          <i class="bi bi-info-circle me-1"></i>
+          Pedido com produtos para produção — seguirá para corte/montagem normalmente.
+        </p>
         {% else %}
         <p class="text-muted small mb-0">
           <i class="bi bi-info-circle me-1"></i>
-          Estoque insuficiente — pedido seguirá para produção normalmente.
+          Estoque insuficiente — verifique o estoque antes de prosseguir.
         </p>
         {% endif %}
 
@@ -149,7 +155,7 @@
         </table>
 
         {% if item.total > 0 %}
-        <div>
+        <div class="mb-3">
           <div class="d-flex justify-content-between small mb-1">
             <span class="text-muted">Unidades separadas</span>
             <span class="fw-semibold text-warning">{{ item.separadas }}/{{ item.total }}</span>
@@ -161,9 +167,27 @@
         </div>
         {% endif %}
 
-        <p class="text-muted small mt-3 mb-0 text-center">
+        {% if item.todos_insumos %}
+        <div class="d-flex gap-2">
+          <a href="{% url 'vendas:etiquetas_pedido' item.pedido.pk %}" target="_blank"
+             class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-tag me-1"></i> Imprimir Etiquetas
+          </a>
+          <form method="post" class="flex-grow-1">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="separar_insumos">
+            <input type="hidden" name="pedido_pk" value="{{ item.pedido.pk }}">
+            <button type="submit" class="btn btn-sm btn-success w-100"
+                    onclick="return confirm('Confirmar separação de todos os insumos do pedido {{ item.pedido.numero }}?')">
+              <i class="bi bi-check-circle me-1"></i> Separar usando Estoque
+            </button>
+          </form>
+        </div>
+        {% else %}
+        <p class="text-muted small mt-2 mb-0 text-center">
           <i class="bi bi-qr-code me-1"></i> Escaneie a etiqueta para confirmar a separação
         </p>
+        {% endif %}
 
       </div>
     </div>
@@ -223,7 +247,7 @@
         </div>
 
         <p class="text-muted small mb-0 text-center">
-          <i class="bi bi-qr-code me-1"></i> Aguardando o envio.
+          <i class="bi bi-qr-code me-1"></i> Escaneie a ficha para confirmar o envio
         </p>
 
       </div>
