@@ -25,9 +25,7 @@
           <div>
             <h6 class="fw-bold mb-1">{{ item.pedido.numero }}</h6>
             <p class="text-muted small mb-0">{{ item.pedido.cliente.nome }}</p>
-            <p class="text-muted small mb-0">
-              Local de saída: <strong>{{ item.local.nome }}</strong>
-            </p>
+            <p class="text-muted small mb-0">Local de saída: <strong>{{ item.local.nome }}</strong></p>
           </div>
           {% if item.tudo_ok %}
           <span class="badge bg-success bg-opacity-10 text-success">
@@ -225,7 +223,7 @@
         </div>
 
         <p class="text-muted small mb-0 text-center">
-          <i class="bi bi-qr-code me-1"></i> Escaneie a ficha para confirmar o envio
+          <i class="bi bi-qr-code me-1"></i> Aguardando o envio.
         </p>
 
       </div>

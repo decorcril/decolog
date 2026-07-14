@@ -1,6 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.db.models import Sum
 from django.contrib.auth.models import User
@@ -136,9 +135,9 @@ def registro_corte_create(request):
 
                         # ── Gera unidades por produto cortado vinculado ao pedido ──
                         if pedido:
-                            from vendas.models import UnidadePedido, ItemPedido
-                            try:
-                                item_pedido   = pedido.itens.get(produto=produto_cortado)
+                            from vendas.models import UnidadePedido
+                            item_pedido = pedido.itens.filter(produto=produto_cortado).first()
+                            if item_pedido:
                                 ja_existentes = item_pedido.unidades.count()
                                 for n in range(int(qty_saida)):
                                     numero = ja_existentes + n + 1
@@ -147,8 +146,6 @@ def registro_corte_create(request):
                                             item=item_pedido,
                                             numero=numero,
                                         )
-                            except ItemPedido.DoesNotExist:
-                                pass
 
                 if pedido:
                     pedido.refresh_from_db()
@@ -184,11 +181,13 @@ def registro_corte_create(request):
         progresso = pedido.progresso_corte
         for p in progresso:
             if not p['completo']:
-                produtos_pedido.append({
-                    'id':         str(pedido.itens.get(produto__nome=p['nome']).produto.pk),
-                    'nome':       p['nome'],
-                    'quantidade': float(p['falta']),
-                })
+                item = pedido.itens.filter(produto__nome=p['nome']).first()
+                if item:
+                    produtos_pedido.append({
+                        'id':         str(item.produto.pk),
+                        'nome':       p['nome'],
+                        'quantidade': float(p['falta']),
+                    })
 
     return render(request, 'producao_corte/registro_corte_form.html', {
         'hoje':           timezone.localdate().isoformat(),
@@ -220,9 +219,10 @@ def registro_corte_list(request):
     else:
         registros = RegistroCorte.objects.filter(operador=request.user)
 
-    operador_id = request.GET.get('operador', '')
-    data_inicio = request.GET.get('data_inicio', '')
-    data_fim    = request.GET.get('data_fim', '')
+    operador_id   = request.GET.get('operador', '')
+    data_inicio   = request.GET.get('data_inicio', '')
+    data_fim      = request.GET.get('data_fim', '')
+    pedido_numero = request.GET.get('pedido', '')
 
     if is_supervisor and operador_id:
         registros = registros.filter(operador__id=operador_id)
@@ -231,6 +231,8 @@ def registro_corte_list(request):
         registros = registros.filter(data__gte=data_inicio)
     if data_fim:
         registros = registros.filter(data__lte=data_fim)
+    if pedido_numero:
+        registros = registros.filter(pedido__numero__icontains=pedido_numero)
 
     registros = registros.prefetch_related(
         'itens__chapa', 'itens__produtos_cortados__produto'
@@ -253,6 +255,7 @@ def registro_corte_list(request):
         'operador_id':   operador_id,
         'data_inicio':   data_inicio,
         'data_fim':      data_fim,
+        'pedido_numero': pedido_numero,
         'page_obj':      page_obj,
     })
 

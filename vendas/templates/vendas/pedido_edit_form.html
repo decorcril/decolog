@@ -84,6 +84,19 @@
                 {% endfor %}
               </select>
             </div>
+            {# Local de Saída #}
+<div class="mb-4 col-md-4">
+  <label class="form-label fw-semibold small">LOCAL DE SAÍDA</label>
+  <select name="local_saida" class="form-select">
+    <option value="">— Selecione —</option>
+    {% for local in locais %}
+    <option value="{{ local.pk }}"
+      {% if pedido.local_saida and pedido.local_saida.pk == local.pk %}selected{% endif %}>
+      {{ local.nome }}
+    </option>
+    {% endfor %}
+  </select>
+</div>
             <div class="col-md-3">
               <label class="form-label fw-semibold text-secondary small">FRETE (R$)</label>
               <input type="text" name="frete" id="id_frete" class="form-control"

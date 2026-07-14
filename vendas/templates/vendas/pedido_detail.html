@@ -40,9 +40,6 @@
                 <th class="text-center">Qtd</th>
                 <th class="text-end">Preço Unit.</th>
                 <th class="text-end">Subtotal</th>
-                {% if is_gerente or is_financeiro or pedido.criado_por == request.user %}
-                <th></th>
-                {% endif %}
               </tr>
             </thead>
             <tbody>
@@ -52,75 +49,13 @@
                 <td class="text-center">{{ item.quantidade }}</td>
                 <td class="text-end">{{ item.preco_unitario|moeda }}</td>
                 <td class="text-end fw-semibold">{{ item.subtotal|moeda }}</td>
-                {% if is_gerente or is_financeiro or pedido.criado_por == request.user %}
-                <td class="text-end">
-                  {% if pedido.status == 'open' or pedido.status == 'aguard_producao' %}
-                  <div class="d-flex gap-1 justify-content-end">
-                    <button type="button"
-                            class="btn btn-sm btn-outline-secondary btn-edit-item"
-                            data-item-pk="{{ item.pk }}"
-                            data-quantidade="{{ item.quantidade }}"
-                            data-preco="{{ item.preco_unitario }}">
-                      <i class="bi bi-pencil"></i>
-                    </button>
-                    <form method="post" action="{% url 'vendas:item_remove' pedido.pk item.pk %}">
-                      {% csrf_token %}
-                      <button type="submit" class="btn btn-sm btn-outline-danger"
-                              onclick="return confirm('Remover {{ item.produto.nome }}?')">
-                        <i class="bi bi-trash"></i>
-                      </button>
-                    </form>
-                  </div>
-                  {% endif %}
-                </td>
-                {% endif %}
               </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
-
-        
-
       </div>
     </div>
-
-    {# ── Ficha de envio ── #}
-    {% if is_financeiro or is_gerente or is_logistica_loja %}
-    <div class="card mb-4">
-      <div class="card-body p-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <p class="fw-semibold text-secondary small mb-0">FICHA DE ENVIO</p>
-          <a href="{% url 'vendas:pedido_pdf' pedido.pk %}" target="_blank" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-printer me-1"></i> Imprimir Ficha
-          </a>
-        </div>
-
-        {% if pedido.status == 'picking' %}
-          {% if tudo_separado %}
-          <span class="badge bg-success bg-opacity-10 text-success">
-            <i class="bi bi-check-circle me-1"></i> Todas as unidades separadas — pronto para envio
-          </span>
-          {% elif total_unidades > 0 %}
-          <div>
-            <span class="badge bg-warning bg-opacity-10 text-warning mb-2">
-              <i class="bi bi-hourglass-split me-1"></i> Aguardando separação — {{ separadas }}/{{ total_unidades }} unidades
-            </span>
-            <div class="progress mt-2" style="height:5px;">
-              <div class="progress-bar bg-warning"
-                   style="width:{% widthratio separadas total_unidades 100 %}%"></div>
-            </div>
-          </div>
-          {% else %}
-          <span class="badge bg-secondary bg-opacity-10 text-secondary">
-            <i class="bi bi-info-circle me-1"></i> Sem unidades registradas
-          </span>
-          {% endif %}
-        {% endif %}
-
-      </div>
-    </div>
-    {% endif %}
 
     {# ── Pagamentos ── #}
     {% if is_financeiro or is_gerente %}
@@ -188,11 +123,48 @@
           </div>
           <div class="col-md-2">
             <button type="submit" id="btn-add-pagamento" class="btn btn-success btn-sm w-100"
-            onclick="return confirm('Tem certeza que deseja registar o pagamento?')">
+                    onclick="return confirm('Tem certeza que deseja registrar o pagamento?')">
               <i class="bi bi-plus-lg"></i> Registrar
             </button>
           </div>
         </form>
+
+      </div>
+    </div>
+    {% endif %}
+
+    {# ── Ficha de envio ── #}
+    {% if is_financeiro or is_gerente or is_logistica_loja %}
+    <div class="card mb-4">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <p class="fw-semibold text-secondary small mb-0">FICHA DE ENVIO</p>
+          <a href="{% url 'vendas:pedido_pdf' pedido.pk %}" target="_blank" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-printer me-1"></i> Imprimir Ficha
+          </a>
+        </div>
+
+        {% if pedido.status == 'picking' %}
+          {% if tudo_separado %}
+          <span class="badge bg-success bg-opacity-10 text-success">
+            <i class="bi bi-check-circle me-1"></i> Todas as unidades separadas — pronto para envio
+          </span>
+          {% elif total_unidades > 0 %}
+          <div>
+            <span class="badge bg-warning bg-opacity-10 text-warning mb-2">
+              <i class="bi bi-hourglass-split me-1"></i> Aguardando separação — {{ separadas }}/{{ total_unidades }} unidades
+            </span>
+            <div class="progress mt-2" style="height:5px;">
+              <div class="progress-bar bg-warning"
+                   style="width:{% widthratio separadas total_unidades 100 %}%"></div>
+            </div>
+          </div>
+          {% else %}
+          <span class="badge bg-secondary bg-opacity-10 text-secondary">
+            <i class="bi bi-info-circle me-1"></i> Sem unidades registradas
+          </span>
+          {% endif %}
+        {% endif %}
 
       </div>
     </div>
@@ -226,6 +198,45 @@
   </div>
 
   <div class="col-lg-4">
+
+    {# ── Financeiro ── #}
+    {% if is_financeiro or is_gerente %}
+    <div class="card mb-4">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">FINANCEIRO</p>
+        <div class="mb-2">
+          <span class="text-muted small">Total Produtos</span>
+          <div class="fw-semibold">{{ pedido.total_produtos|moeda }}</div>
+        </div>
+        {% if pedido.total_desconto %}
+        <div class="mb-2">
+          <span class="text-muted small">Desconto</span>
+          <div class="fw-semibold text-danger">- {{ pedido.total_desconto|moeda }}</div>
+        </div>
+        {% endif %}
+        {% if pedido.frete %}
+        <div class="mb-2">
+          <span class="text-muted small">Frete</span>
+          <div class="fw-semibold">{{ pedido.frete|moeda }}</div>
+        </div>
+        {% endif %}
+        <div class="mb-2">
+          <span class="text-muted small">Total Geral</span>
+          <div class="fw-bold fs-5">{{ pedido.total_geral|moeda }}</div>
+        </div>
+        <div class="mb-2">
+          <span class="text-muted small">Total Pago</span>
+          <div class="fw-semibold text-success">{{ pedido.total_pago|moeda }}</div>
+        </div>
+        <div class="mb-2">
+          <span class="text-muted small">Saldo Restante</span>
+          <div class="fw-semibold {% if pedido.saldo_restante > 0 %}text-danger{% else %}text-success{% endif %}">
+            {{ pedido.saldo_restante|moeda }}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
 
     {# ── Status ── #}
     <div class="card mb-4">
@@ -370,45 +381,6 @@
         {% endif %}
       </div>
     </div>
-
-    {# ── Financeiro ── #}
-    {% if is_financeiro or is_gerente %}
-    <div class="card mb-4">
-      <div class="card-body p-4">
-        <p class="fw-semibold text-secondary small mb-3">FINANCEIRO</p>
-        <div class="mb-2">
-          <span class="text-muted small">Total Produtos</span>
-          <div class="fw-semibold">{{ pedido.total_produtos|moeda }}</div>
-        </div>
-        {% if pedido.total_desconto %}
-        <div class="mb-2">
-          <span class="text-muted small">Desconto</span>
-          <div class="fw-semibold text-danger">- {{ pedido.total_desconto|moeda }}</div>
-        </div>
-        {% endif %}
-        {% if pedido.frete %}
-        <div class="mb-2">
-          <span class="text-muted small">Frete</span>
-          <div class="fw-semibold">{{ pedido.frete|moeda }}</div>
-        </div>
-        {% endif %}
-        <div class="mb-2">
-          <span class="text-muted small">Total Geral</span>
-          <div class="fw-bold fs-5">{{ pedido.total_geral|moeda }}</div>
-        </div>
-        <div class="mb-2">
-          <span class="text-muted small">Total Pago</span>
-          <div class="fw-semibold text-success">{{ pedido.total_pago|moeda }}</div>
-        </div>
-        <div class="mb-2">
-          <span class="text-muted small">Saldo Restante</span>
-          <div class="fw-semibold {% if pedido.saldo_restante > 0 %}text-danger{% else %}text-success{% endif %}">
-            {{ pedido.saldo_restante|moeda }}
-          </div>
-        </div>
-      </div>
-    </div>
-    {% endif %}
 
   </div>
 </div>

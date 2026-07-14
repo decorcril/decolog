@@ -32,14 +32,12 @@ from .producao import (
     laser_finalizar,
     montagem_list,
     montagem_finalizar,
+    laser_atribuir,
 )
 
-from .relatorio import relatorio_comissoes
 from .relatorio import relatorio_comissoes, exportar_comissoes_csv
-from .producao import laser_list, laser_confirmar, laser_finalizar, laser_atribuir
 from .logistica import logistica_list, logistica_historico
 from .pdf import pedido_pdf
 from .expedicao import expedir_pedido
 from .etiqueta import etiquetas_pedido
-from .separacao import separar_unidade
 from .unidade import unidade_pedido

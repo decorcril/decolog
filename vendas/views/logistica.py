@@ -4,17 +4,12 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 
 from core.mixins import logistica_ou_gerente
-from vendas.models import Pedido
+from vendas.models import Pedido, UnidadePedido
 from estoque.models import Estoque
 from core.models import Local
 
 
 def _verificar_estoque_pedido(pedido):
-    """
-    Verifica se todos os itens do pedido têm estoque suficiente
-    no local_saida (ou fábrica como fallback).
-    Retorna lista com status de cada item.
-    """
     local = pedido.local_saida
     if not local:
         local = Local.objects.filter(tipo='fabrica').first()
@@ -25,16 +20,13 @@ def _verificar_estoque_pedido(pedido):
     for item in pedido.itens.select_related('produto').all():
         try:
             ficha = item.produto.ficha_tecnica
-            # Produto composto — verifica componentes
-            itens_ok = True
+            itens_ok    = True
             componentes = []
             for componente in ficha.itens.select_related('material').all():
                 qtd_necessaria = componente.quantidade * item.quantidade
-                saldo = Estoque.objects.filter(
-                    produto=componente.material, local=local
-                ).first()
+                saldo      = Estoque.objects.filter(produto=componente.material, local=local).first()
                 disponivel = saldo.quantidade if saldo else 0
-                ok = disponivel >= qtd_necessaria
+                ok         = disponivel >= qtd_necessaria
                 if not ok:
                     itens_ok = False
                     tudo_ok  = False
@@ -52,12 +44,9 @@ def _verificar_estoque_pedido(pedido):
                 'ok':          itens_ok,
             })
         except item.produto.__class__.ficha_tecnica.RelatedObjectDoesNotExist:
-            # Produto simples
-            saldo = Estoque.objects.filter(
-                produto=item.produto, local=local
-            ).first()
+            saldo      = Estoque.objects.filter(produto=item.produto, local=local).first()
             disponivel = saldo.quantidade if saldo else 0
-            ok = disponivel >= item.quantidade
+            ok         = disponivel >= item.quantidade
             if not ok:
                 tudo_ok = False
             resultado.append({
@@ -89,44 +78,53 @@ def logistica_list(request):
 
         return redirect('vendas:logistica_list')
 
-    # ── Pedidos em picking ──
-    pedidos_picking = Pedido.objects.filter(
-        status=Pedido.Status.PICKING
-    ).select_related('cliente', 'criado_por').prefetch_related('itens__produto')
-
-    picking_com_info = []
-    for pedido in pedidos_picking:
-        picking_com_info.append({
-            'pedido':      pedido,
-            'is_retirada': pedido.transportadora == 'Retirada na Loja',
-        })
-
-    paginator_picking = Paginator(picking_com_info, 10)
-    page_picking      = paginator_picking.get_page(request.GET.get('page_picking', 1))
-
     # ── Pedidos aguardando produção — verificar estoque ──
-    pedidos_aguardando = Pedido.objects.filter(
+    pedidos_aguardando_qs = Pedido.objects.filter(
         status=Pedido.Status.AGUARD_PRODUCAO
     ).select_related('cliente', 'local_saida').prefetch_related('itens__produto')
 
-    aguardando_com_info = []
-    for pedido in pedidos_aguardando:
+    pedidos_aguardando = []
+    for pedido in pedidos_aguardando_qs:
         itens_status, tudo_ok, local = _verificar_estoque_pedido(pedido)
-        aguardando_com_info.append({
+        pedidos_aguardando.append({
             'pedido':       pedido,
             'itens_status': itens_status,
             'tudo_ok':      tudo_ok,
             'local':        local,
         })
 
-    paginator_aguardando = Paginator(aguardando_com_info, 10)
-    page_aguardando      = paginator_aguardando.get_page(request.GET.get('page_aguardando', 1))
+    # ── Pedidos em picking ──
+    pedidos_picking = Pedido.objects.filter(
+        status='picking',
+    ).select_related('cliente', 'criado_por').prefetch_related(
+        'itens__produto', 'itens__unidades'
+    ).order_by('criado_em')
+
+    pedidos_separacao = []
+    pedidos_envio     = []
+
+    for pedido in pedidos_picking:
+        total         = UnidadePedido.objects.filter(item__pedido=pedido).count()
+        separadas     = UnidadePedido.objects.filter(item__pedido=pedido, separada=True).count()
+        tudo_separado = total > 0 and separadas >= total
+
+        info = {
+            'pedido':        pedido,
+            'is_retirada':   pedido.transportadora == 'Retirada na Loja',
+            'total':         total,
+            'separadas':     separadas,
+            'tudo_separado': tudo_separado,
+        }
+
+        if tudo_separado:
+            pedidos_envio.append(info)
+        else:
+            pedidos_separacao.append(info)
 
     return render(request, 'vendas/logistica_list.html', {
-        'pedidos':            page_picking,
-        'page_obj':           page_picking,
-        'pedidos_aguardando': page_aguardando,
-        'page_aguardando':    page_aguardando,
+        'pedidos_aguardando': pedidos_aguardando,
+        'pedidos_separacao':  pedidos_separacao,
+        'pedidos_envio':      pedidos_envio,
     })
 
 
