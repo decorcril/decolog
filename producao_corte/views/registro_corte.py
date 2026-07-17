@@ -127,25 +127,16 @@ def registro_corte_create(request):
 
                     for prod_id_saida, qty_saida in produtos_por_chapa.get(chapa_idx, []):
                         produto_cortado = Produto.objects.get(pk=prod_id_saida)
-                        ProdutoCortado.objects.create(
-                            item_corte=item_corte,
-                            produto=produto_cortado,
-                            quantidade=qty_saida,
-                        )
 
-                        # ── Gera unidades por produto cortado vinculado ao pedido ──
-                        if pedido:
-                            from vendas.models import UnidadePedido
-                            item_pedido = pedido.itens.filter(produto=produto_cortado).first()
-                            if item_pedido:
-                                ja_existentes = item_pedido.unidades.count()
-                                for n in range(int(qty_saida)):
-                                    numero = ja_existentes + n + 1
-                                    if numero <= item_pedido.quantidade:
-                                        UnidadePedido.objects.get_or_create(
-                                            item=item_pedido,
-                                            numero=numero,
-                                        )
+                        # Cria uma peça por unidade cortada
+                        for _ in range(int(qty_saida)):
+                            ProdutoCortado.objects.create(
+                                item_corte  = item_corte,
+                                produto     = produto_cortado,
+                                pedido      = pedido,
+                                cortada_por = request.user, 
+                                observacao  = observacao,
+                            )
 
                 if pedido:
                     pedido.refresh_from_db()

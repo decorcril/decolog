@@ -4,13 +4,17 @@ from .views import (
     registro_corte_list,
     registro_corte_delete,
     registro_corte_detail,
+    etiquetas_registro_corte,
+    peca_scan,
 )
 
 app_name = 'producao_corte'
 
 urlpatterns = [
-    path('', registro_corte_list, name='list'),
-    path('novo/', registro_corte_create, name='create'),
-    path('<int:pk>/', registro_corte_detail, name='detail'),
-    path('<int:pk>/excluir/', registro_corte_delete, name='delete'),
+    path('',                    registro_corte_list,      name='list'),
+    path('novo/',               registro_corte_create,    name='create'),
+    path('<int:pk>/',           registro_corte_detail,    name='detail'),
+    path('<int:pk>/excluir/',   registro_corte_delete,    name='delete'),
+    path('<int:pk>/etiquetas/', etiquetas_registro_corte, name='etiquetas'),
+    path('peca/<str:token>/',   peca_scan,                name='peca_scan'),
 ]

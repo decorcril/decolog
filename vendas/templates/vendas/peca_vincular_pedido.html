@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}Vincular ao Pedido{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-body p-4">
+        <div class="text-center mb-4">
+          <i class="bi bi-box-seam fs-1 mb-3 text-primary"></i>
+          <h5 class="fw-bold mb-1">{{ peca.produto.nome }}</h5>
+          {% if peca.produto.codigo %}
+          <p class="text-muted small mb-0">{{ peca.produto.codigo }}</p>
+          {% endif %}
+          <p class="text-muted small">Peça disponível no estoque — vincular a um pedido</p>
+        </div>
+
+        {% if pedidos_precisando %}
+        <p class="fw-semibold text-secondary small mb-3">PEDIDOS QUE PRECISAM DESTE PRODUTO</p>
+        <form method="post">
+          {% csrf_token %}
+          {% for pedido in pedidos_precisando %}
+          <div class="card mb-2">
+            <div class="card-body p-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <p class="fw-bold mb-0">{{ pedido.numero }}</p>
+                  <p class="text-muted small mb-0">{{ pedido.cliente.nome }}</p>
+                </div>
+                <button type="submit" name="pedido_pk" value="{{ pedido.pk }}"
+                        class="btn btn-primary btn-sm">
+                  <i class="bi bi-link me-1"></i> Vincular
+                </button>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </form>
+        {% else %}
+        <div class="alert alert-warning">
+          <i class="bi bi-info-circle me-1"></i>
+          Nenhum pedido em separação precisa deste produto no momento.
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

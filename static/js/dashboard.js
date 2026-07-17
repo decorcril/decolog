@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const coresMotivos = [
-    'rgba(220,53,69,0.8)',
+    'rgba(254, 202, 27, 0.9)',
     'rgba(32,201,151,0.8)',
     'rgba(77,163,255,0.8)',
     'rgba(253,126,20,0.8)',
@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
           {
             label: 'Entradas',
             data: entradas,
-            borderColor: '#20c997',
+            borderColor: '#1D4ED8',
             backgroundColor: 'rgba(32,201,151,0.08)',
             tension: 0.3,
             fill: true,
@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
           {
             label: isGerente ? 'Vendas' : 'Saídas',
             data: vendas,
-            borderColor: '#dc3545',
+            borderColor: '#20c997',
             backgroundColor: 'rgba(220,53,69,0.08)',
             tension: 0.3,
             fill: true,

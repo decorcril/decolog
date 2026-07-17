@@ -243,11 +243,13 @@ def producao_detail(request, pk):
 
 @montagem_ou_gerente
 def historico_montagem(request):
-    registros = RegistroMontagem.objects.select_related(
-        'operador', 'pedido__cliente'
-    ).prefetch_related(
-        'itens__produto'
-    ).order_by('-criado_em')
+    from producao_corte.models import ProdutoCortado
+    
+    registros = ProdutoCortado.objects.filter(
+        status='montado'
+    ).select_related(
+        'montada_por', 'produto', 'pedido__cliente'
+    ).order_by('-montada_em')
 
     paginator = Paginator(registros, 20)
     page_obj  = paginator.get_page(request.GET.get('page', 1))

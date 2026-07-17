@@ -11,6 +11,8 @@ from core.models import Local
 
 
 def _verificar_estoque_pedido(pedido):
+    from producao_corte.models import ProdutoCortado
+
     local = pedido.local_saida
     if not local:
         local = Local.objects.filter(tipo='fabrica').first()
@@ -19,54 +21,85 @@ def _verificar_estoque_pedido(pedido):
     tudo_ok   = True
 
     for item in pedido.itens.select_related('produto').all():
-        try:
-            ficha = item.produto.ficha_tecnica
-            itens_ok    = True
-            componentes = []
-            for componente in ficha.itens.select_related('material').all():
-                qtd_necessaria = componente.quantidade * item.quantidade
-                saldo      = Estoque.objects.filter(produto=componente.material, local=local).first()
-                disponivel = saldo.quantidade if saldo else 0
-                ok         = disponivel >= qtd_necessaria
-                if not ok:
-                    itens_ok = False
-                    tudo_ok  = False
-                componentes.append({
-                    'nome':       componente.material.nome,
-                    'necessario': qtd_necessaria,
-                    'disponivel': disponivel,
-                    'ok':         ok,
-                })
-            resultado.append({
-                'nome':        item.produto.nome,
-                'quantidade':  item.quantidade,
-                'composto':    True,
-                'componentes': componentes,
-                'ok':          itens_ok,
-            })
-        except item.produto.__class__.ficha_tecnica.RelatedObjectDoesNotExist:
-            saldo      = Estoque.objects.filter(produto=item.produto, local=local).first()
-            disponivel = saldo.quantidade if saldo else 0
-            ok         = disponivel >= item.quantidade
+
+        # ── Produto final — verifica peças montadas no estoque ──
+        if item.produto.categoria == 'produto_final':
+            disponiveis = ProdutoCortado.objects.filter(
+                produto=item.produto,
+                status='montado',
+                pedido=None,
+            ).count()
+            ok = disponiveis >= item.quantidade
             if not ok:
                 tudo_ok = False
             resultado.append({
                 'nome':       item.produto.nome,
                 'quantidade': item.quantidade,
                 'composto':   False,
-                'disponivel': disponivel,
+                'disponivel': disponiveis,
                 'ok':         ok,
             })
+
+        else:
+            # ── Insumo ou composto — verifica estoque normal ──
+            try:
+                ficha = item.produto.ficha_tecnica
+                itens_ok    = True
+                componentes = []
+                for componente in ficha.itens.select_related('material').all():
+                    qtd_necessaria = componente.quantidade * item.quantidade
+                    saldo      = Estoque.objects.filter(produto=componente.material, local=local).first()
+                    disponivel = saldo.quantidade if saldo else 0
+                    ok         = disponivel >= qtd_necessaria
+                    if not ok:
+                        itens_ok = False
+                        tudo_ok  = False
+                    componentes.append({
+                        'nome':       componente.material.nome,
+                        'necessario': qtd_necessaria,
+                        'disponivel': disponivel,
+                        'ok':         ok,
+                    })
+                resultado.append({
+                    'nome':        item.produto.nome,
+                    'quantidade':  item.quantidade,
+                    'composto':    True,
+                    'componentes': componentes,
+                    'ok':          itens_ok,
+                })
+            except item.produto.__class__.ficha_tecnica.RelatedObjectDoesNotExist:
+                saldo      = Estoque.objects.filter(produto=item.produto, local=local).first()
+                disponivel = saldo.quantidade if saldo else 0
+                ok         = disponivel >= item.quantidade
+                if not ok:
+                    tudo_ok = False
+                resultado.append({
+                    'nome':       item.produto.nome,
+                    'quantidade': item.quantidade,
+                    'composto':   False,
+                    'disponivel': disponivel,
+                    'ok':         ok,
+                })
 
     return resultado, tudo_ok, local
 
 
 def _todos_insumos(pedido):
-    return all(
-        item.produto.categoria == 'insumo'
-        for item in pedido.itens.select_related('produto').all()
-    )
-
+    """Retorna True se todos os itens são insumos OU produto_final com peças no estoque."""
+    from producao_corte.models import ProdutoCortado
+    for item in pedido.itens.select_related('produto').all():
+        if item.produto.categoria == 'insumo':
+            continue
+        if item.produto.categoria == 'produto_final':
+            disponiveis = ProdutoCortado.objects.filter(
+                produto=item.produto,
+                status='montado',
+                pedido=None,
+            ).count()
+            if disponiveis >= item.quantidade:
+                continue
+        return False
+    return True
 
 @logistica_ou_gerente
 def logistica_list(request):
@@ -88,6 +121,7 @@ def logistica_list(request):
 
         # ── Separar insumos ──
         elif action == 'separar_insumos':
+            from django.utils import timezone
             pedido   = get_object_or_404(Pedido, pk=pedido_pk, status=Pedido.Status.PICKING)
             unidades = UnidadePedido.objects.filter(item__pedido=pedido, separada=False)
             unidades.update(
@@ -119,22 +153,31 @@ def logistica_list(request):
     pedidos_picking = Pedido.objects.filter(
         status='picking',
     ).select_related('cliente', 'criado_por').prefetch_related(
-        'itens__produto', 'itens__unidades'
+        'itens__produto'
     ).order_by('criado_em')
 
     pedidos_separacao = []
     pedidos_envio     = []
 
     for pedido in pedidos_picking:
-        total         = UnidadePedido.objects.filter(item__pedido=pedido).count()
-        separadas     = UnidadePedido.objects.filter(item__pedido=pedido, separada=True).count()
-        tudo_separado = total > 0 and separadas >= total
+        from producao_corte.models import ProdutoCortado
+        total         = ProdutoCortado.objects.filter(pedido=pedido).count()
+        separadas     = ProdutoCortado.objects.filter(pedido=pedido, status='separado').count()
+
+        # Considera também UnidadePedido para insumos
+        from vendas.models import UnidadePedido as UP
+        total_uni     = UP.objects.filter(item__pedido=pedido).count()
+        separadas_uni = UP.objects.filter(item__pedido=pedido, separada=True).count()
+
+        total_geral     = total + total_uni
+        separadas_geral = separadas + separadas_uni
+        tudo_separado   = total_geral > 0 and separadas_geral >= total_geral
 
         info = {
             'pedido':        pedido,
             'is_retirada':   pedido.transportadora == 'Retirada na Loja',
-            'total':         total,
-            'separadas':     separadas,
+            'total':         total_geral,
+            'separadas':     separadas_geral,
             'tudo_separado': tudo_separado,
             'todos_insumos': _todos_insumos(pedido),
         }
@@ -149,7 +192,6 @@ def logistica_list(request):
         'pedidos_separacao':  pedidos_separacao,
         'pedidos_envio':      pedidos_envio,
     })
-
 
 @logistica_ou_gerente
 def logistica_historico(request):

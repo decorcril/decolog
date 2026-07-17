@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block title %}Confirmar Separação{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-body p-4 text-center">
+        <i class="bi bi-box-seam fs-1 mb-3 text-primary"></i>
+        <h5 class="fw-bold mb-1">{{ peca.produto.nome }}</h5>
+        <p class="text-muted mb-1">Pedido <strong>{{ peca.pedido.numero }}</strong></p>
+        <p class="text-muted small mb-4">{{ peca.pedido.cliente.nome }}</p>
+        <p class="text-muted mb-4">Confirma a <strong>separação</strong> desta peça?</p>
+        <form method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary btn-lg w-100">
+            <i class="bi bi-check-circle me-1"></i> Confirmar Separação
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

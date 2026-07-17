@@ -154,19 +154,18 @@ class Pedido(models.Model):
         from producao_corte.models import ProdutoCortado
         resultado = []
         for item in self.itens.select_related('produto').all():
-            # Insumos não passam por corte
             if item.produto.categoria == 'insumo':
                 continue
             cortado = ProdutoCortado.objects.filter(
                 item_corte__registro__pedido=self,
                 produto=item.produto,
-            ).aggregate(total=Sum('quantidade'))['total'] or Decimal('0')
+            ).count()
             resultado.append({
                 'nome':     item.produto.nome,
                 'cortado':  cortado,
                 'total':    item.quantidade,
                 'completo': cortado >= item.quantidade,
-                'falta':    max(Decimal('0'), item.quantidade - cortado),
+                'falta':    max(0, item.quantidade - cortado),
             })
         return resultado
 
@@ -176,14 +175,13 @@ class Pedido(models.Model):
 
     @property
     def progresso_montagem(self):
-        from vendas.models.unidade_pedido import UnidadePedido
+        from producao_corte.models import ProdutoCortado
         resultado = []
         for item in self.itens.select_related('produto').all():
-            # Insumos não passam por montagem
             if item.produto.categoria == 'insumo':
                 continue
-            total   = UnidadePedido.objects.filter(item=item).count()
-            montado = UnidadePedido.objects.filter(item=item, montada=True).count()
+            total   = ProdutoCortado.objects.filter(pedido=self, produto=item.produto).count()
+            montado = ProdutoCortado.objects.filter(pedido=self, produto=item.produto, status='montado').count()
             resultado.append({
                 'nome':     item.produto.nome,
                 'montado':  montado,

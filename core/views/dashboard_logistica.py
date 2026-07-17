@@ -4,6 +4,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 from vendas.models import Pedido, UnidadePedido
+from producao_corte.models import ProdutoCortado
 
 
 @login_required
@@ -16,19 +17,28 @@ def dashboard_logistica(request):
     pedidos_picking = Pedido.objects.filter(
         status='picking',
     ).select_related('cliente', 'criado_por').prefetch_related(
-        'itens__produto', 'itens__unidades'
+        'itens__produto'
     ).order_by('criado_em')
 
     pedidos_com_info = []
     for pedido in pedidos_picking:
-        total         = UnidadePedido.objects.filter(item__pedido=pedido).count()
-        separadas     = UnidadePedido.objects.filter(item__pedido=pedido, separada=True).count()
-        tudo_separado = total > 0 and separadas >= total
+        # ProdutoCortado — produto_final
+        total_pc     = ProdutoCortado.objects.filter(pedido=pedido).count()
+        separadas_pc = ProdutoCortado.objects.filter(pedido=pedido, status='separado').count()
+
+        # UnidadePedido — insumos
+        total_uni     = UnidadePedido.objects.filter(item__pedido=pedido).count()
+        separadas_uni = UnidadePedido.objects.filter(item__pedido=pedido, separada=True).count()
+
+        total_geral     = total_pc + total_uni
+        separadas_geral = separadas_pc + separadas_uni
+        tudo_separado   = total_geral > 0 and separadas_geral >= total_geral
+
         pedidos_com_info.append({
             'pedido':        pedido,
             'is_retirada':   pedido.transportadora == 'Retirada na Loja',
-            'total':         total,
-            'separadas':     separadas,
+            'total':         total_geral,
+            'separadas':     separadas_geral,
             'tudo_separado': tudo_separado,
         })
 
