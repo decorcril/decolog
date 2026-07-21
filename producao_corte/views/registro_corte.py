@@ -16,14 +16,106 @@ from core.mixins import producao_ou_gerente
 from ..models import RegistroCorte, ItemCorte, ProdutoCortado
 
 
+def _redirect_create(pedido_pk):
+    """Redireciona de volta pro formulário, preservando o pedido em contexto."""
+    url = reverse('producao_corte:create')
+    if pedido_pk:
+        url += f'?pedido_pk={pedido_pk}'
+    return redirect(url)
+
+
+def _validar_estoque_chapas(chapas):
+    """Confere se há saldo suficiente de cada chapa antes de gravar qualquer coisa."""
+    for _, prod_id, quantidade in chapas:
+        produto = Produto.objects.get(pk=prod_id)
+        disponivel = Estoque.objects.filter(
+            produto=produto
+        ).aggregate(total=Sum('quantidade'))['total'] or Decimal('0')
+
+        if disponivel < quantidade:
+            raise ValueError(
+                f'Estoque insuficiente para {produto.nome}: '
+                f'disponível {disponivel}, solicitado {quantidade}.'
+            )
+
+
+def _baixar_chapa(produto, quantidade, data_parsed, pedido, registro, usuario):
+    """Debita a chapa do(s) estoque(s) com saldo, do maior pro menor."""
+    restante = quantidade
+    for estoque in Estoque.objects.filter(produto=produto, quantidade__gt=0).order_by('-quantidade'):
+        if restante <= 0:
+            break
+        abate = min(estoque.quantidade, restante)
+        Movimentacao.objects.create(
+            produto=produto,
+            local=estoque.local,
+            tipo='saida',
+            motivo='uso_interno',
+            quantidade=abate,
+            observacao=(
+                f'Corte em {data_parsed.strftime("%d/%m/%Y")}'
+                + (f' — Pedido {pedido.numero}' if pedido else '')
+            ),
+            usuario=usuario,
+            registro_corte=registro,
+        )
+        restante -= abate
+
+
+def _criar_pecas_cortadas(item_corte, produtos_saida, pedido, observacao, usuario):
+    """Cria um ProdutoCortado por unidade cortada de cada produto de saída da chapa."""
+    for prod_id_saida, qty_saida in produtos_saida:
+        produto_cortado = Produto.objects.get(pk=prod_id_saida)
+        for _ in range(int(qty_saida)):
+            ProdutoCortado.objects.create(
+                item_corte=item_corte,
+                produto=produto_cortado,
+                pedido=pedido,
+                cortada_por=usuario,
+                observacao=observacao,
+            )
+
+
+def _notificar_aguardando_montagem(pedido):
+    """Avisa o time de montagem assim que o pedido entra em 'assembling'."""
+    from core.models.notificacao import Notificacao
+    usuarios = Notificacao.usuarios_por_grupo(
+        'Operador de Montagem', 'Supervisor de Montagem', 'Gerente'
+    )
+    Notificacao.notificar(pedido, Notificacao.Tipo.AGUARD_MONTAGEM, usuarios)
+
+
+def _atualizar_status_pedido(pedido, request):
+    """
+    Após registrar o corte, reavalia o progresso do pedido:
+    - Se tudo cortado -> ASSEMBLING (e notifica o time de montagem).
+    - Se ainda falta algo -> permanece/volta para CUTTING.
+    """
+    pedido.refresh_from_db()
+    progresso   = pedido.progresso_corte
+    incompletos = [p for p in progresso if not p['completo']]
+
+    if not incompletos:
+        pedido.status = pedido.Status.ASSEMBLING
+        pedido.save(update_fields=['status', 'atualizado_em'])
+        _notificar_aguardando_montagem(pedido)
+        messages.success(request, f'Corte completo! Pedido {pedido.numero} enviado para montagem.')
+    else:
+        pedido.status = pedido.Status.CUTTING
+        pedido.save(update_fields=['status', 'atualizado_em'])
+        faltam = ', '.join(
+            f"{p['nome']} ({p['falta']} restante{'s' if p['falta'] > 1 else ''})"
+            for p in incompletos
+        )
+        messages.warning(request, f'Corte parcial registrado. Faltam: {faltam}')
+
+
 @producao_ou_gerente
 def registro_corte_create(request):
     from vendas.models import Pedido
 
     pedido_pk = request.GET.get('pedido_pk') or request.POST.get('pedido_pk')
-    pedido    = None
-    if pedido_pk:
-        pedido = get_object_or_404(Pedido, pk=pedido_pk)
+    pedido    = get_object_or_404(Pedido, pk=pedido_pk) if pedido_pk else None
 
     produtos_materiais = Produto.objects.filter(
         categoria__in=['chapa'], ativo=True
@@ -40,12 +132,13 @@ def registro_corte_create(request):
             data_parsed = date.fromisoformat(data_str)
         except (ValueError, TypeError):
             messages.error(request, 'Data inválida.')
-            return redirect(reverse('producao_corte:create') + (f'?pedido_pk={pedido_pk}' if pedido_pk else ''))
+            return _redirect_create(pedido_pk)
 
         if data_parsed > timezone.localdate():
             messages.error(request, 'A data não pode ser no futuro.')
-            return redirect(reverse('producao_corte:create') + (f'?pedido_pk={pedido_pk}' if pedido_pk else ''))
+            return _redirect_create(pedido_pk)
 
+        # ── Lê as chapas de entrada (uma linha por chapa usada) ──
         chapas = []
         i = 0
         while f'entrada_produto_{i}' in request.POST:
@@ -55,6 +148,7 @@ def registro_corte_create(request):
                 chapas.append((i, prod_id, Decimal(qty)))
             i += 1
 
+        # ── Lê os produtos cortados de cada chapa ──
         produtos_por_chapa = {}
         for chapa_idx, _, _ in chapas:
             produtos_por_chapa[chapa_idx] = []
@@ -68,27 +162,16 @@ def registro_corte_create(request):
 
         if not chapas:
             messages.error(request, 'Informe ao menos uma chapa utilizada.')
-            return redirect(reverse('producao_corte:create') + (f'?pedido_pk={pedido_pk}' if pedido_pk else ''))
+            return _redirect_create(pedido_pk)
 
-        tem_produtos = any(produtos_por_chapa.get(idx) for idx, _, _ in chapas)
-        if not tem_produtos:
+        if not any(produtos_por_chapa.get(idx) for idx, _, _ in chapas):
             messages.error(request, 'Informe ao menos um produto cortado.')
-            return redirect(reverse('producao_corte:create') + (f'?pedido_pk={pedido_pk}' if pedido_pk else ''))
+            return _redirect_create(pedido_pk)
 
         try:
             from django.db import transaction
             with transaction.atomic():
-                for _, prod_id, quantidade in chapas:
-                    produto       = Produto.objects.get(pk=prod_id)
-                    estoque_total = Estoque.objects.filter(
-                        produto=produto
-                    ).aggregate(total=Sum('quantidade'))['total'] or Decimal('0')
-
-                    if estoque_total < quantidade:
-                        raise ValueError(
-                            f'Estoque insuficiente para {produto.nome}: '
-                            f'disponível {estoque_total}, solicitado {quantidade}.'
-                        )
+                _validar_estoque_chapas(chapas)
 
                 registro = RegistroCorte.objects.create(
                     data=data_parsed,
@@ -98,26 +181,9 @@ def registro_corte_create(request):
                 )
 
                 for chapa_idx, prod_id, quantidade in chapas:
-                    produto  = Produto.objects.get(pk=prod_id)
-                    restante = quantidade
+                    produto = Produto.objects.get(pk=prod_id)
 
-                    for estoque in Estoque.objects.filter(
-                        produto=produto, quantidade__gt=0
-                    ).order_by('-quantidade'):
-                        if restante <= 0:
-                            break
-                        abate = min(estoque.quantidade, restante)
-                        Movimentacao.objects.create(
-                            produto=produto,
-                            local=estoque.local,
-                            tipo='saida',
-                            motivo='uso_interno',
-                            quantidade=abate,
-                            observacao=f'Corte em {data_parsed.strftime("%d/%m/%Y")}' + (f' — Pedido {pedido.numero}' if pedido else ''),
-                            usuario=request.user,
-                            registro_corte=registro,
-                        )
-                        restante -= abate
+                    _baixar_chapa(produto, quantidade, data_parsed, pedido, registro, request.user)
 
                     item_corte = ItemCorte.objects.create(
                         registro=registro,
@@ -125,52 +191,29 @@ def registro_corte_create(request):
                         quantidade_chapa=quantidade,
                     )
 
-                    for prod_id_saida, qty_saida in produtos_por_chapa.get(chapa_idx, []):
-                        produto_cortado = Produto.objects.get(pk=prod_id_saida)
-
-                        # Cria uma peça por unidade cortada
-                        for _ in range(int(qty_saida)):
-                            ProdutoCortado.objects.create(
-                                item_corte  = item_corte,
-                                produto     = produto_cortado,
-                                pedido      = pedido,
-                                cortada_por = request.user, 
-                                observacao  = observacao,
-                            )
+                    _criar_pecas_cortadas(
+                        item_corte,
+                        produtos_por_chapa.get(chapa_idx, []),
+                        pedido,
+                        observacao,
+                        request.user,
+                    )
 
                 if pedido:
-                    pedido.refresh_from_db()
-                    progresso       = pedido.progresso_corte
-                    todos_completos = all(p['completo'] for p in progresso)
-                    incompletos     = [p for p in progresso if not p['completo']]
-
-                    if todos_completos:
-                        pedido.status = Pedido.Status.ASSEMBLING
-                        pedido.save(update_fields=['status', 'atualizado_em'])
-                        messages.success(request, f'Corte completo! Pedido {pedido.numero} enviado para montagem.')
-                    else:
-                        pedido.status = Pedido.Status.CUTTING
-                        pedido.save(update_fields=['status', 'atualizado_em'])
-                        faltam = ', '.join(
-                            f"{p['nome']} ({p['falta']} restante{'s' if p['falta'] > 1 else ''})"
-                            for p in incompletos
-                        )
-                        messages.warning(request, f'Corte parcial registrado. Faltam: {faltam}')
-
+                    _atualizar_status_pedido(pedido, request)
                     return redirect('vendas:laser_list')
 
-                else:
-                    messages.success(request, 'Registro de corte salvo com sucesso!')
-                    return redirect('producao_corte:list')
+                messages.success(request, 'Registro de corte salvo com sucesso!')
+                return redirect('producao_corte:list')
 
         except ValueError as e:
             messages.error(request, str(e))
-            return redirect(reverse('producao_corte:create') + (f'?pedido_pk={pedido_pk}' if pedido_pk else ''))
+            return _redirect_create(pedido_pk)
 
+    # ── GET: monta o formulário ──
     produtos_pedido = []
     if pedido:
-        progresso = pedido.progresso_corte
-        for p in progresso:
+        for p in pedido.progresso_corte:
             if not p['completo']:
                 item = pedido.itens.filter(produto__nome=p['nome']).first()
                 if item:

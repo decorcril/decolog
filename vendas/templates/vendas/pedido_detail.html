@@ -133,6 +133,39 @@
     </div>
     {% endif %}
 
+    {# ── Cliente ── #}
+    <div class="card mb-4">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">CLIENTE</p>
+        <div class="mb-2">
+          <span class="text-muted small">Nome</span>
+          <div class="fw-semibold">
+            <a href="{% url 'clientes:detail' pedido.cliente.pk %}" class="text-decoration-none">
+              {{ pedido.cliente.nome }}
+            </a>
+          </div>
+        </div>
+        {% if pedido.contato %}
+        <div class="mb-2">
+          <span class="text-muted small">Contato</span>
+          <div class="fw-semibold">{{ pedido.contato }}</div>
+        </div>
+        {% endif %}
+        {% if pedido.cliente.telefone %}
+        <div class="mb-2">
+          <span class="text-muted small">Telefone</span>
+          <div class="fw-semibold">{{ pedido.cliente.telefone }}</div>
+        </div>
+        {% endif %}
+        {% if pedido.cliente.email %}
+        <div class="mb-2">
+          <span class="text-muted small">Email</span>
+          <div class="fw-semibold">{{ pedido.cliente.email }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
     {# ── Ficha de envio ── #}
     {% if is_financeiro or is_gerente or is_logistica_loja %}
     <div class="card mb-4">
@@ -143,28 +176,6 @@
             <i class="bi bi-printer me-1"></i> Imprimir Ficha
           </a>
         </div>
-
-        {% if pedido.status == 'picking' %}
-          {% if tudo_separado %}
-          <span class="badge bg-success bg-opacity-10 text-success">
-            <i class="bi bi-check-circle me-1"></i> Todas as unidades separadas — pronto para envio
-          </span>
-          {% elif total_unidades > 0 %}
-          <div>
-            <span class="badge bg-warning bg-opacity-10 text-warning mb-2">
-              <i class="bi bi-hourglass-split me-1"></i> Aguardando separação — {{ separadas }}/{{ total_unidades }} unidades
-            </span>
-            <div class="progress mt-2" style="height:5px;">
-              <div class="progress-bar bg-warning"
-                   style="width:{% widthratio separadas total_unidades 100 %}%"></div>
-            </div>
-          </div>
-          {% else %}
-          <span class="badge bg-secondary bg-opacity-10 text-secondary">
-            <i class="bi bi-info-circle me-1"></i> Sem unidades registradas
-          </span>
-          {% endif %}
-        {% endif %}
 
       </div>
     </div>
@@ -346,39 +357,6 @@
         </div>
         {% endif %}
 
-      </div>
-    </div>
-
-    {# ── Cliente ── #}
-    <div class="card mb-4">
-      <div class="card-body p-4">
-        <p class="fw-semibold text-secondary small mb-3">CLIENTE</p>
-        <div class="mb-2">
-          <span class="text-muted small">Nome</span>
-          <div class="fw-semibold">
-            <a href="{% url 'clientes:detail' pedido.cliente.pk %}" class="text-decoration-none">
-              {{ pedido.cliente.nome }}
-            </a>
-          </div>
-        </div>
-        {% if pedido.contato %}
-        <div class="mb-2">
-          <span class="text-muted small">Contato</span>
-          <div class="fw-semibold">{{ pedido.contato }}</div>
-        </div>
-        {% endif %}
-        {% if pedido.cliente.telefone %}
-        <div class="mb-2">
-          <span class="text-muted small">Telefone</span>
-          <div class="fw-semibold">{{ pedido.cliente.telefone }}</div>
-        </div>
-        {% endif %}
-        {% if pedido.cliente.email %}
-        <div class="mb-2">
-          <span class="text-muted small">Email</span>
-          <div class="fw-semibold">{{ pedido.cliente.email }}</div>
-        </div>
-        {% endif %}
       </div>
     </div>
 

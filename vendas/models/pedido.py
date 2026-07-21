@@ -157,7 +157,7 @@ class Pedido(models.Model):
             if item.produto.categoria == 'insumo':
                 continue
             cortado = ProdutoCortado.objects.filter(
-                item_corte__registro__pedido=self,
+                pedido=self,
                 produto=item.produto,
             ).count()
             resultado.append({
@@ -181,7 +181,9 @@ class Pedido(models.Model):
             if item.produto.categoria == 'insumo':
                 continue
             total   = ProdutoCortado.objects.filter(pedido=self, produto=item.produto).count()
-            montado = ProdutoCortado.objects.filter(pedido=self, produto=item.produto, status='montado').count()
+            montado = ProdutoCortado.objects.filter(
+                pedido=self, produto=item.produto, montada_em__isnull=False,
+            ).count()
             resultado.append({
                 'nome':     item.produto.nome,
                 'montado':  montado,
@@ -194,6 +196,30 @@ class Pedido(models.Model):
     @property
     def montagem_completa(self):
         return all(p['completo'] for p in self.progresso_montagem)
+
+    @property
+    def status_separacao(self):
+        from vendas.models.unidade_pedido import UnidadePedido
+        from producao_corte.models import ProdutoCortado
+
+        total     = 0
+        separadas = 0
+
+        # Itens do tipo insumo — rastreados via UnidadePedido
+        total     += UnidadePedido.objects.filter(item__pedido=self).count()
+        separadas += UnidadePedido.objects.filter(item__pedido=self, separada=True).count()
+
+        # Itens de produto final (cortados/montados) — rastreados via ProdutoCortado
+        total     += ProdutoCortado.objects.filter(pedido=self).count()
+        separadas += ProdutoCortado.objects.filter(
+            pedido=self, status__in=['separado', 'enviado']
+        ).count()
+
+        return {
+            'total':         total,
+            'separadas':     separadas,
+            'tudo_separado': separadas >= total,
+        }
 
     def sync_status(self):
         protected = {

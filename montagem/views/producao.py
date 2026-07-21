@@ -11,6 +11,7 @@ from movimentacoes.models import Movimentacao
 from produtos.models import Produto
 from core.models import Local
 from montagem.models import RegistroMontagem, ItemMontagem
+from vendas.models.pedido import Pedido
 
 
 def _registrar_entrada_producao(produto, qty, fabrica, observacao, user):
@@ -163,23 +164,29 @@ def registrar_producao(request):
 
 @montagem_ou_gerente
 def montagem_list(request):
-    from vendas.models import Pedido
+    from producao_corte.models import ProdutoCortado
 
     pedidos = Pedido.objects.filter(
-        status=Pedido.Status.ASSEMBLING
-    ).select_related('cliente', 'criado_por').prefetch_related('itens__produto')
+        status='assembling',
+    ).select_related('cliente', 'criado_por').order_by('criado_em')
 
     pedidos_com_progresso = []
     for pedido in pedidos:
         pedidos_com_progresso.append({
-            'pedido':    pedido,
-            'progresso': pedido.progresso_montagem,
+            'pedido':             pedido,
+            'progresso_montagem': pedido.progresso_montagem,
         })
 
-    return render(request, 'vendas/montagem_list.html', {
-        'pedidos': pedidos_com_progresso,
-    })
+    # ── Peças avulsas aguardando montagem (sem pedido vinculado) ──
+    pecas_avulsas = ProdutoCortado.objects.filter(
+        pedido__isnull=True,
+        status='aguardando',
+    ).select_related('produto', 'cortada_por').order_by('item_corte__registro__criado_em')
 
+    return render(request, 'vendas/montagem_list.html', {
+        'pedidos':       pedidos_com_progresso,
+        'pecas_avulsas': pecas_avulsas,
+    })
 
 @montagem_ou_gerente
 def montagem_finalizar(request, pk):

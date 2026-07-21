@@ -4,7 +4,70 @@ from django.utils import timezone
 
 from producao_corte.models import ProdutoCortado
 from movimentacoes.models import Movimentacao
+from estoque.models import Estoque
 from core.models import Local
+
+
+def _local_com_saldo(produto, local_preferido, local_fallback, quantidade):
+    """
+    Usa o local preferido se ele tiver saldo suficiente do produto;
+    caso contrário, cai para o local de fallback (fábrica).
+    Evita tentar debitar de um local que nunca recebeu o material.
+    """
+    if local_preferido:
+        saldo = Estoque.objects.filter(produto=produto, local=local_preferido).first()
+        if saldo and saldo.quantidade >= quantidade:
+            return local_preferido
+    return local_fallback
+
+
+def _debitar_componentes_ficha(peca, pedido, usuario):
+    """
+    Ao separar a peça, debita:
+    1. A própria peça pronta (produto final) do estoque de peças montadas —
+       fecha o ciclo aberto na montagem, onde ela deu entrada no Estoque.
+    2. Os materiais da ficha técnica, se existir (comportamento já existente,
+       mantido como estava).
+    """
+    fabrica_padrao  = Local.objects.filter(tipo='fabrica').first()
+    local_preferido = pedido.local_saida if pedido else None
+
+    # ── 1. Saída da peça pronta (fecha o ciclo aberto na montagem) ──
+    local_peca = _local_com_saldo(peca.produto, local_preferido, fabrica_padrao, 1)
+    Movimentacao.objects.create(
+        produto    = peca.produto,
+        local      = local_peca,
+        tipo       = 'saida',
+        motivo     = 'venda',
+        quantidade = 1,
+        observacao = (
+            f'Separação — Pedido {pedido.numero} ({peca.produto.nome})'
+            if pedido else f'Separação — {peca.produto.nome}'
+        ),
+        usuario    = usuario,
+    )
+
+    # ── 2. Materiais da ficha técnica (comportamento já existente) ──
+    try:
+        ficha = peca.produto.ficha_tecnica
+        for componente in ficha.itens.select_related('material').all():
+            local_usar = _local_com_saldo(
+                componente.material, local_preferido, fabrica_padrao, componente.quantidade
+            )
+            Movimentacao.objects.create(
+                produto    = componente.material,
+                local      = local_usar,
+                tipo       = 'saida',
+                motivo     = 'venda',
+                quantidade = componente.quantidade,
+                observacao = (
+                    f'Separação — Pedido {pedido.numero} ({peca.produto.nome})'
+                    if pedido else f'Separação — {peca.produto.nome}'
+                ),
+                usuario    = usuario,
+            )
+    except peca.produto.__class__.ficha_tecnica.RelatedObjectDoesNotExist:
+        pass  # produto sem ficha técnica — já debitado no passo 1 acima
 
 
 @login_required
@@ -36,30 +99,7 @@ def confirmar_montagem(request, token):
                         status__in=['picking', 'aguard_producao']
                     )
 
-                    fabrica = pedido.local_saida or Local.objects.filter(tipo='fabrica').first()
-
-                    try:
-                        ficha = peca.produto.ficha_tecnica
-                        for componente in ficha.itens.select_related('material').all():
-                            Movimentacao.objects.create(
-                                produto    = componente.material,
-                                local      = fabrica,
-                                tipo       = 'saida',
-                                motivo     = 'venda',
-                                quantidade = componente.quantidade,
-                                observacao = f'Separação — Pedido {pedido.numero} ({peca.produto.nome})',
-                                usuario    = request.user,
-                            )
-                    except peca.produto.__class__.ficha_tecnica.RelatedObjectDoesNotExist:
-                        Movimentacao.objects.create(
-                            produto    = peca.produto,
-                            local      = fabrica,
-                            tipo       = 'saida',
-                            motivo     = 'venda',
-                            quantidade = 1,
-                            observacao = f'Separação — Pedido {pedido.numero} ({peca.produto.nome})',
-                            usuario    = request.user,
-                        )
+                    _debitar_componentes_ficha(peca, pedido, request.user)
 
                     peca.pedido       = pedido
                     peca.status       = 'separado'
@@ -88,31 +128,9 @@ def confirmar_montagem(request, token):
 
         # Peça com pedido — confirmar separação
         if request.method == 'POST':
-            pedido  = peca.pedido
-            fabrica = pedido.local_saida or Local.objects.filter(tipo='fabrica').first()
+            pedido = peca.pedido
 
-            try:
-                ficha = peca.produto.ficha_tecnica
-                for componente in ficha.itens.select_related('material').all():
-                    Movimentacao.objects.create(
-                        produto    = componente.material,
-                        local      = fabrica,
-                        tipo       = 'saida',
-                        motivo     = 'venda',
-                        quantidade = componente.quantidade,
-                        observacao = f'Separação — Pedido {pedido.numero} ({peca.produto.nome})',
-                        usuario    = request.user,
-                    )
-            except peca.produto.__class__.ficha_tecnica.RelatedObjectDoesNotExist:
-                Movimentacao.objects.create(
-                    produto    = peca.produto,
-                    local      = fabrica,
-                    tipo       = 'saida',
-                    motivo     = 'venda',
-                    quantidade = 1,
-                    observacao = f'Separação — Pedido {pedido.numero} ({peca.produto.nome})',
-                    usuario    = request.user,
-                )
+            _debitar_componentes_ficha(peca, pedido, request.user)
 
             peca.status       = 'separado'
             peca.separada_por = request.user
@@ -143,15 +161,18 @@ def confirmar_montagem(request, token):
                     usuario    = request.user,
                 )
         except peca.produto.__class__.ficha_tecnica.RelatedObjectDoesNotExist:
-            Movimentacao.objects.create(
-                produto    = peca.produto,
-                local      = fabrica,
-                tipo       = 'entrada',
-                motivo     = 'producao',
-                quantidade = 1,
-                observacao = f'Montagem — {peca.produto.nome}',
-                usuario    = request.user,
-            )
+            pass  # produto sem ficha técnica — nada a debitar/creditar aqui
+
+        # ── Dá entrada na peça pronta no estoque (fecha o ciclo com a separação) ──
+        Movimentacao.objects.create(
+            produto    = peca.produto,
+            local      = fabrica,
+            tipo       = 'entrada',
+            motivo     = 'producao',
+            quantidade = 1,
+            observacao = f'Montagem — {peca.produto.nome} (peça pronta)',
+            usuario    = request.user,
+        )
 
         peca.status      = 'montado'
         peca.montada_por = request.user

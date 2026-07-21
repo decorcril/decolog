@@ -93,6 +93,8 @@ def laser_finalizar(request, pk):
 
 @montagem_ou_gerente
 def montagem_list(request):
+    from producao_corte.models import ProdutoCortado
+
     pedidos = Pedido.objects.filter(
         status='assembling',
     ).select_related('cliente', 'criado_por').order_by('criado_em')
@@ -104,8 +106,15 @@ def montagem_list(request):
             'progresso_montagem': pedido.progresso_montagem,
         })
 
+    # ── Peças avulsas aguardando montagem (sem pedido vinculado) ──
+    pecas_avulsas = ProdutoCortado.objects.filter(
+        pedido__isnull=True,
+        status='aguardando',
+    ).select_related('produto', 'cortada_por').order_by('item_corte__registro__criado_em')
+
     return render(request, 'vendas/montagem_list.html', {
-        'pedidos': pedidos_com_progresso,
+        'pedidos':       pedidos_com_progresso,
+        'pecas_avulsas': pecas_avulsas,
     })
 
 

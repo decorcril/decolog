@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from core.mixins import logistica_ou_gerente
 from vendas.models import Pedido, UnidadePedido
+from movimentacoes.models import Movimentacao
 from estoque.models import Estoque
 from core.models import Local
 
@@ -101,6 +102,61 @@ def _todos_insumos(pedido):
         return False
     return True
 
+
+def _processar_uso_estoque(pedido, local, usuario):
+    """
+    Efetiva o uso do estoque para um pedido em AGUARD_PRODUCAO com tudo_ok=True:
+    - Produto final (peça avulsa já montada): vincula a peça ao pedido e marca
+      como separada (já está pronta, veio direto do estoque).
+    - Insumo/composto: debita de fato o material via Movimentacao, igual ao
+      fluxo normal de separação.
+    """
+    from producao_corte.models import ProdutoCortado
+
+    agora = timezone.now()
+
+    for item in pedido.itens.select_related('produto').all():
+
+        if item.produto.categoria == 'produto_final':
+            pecas = ProdutoCortado.objects.filter(
+                produto=item.produto,
+                status='montado',
+                pedido=None,
+            ).order_by('id')[:item.quantidade]
+
+            for peca in pecas:
+                peca.pedido       = pedido
+                peca.status       = 'separado'
+                peca.separada_por = usuario
+                peca.separada_em  = agora
+                peca.save(update_fields=['pedido', 'status', 'separada_por', 'separada_em'])
+
+        else:
+            try:
+                ficha = item.produto.ficha_tecnica
+                for componente in ficha.itens.select_related('material').all():
+                    qtd_necessaria = componente.quantidade * item.quantidade
+                    Movimentacao.objects.create(
+                        produto    = componente.material,
+                        local      = local,
+                        tipo       = 'saida',
+                        motivo     = 'venda',
+                        quantidade = qtd_necessaria,
+                        observacao = f'Uso de estoque — Pedido {pedido.numero} ({item.produto.nome})',
+                        usuario    = usuario,
+                    )
+            except item.produto.__class__.ficha_tecnica.RelatedObjectDoesNotExist:
+                Movimentacao.objects.create(
+                    produto    = item.produto,
+                    local      = local,
+                    tipo       = 'saida',
+                    motivo     = 'venda',
+                    quantidade = item.quantidade,
+                    observacao = f'Uso de estoque — Pedido {pedido.numero}',
+                    usuario    = usuario,
+                )
+
+
 @logistica_ou_gerente
 def logistica_list(request):
 
@@ -108,20 +164,23 @@ def logistica_list(request):
         action    = request.POST.get('action', 'usar_estoque')
         pedido_pk = request.POST.get('pedido_pk')
 
-        # ── Usar estoque — insumos aguardando produção ──
+        # ── Usar estoque — insumos/peças avulsas aguardando produção ──
         if action == 'usar_estoque':
             pedido = get_object_or_404(Pedido, pk=pedido_pk, status=Pedido.Status.AGUARD_PRODUCAO)
-            _, tudo_ok, _ = _verificar_estoque_pedido(pedido)
+            _, tudo_ok, local = _verificar_estoque_pedido(pedido)
+
             if tudo_ok:
-                pedido.status = Pedido.Status.PICKING
-                pedido.save(update_fields=['status', 'atualizado_em'])
+                from django.db import transaction
+                with transaction.atomic():
+                    _processar_uso_estoque(pedido, local, request.user)
+                    pedido.status = Pedido.Status.PICKING
+                    pedido.save(update_fields=['status', 'atualizado_em'])
                 messages.success(request, f'Pedido {pedido.numero} enviado para separação!')
             else:
                 messages.error(request, f'Estoque insuficiente para o pedido {pedido.numero}.')
 
         # ── Separar insumos ──
         elif action == 'separar_insumos':
-            from django.utils import timezone
             pedido   = get_object_or_404(Pedido, pk=pedido_pk, status=Pedido.Status.PICKING)
             unidades = UnidadePedido.objects.filter(item__pedido=pedido, separada=False)
             unidades.update(
@@ -160,29 +219,16 @@ def logistica_list(request):
     pedidos_envio     = []
 
     for pedido in pedidos_picking:
-        from producao_corte.models import ProdutoCortado
-        total         = ProdutoCortado.objects.filter(pedido=pedido).count()
-        separadas     = ProdutoCortado.objects.filter(pedido=pedido, status='separado').count()
-
-        # Considera também UnidadePedido para insumos
-        from vendas.models import UnidadePedido as UP
-        total_uni     = UP.objects.filter(item__pedido=pedido).count()
-        separadas_uni = UP.objects.filter(item__pedido=pedido, separada=True).count()
-
-        total_geral     = total + total_uni
-        separadas_geral = separadas + separadas_uni
-        tudo_separado   = total_geral > 0 and separadas_geral >= total_geral
-
         info = {
             'pedido':        pedido,
             'is_retirada':   pedido.transportadora == 'Retirada na Loja',
-            'total':         total_geral,
-            'separadas':     separadas_geral,
-            'tudo_separado': tudo_separado,
+            'total':         pedido.status_separacao['total'],
+            'separadas':     pedido.status_separacao['separadas'],
+            'tudo_separado': pedido.status_separacao['tudo_separado'],
             'todos_insumos': _todos_insumos(pedido),
         }
 
-        if tudo_separado:
+        if info['tudo_separado']:
             pedidos_envio.append(info)
         else:
             pedidos_separacao.append(info)
@@ -192,6 +238,7 @@ def logistica_list(request):
         'pedidos_separacao':  pedidos_separacao,
         'pedidos_envio':      pedidos_envio,
     })
+
 
 @logistica_ou_gerente
 def logistica_historico(request):

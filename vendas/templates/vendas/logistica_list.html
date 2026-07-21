@@ -86,15 +86,10 @@
         </table>
 
         {% if item.tudo_ok and item.todos_insumos %}
-        <form method="post">
-          {% csrf_token %}
-          <input type="hidden" name="action" value="usar_estoque">
-          <input type="hidden" name="pedido_pk" value="{{ item.pedido.pk }}">
-          <button type="submit" class="btn btn-success btn-sm"
-                  onclick="return confirm('Usar estoque disponível para o pedido {{ item.pedido.numero }}?')">
-            <i class="bi bi-box-seam me-1"></i> Usar Estoque — Enviar para Separação
-          </button>
-        </form>
+        <p class="text-muted small mb-0">
+          <i class="bi bi-check-circle me-1"></i>
+          Estoque disponível — pronto para ser enviado à separação.
+        </p>
         {% elif not item.todos_insumos %}
         <p class="text-muted small mb-0">
           <i class="bi bi-info-circle me-1"></i>
@@ -169,10 +164,6 @@
 
         {% if item.todos_insumos %}
         <div class="d-flex gap-2">
-          <a href="{% url 'vendas:etiquetas_pedido' item.pedido.pk %}" target="_blank"
-             class="btn btn-sm btn-outline-secondary">
-            <i class="bi bi-tag me-1"></i> Imprimir Etiquetas
-          </a>
           <form method="post" class="flex-grow-1">
             {% csrf_token %}
             <input type="hidden" name="action" value="separar_insumos">

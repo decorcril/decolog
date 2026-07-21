@@ -9,6 +9,9 @@
   <h4 class="fw-bold mb-1">Fila de Montagem</h4>
   <p class="text-muted small mb-0">
     {{ pedidos|length }} pedido{{ pedidos|length|pluralize }} em montagem
+    {% if pecas_avulsas %}
+    · {{ pecas_avulsas|length }} peça{{ pecas_avulsas|length|pluralize }} avulsa{{ pecas_avulsas|length|pluralize }}
+    {% endif %}
   </p>
 </div>
 
@@ -27,7 +30,7 @@
 
         {# Progresso por produto #}
         <div class="mb-3">
-          {% for p in item.progresso %}
+          {% for p in item.progresso_montagem %}
           <div class="mb-2">
             <div class="d-flex justify-content-between align-items-center mb-1">
               <span class="small">{{ p.nome }}</span>
@@ -57,11 +60,39 @@
   </div>
   {% endfor %}
 </div>
-{% else %}
+{% elif not pecas_avulsas %}
 <div class="card">
   <div class="card-body p-4 text-center text-muted">
     <i class="bi bi-check-circle fs-3 mb-2 d-block text-success"></i>
     Nenhum pedido em montagem.
+  </div>
+</div>
+{% endif %}
+
+{% if pecas_avulsas %}
+<div class="mt-4">
+  <h6 class="fw-bold text-secondary mb-3">
+    <i class="bi bi-box-seam me-1"></i> Peças Avulsas Aguardando Montagem
+  </h6>
+  <div class="row g-3">
+    {% for peca in pecas_avulsas %}
+    <div class="col-md-6 col-lg-4">
+      <div class="card h-100 border-secondary">
+        <div class="card-body p-4">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <span class="fw-bold">{{ peca.produto.nome }}</span>
+            <span class="badge bg-secondary bg-opacity-10 text-secondary">Avulsa</span>
+          </div>
+          <p class="text-muted small mb-3">
+            Cortada por {{ peca.cortada_por.get_full_name|default:peca.cortada_por.username|default:"—" }}
+          </p>
+          <p class="text-muted small mb-0 text-center">
+            <i class="bi bi-qr-code me-1"></i> Escaneie o QR Code para confirmar a montagem
+          </p>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
   </div>
 </div>
 {% endif %}

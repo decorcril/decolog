@@ -21,10 +21,13 @@
     <div class="card h-100">
       <div class="card-body p-4">
         <p class="text-muted small mb-1">Em Montagem</p>
-        <p class="fw-bold fs-4 mb-0 {% if pedidos %}text-warning{% else %}text-success{% endif %}">
+        <p class="fw-bold fs-4 mb-0 {% if pedidos or pecas_avulsas %}text-warning{% else %}text-success{% endif %}">
           {{ pedidos|length }}
         </p>
-        <p class="text-muted small mb-0">pedidos aguardando</p>
+        <p class="text-muted small mb-0">
+          pedidos aguardando
+          {% if pecas_avulsas %}· {{ pecas_avulsas|length }} peça{{ pecas_avulsas|length|pluralize }} avulsa{{ pecas_avulsas|length|pluralize }}{% endif %}
+        </p>
       </div>
     </div>
   </div>
@@ -101,12 +104,37 @@
   {% endfor %}
 </div>
 
-{% else %}
+{% elif not pecas_avulsas %}
 <div class="card mb-4">
   <div class="card-body p-4 text-center text-muted">
     <i class="bi bi-tools fs-3 mb-2 d-block text-success"></i>
     Nenhum pedido em montagem no momento.
   </div>
+</div>
+{% endif %}
+
+{# ── Peças avulsas em montagem ── #}
+{% if pecas_avulsas %}
+<p class="fw-semibold text-secondary small mb-3">PEÇAS AVULSAS AGUARDANDO MONTAGEM</p>
+<div class="row g-3 mb-4">
+  {% for peca in pecas_avulsas %}
+  <div class="col-md-6 col-lg-4">
+    <div class="card h-100 border-secondary">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <span class="fw-bold">{{ peca.produto.nome }}</span>
+          <span class="badge bg-secondary bg-opacity-10 text-secondary">Avulsa</span>
+        </div>
+        <p class="text-muted small mb-3">
+          Cortada por {{ peca.cortada_por.get_full_name|default:peca.cortada_por.username|default:"—" }}
+        </p>
+        <p class="text-muted small mb-0 text-center">
+          <i class="bi bi-qr-code me-1"></i> Escaneie o QR Code para confirmar a montagem
+        </p>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
 </div>
 {% endif %}
 
@@ -132,12 +160,12 @@
           <tr>
             <td class="small text-muted">{{ reg.montada_em|date:"d/m/Y H:i" }}</td>
             <td class="small fw-semibold">
-              {% if reg.item.pedido %}{{ reg.item.pedido.numero }}{% else %}—{% endif %}
+              {% if reg.pedido %}{{ reg.pedido.numero }}{% else %}—{% endif %}
             </td>
-            <td class="small">{% if reg.item.pedido %}{{ reg.item.pedido.cliente.nome }}{% else %}—{% endif %}</td>
+            <td class="small">{% if reg.cliente %}{{ reg.cliente.nome }}{% else %}—{% endif %}</td>
             <td class="small">{{ reg.montada_por.get_full_name|default:reg.montada_por.username }}</td>
-            <td class="small">{{ reg.item.produto.nome }}</td>
-            <td class="small text-center">{{ reg.numero }}/{{ reg.item.quantidade }}</td>
+            <td class="small">{{ reg.produto.nome }}</td>
+            <td class="small text-center">{{ reg.unidade }}</td>
           </tr>
           {% endfor %}
         </tbody>

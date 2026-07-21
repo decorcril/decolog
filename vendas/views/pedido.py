@@ -267,6 +267,7 @@ def pedido_create(request):
     })
 
 
+
 @acesso_vendas
 def pedido_detail(request, pk):
     from vendas.models import UnidadePedido
@@ -286,8 +287,7 @@ def pedido_detail(request, pk):
     # ── Progresso de separação ──
     total_unidades     = UnidadePedido.objects.filter(item__pedido=pedido).count()
     separadas          = UnidadePedido.objects.filter(item__pedido=pedido, separada=True).count()
-    tudo_separado      = total_unidades > 0 and separadas >= total_unidades
-
+    tudo_separado       = separadas >= total_unidades
     return render(request, 'vendas/pedido_detail.html', {
         'pedido':          pedido,
         'status_choices':  Pedido.Status.choices,
