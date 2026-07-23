@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.urls import reverse
 from decimal import Decimal
+from collections import defaultdict
 from datetime import date
 import json
 
@@ -24,9 +25,47 @@ def _redirect_create(pedido_pk):
     return redirect(url)
 
 
-def _validar_estoque_chapas(chapas):
+def _ler_produtos_com_chapas(post):
+    """
+    Lê a lista de produtos cortados nesta sessão, cada um com a(s) chapa(s)
+    que consumiu. Um mesmo produto pode ter usado material de mais de uma
+    chapa (ex: um cubo que leva acrílico branco E acrílico cristal).
+    """
+    produtos = []
+    pi = 0
+    while f'produto_produto_{pi}' in post:
+        prod_id = post.get(f'produto_produto_{pi}')
+        qty     = post.get(f'produto_quantidade_{pi}')
+        if prod_id and qty:
+            chapas = []
+            ci = 0
+            while f'produto_chapa_{pi}_produto_{ci}' in post:
+                chapa_id  = post.get(f'produto_chapa_{pi}_produto_{ci}')
+                chapa_qty = post.get(f'produto_chapa_{pi}_quantidade_{ci}')
+                if chapa_id and chapa_qty:
+                    chapas.append((chapa_id, Decimal(chapa_qty)))
+                ci += 1
+            produtos.append({
+                'produto_id': prod_id,
+                'quantidade': Decimal(qty),
+                'chapas':     chapas,
+            })
+        pi += 1
+    return produtos
+
+
+def _agregar_chapas(produtos_com_chapas):
+    """Soma o total de cada tipo de chapa usado, somando entre todos os produtos da sessão."""
+    totais = defaultdict(Decimal)
+    for p in produtos_com_chapas:
+        for chapa_id, qty in p['chapas']:
+            totais[chapa_id] += qty
+    return list(totais.items())  # [(chapa_id, quantidade_total), ...]
+
+
+def _validar_estoque_chapas(chapas_totais):
     """Confere se há saldo suficiente de cada chapa antes de gravar qualquer coisa."""
-    for _, prod_id, quantidade in chapas:
+    for prod_id, quantidade in chapas_totais:
         produto = Produto.objects.get(pk=prod_id)
         disponivel = Estoque.objects.filter(
             produto=produto
@@ -62,17 +101,23 @@ def _baixar_chapa(produto, quantidade, data_parsed, pedido, registro, usuario):
         restante -= abate
 
 
-def _criar_pecas_cortadas(item_corte, produtos_saida, pedido, observacao, usuario):
-    """Cria um ProdutoCortado por unidade cortada de cada produto de saída da chapa."""
-    for prod_id_saida, qty_saida in produtos_saida:
-        produto_cortado = Produto.objects.get(pk=prod_id_saida)
-        for _ in range(int(qty_saida)):
+def _criar_pecas_cortadas(item_corte_referencia, produtos_com_chapas, pedido, observacao, usuario):
+    """
+    Cria um ProdutoCortado por unidade cortada de cada produto da sessão.
+    item_corte_referencia satisfaz a FK obrigatória (todo ProdutoCortado
+    precisa apontar pra um ItemCorte) — não implica que a peça veio
+    especificamente daquela chapa. A rastreabilidade de quais chapas a
+    sessão consumiu está no RegistroCorte (via item_corte.registro).
+    """
+    for p in produtos_com_chapas:
+        produto_cortado = Produto.objects.get(pk=p['produto_id'])
+        for _ in range(int(p['quantidade'])):
             ProdutoCortado.objects.create(
-                item_corte=item_corte,
-                produto=produto_cortado,
-                pedido=pedido,
-                cortada_por=usuario,
-                observacao=observacao,
+                item_corte  = item_corte_referencia,
+                produto     = produto_cortado,
+                pedido      = pedido,
+                cortada_por = usuario,
+                observacao  = observacao,
             )
 
 
@@ -138,40 +183,22 @@ def registro_corte_create(request):
             messages.error(request, 'A data não pode ser no futuro.')
             return _redirect_create(pedido_pk)
 
-        # ── Lê as chapas de entrada (uma linha por chapa usada) ──
-        chapas = []
-        i = 0
-        while f'entrada_produto_{i}' in request.POST:
-            prod_id = request.POST.get(f'entrada_produto_{i}')
-            qty     = request.POST.get(f'entrada_quantidade_{i}')
-            if prod_id and qty:
-                chapas.append((i, prod_id, Decimal(qty)))
-            i += 1
+        produtos_com_chapas = _ler_produtos_com_chapas(request.POST)
 
-        # ── Lê os produtos cortados de cada chapa ──
-        produtos_por_chapa = {}
-        for chapa_idx, _, _ in chapas:
-            produtos_por_chapa[chapa_idx] = []
-            j = 0
-            while f'saida_chapa_{chapa_idx}_produto_{j}' in request.POST:
-                prod_id = request.POST.get(f'saida_chapa_{chapa_idx}_produto_{j}')
-                qty     = request.POST.get(f'saida_chapa_{chapa_idx}_quantidade_{j}')
-                if prod_id and qty:
-                    produtos_por_chapa[chapa_idx].append((prod_id, Decimal(qty)))
-                j += 1
+        if not produtos_com_chapas:
+            messages.error(request, 'Informe ao menos um produto cortado.')
+            return _redirect_create(pedido_pk)
 
-        if not chapas:
+        if not any(p['chapas'] for p in produtos_com_chapas):
             messages.error(request, 'Informe ao menos uma chapa utilizada.')
             return _redirect_create(pedido_pk)
 
-        if not any(produtos_por_chapa.get(idx) for idx, _, _ in chapas):
-            messages.error(request, 'Informe ao menos um produto cortado.')
-            return _redirect_create(pedido_pk)
+        chapas_totais = _agregar_chapas(produtos_com_chapas)
 
         try:
             from django.db import transaction
             with transaction.atomic():
-                _validar_estoque_chapas(chapas)
+                _validar_estoque_chapas(chapas_totais)
 
                 registro = RegistroCorte.objects.create(
                     data=data_parsed,
@@ -180,24 +207,23 @@ def registro_corte_create(request):
                     pedido=pedido,
                 )
 
-                for chapa_idx, prod_id, quantidade in chapas:
-                    produto = Produto.objects.get(pk=prod_id)
+                item_corte_referencia = None
+                for prod_id, quantidade in chapas_totais:
+                    produto_chapa = Produto.objects.get(pk=prod_id)
 
-                    _baixar_chapa(produto, quantidade, data_parsed, pedido, registro, request.user)
+                    _baixar_chapa(produto_chapa, quantidade, data_parsed, pedido, registro, request.user)
 
                     item_corte = ItemCorte.objects.create(
                         registro=registro,
-                        chapa=produto,
+                        chapa=produto_chapa,
                         quantidade_chapa=quantidade,
                     )
+                    if item_corte_referencia is None:
+                        item_corte_referencia = item_corte
 
-                    _criar_pecas_cortadas(
-                        item_corte,
-                        produtos_por_chapa.get(chapa_idx, []),
-                        pedido,
-                        observacao,
-                        request.user,
-                    )
+                _criar_pecas_cortadas(
+                    item_corte_referencia, produtos_com_chapas, pedido, observacao, request.user,
+                )
 
                 if pedido:
                     _atualizar_status_pedido(pedido, request)
@@ -327,11 +353,13 @@ def registro_corte_delete(request, pk):
 @producao_ou_gerente
 def registro_corte_detail(request, pk):
     registro = get_object_or_404(
-        RegistroCorte.objects.prefetch_related(
-            'itens__chapa', 'itens__produtos_cortados__produto'
-        ).select_related('operador'),
+        RegistroCorte.objects.prefetch_related('itens__chapa').select_related('operador'),
         pk=pk
     )
+    produtos_cortados = ProdutoCortado.objects.filter(
+        item_corte__registro=registro,
+    ).select_related('produto').order_by('produto__nome', 'id')
+
     is_supervisor = (
         request.user.is_staff or
         request.user.groups.filter(
@@ -342,8 +370,9 @@ def registro_corte_detail(request, pk):
     page        = request.GET.get('page', '')
 
     return render(request, 'producao_corte/registro_corte_detail.html', {
-        'registro':      registro,
-        'is_supervisor': is_supervisor,
-        'operador_id':   operador_id,
-        'page':          page,
+        'registro':          registro,
+        'produtos_cortados': produtos_cortados,
+        'is_supervisor':      is_supervisor,
+        'operador_id':        operador_id,
+        'page':                page,
     })

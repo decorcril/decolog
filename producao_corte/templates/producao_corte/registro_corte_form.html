@@ -39,27 +39,27 @@
     {% endif %}
 
     {% if pedido %}
-<div class="card border-0 shadow-sm mb-3" style="border-left: 4px solid var(--bs-primary) !important;">
-  <div class="card-body py-3">
-    <p class="fw-semibold mb-1 text-primary">
-      <i class="bi me-1"></i> Pedido {{ pedido.numero }}
-    </p>
-    <p class="text-muted small mb-2">
-      {{ pedido.cliente.nome }} — {{ pedido.get_tipo_venda_display }}
-    </p>
-    <p class="text-muted small mb-1 fw-semibold">Falta cortar:</p>
-    <ul class="mb-0 small">
-      {% for p in pedido.progresso_corte %}
-        {% if not p.completo %}
-        <li class="text-danger">{{ p.falta }}x {{ p.nome }} — Falta cortar</li>
-        {% else %}
-        <li class="text-success"><i class="bi bi-check-circle-fill me-1"></i>{{ p.nome }} — cortado</li>
-        {% endif %}
-      {% endfor %}
-    </ul>
-  </div>
-</div>
-{% endif %}
+    <div class="card border-0 shadow-sm mb-3" style="border-left: 4px solid var(--bs-primary) !important;">
+      <div class="card-body py-3">
+        <p class="fw-semibold mb-1 text-primary">
+          <i class="bi me-1"></i> Pedido {{ pedido.numero }}
+        </p>
+        <p class="text-muted small mb-2">
+          {{ pedido.cliente.nome }} — {{ pedido.get_tipo_venda_display }}
+        </p>
+        <p class="text-muted small mb-1 fw-semibold">Falta cortar:</p>
+        <ul class="mb-0 small">
+          {% for p in pedido.progresso_corte %}
+            {% if not p.completo %}
+            <li class="text-danger">{{ p.falta }}x {{ p.nome }} — Falta cortar</li>
+            {% else %}
+            <li class="text-success"><i class="bi bi-check-circle-fill me-1"></i>{{ p.nome }} — cortado</li>
+            {% endif %}
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    {% endif %}
 
     <div class="card border-0 shadow-sm mb-3">
       <div class="card-body py-3">
@@ -69,15 +69,23 @@
       </div>
     </div>
 
+    {# ── Produtos cortados; cada um lista as chapas que consumiu ── #}
     <div class="card border-0 shadow-sm mb-3">
       <div class="card-body py-3">
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <span class="fw-semibold">Chapas e Produtos Cortados</span>
-          <button type="button" id="btn-add-chapa" class="btn btn-sm btn-primary">
-            + Chapa
+          <span class="fw-semibold">
+            Produtos Cortados
+            <span class="badge bg-secondary rounded-pill ms-1"><span id="produtos-count">0</span></span>
+          </span>
+          <button type="button" id="btn-add-produto" class="btn btn-sm btn-success">
+            + Produto
           </button>
         </div>
-        <div id="chapas-container"></div>
+        <div id="produtos-container"></div>
+        <p class="text-muted small mb-0 mt-2">
+          <i class="bi bi-info-circle me-1"></i>
+          Para cada produto, informe a(s) chapa(s) que ele consumiu — um produto pode usar mais de uma.
+        </p>
       </div>
     </div>
 

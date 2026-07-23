@@ -8,6 +8,19 @@ from estoque.models import Estoque
 from core.models import Local
 
 
+def _ficha_e_kit(ficha):
+    """
+    True se a ficha técnica é composta por outros produtos finais (ex: um
+    'trio' feito de peças já rastreadas individualmente), e não por matéria-
+    prima/insumo. Nesse caso, a peça-container não tem estoque próprio — só
+    os componentes movimentam.
+    """
+    return any(
+        componente.material.categoria == 'produto_final'
+        for componente in ficha.itens.select_related('material').all()
+    )
+
+
 def _local_com_saldo(produto, local_preferido, local_fallback, quantidade):
     """
     Usa o local preferido se ele tiver saldo suficiente do produto;
@@ -26,30 +39,39 @@ def _debitar_componentes_ficha(peca, pedido, usuario):
     Ao separar a peça, debita:
     1. A própria peça pronta (produto final) do estoque de peças montadas —
        fecha o ciclo aberto na montagem, onde ela deu entrada no Estoque.
-    2. Os materiais da ficha técnica, se existir (comportamento já existente,
+       PULADO quando a peça é um kit de outras peças finais (ex: "Trio de
+       cubos" feito de P, M, G) — nesse caso ela não tem estoque próprio.
+    2. Os materiais/peças da ficha técnica (comportamento já existente,
        mantido como estava).
     """
     fabrica_padrao  = Local.objects.filter(tipo='fabrica').first()
     local_preferido = pedido.local_saida if pedido else None
 
-    # ── 1. Saída da peça pronta (fecha o ciclo aberto na montagem) ──
-    local_peca = _local_com_saldo(peca.produto, local_preferido, fabrica_padrao, 1)
-    Movimentacao.objects.create(
-        produto    = peca.produto,
-        local      = local_peca,
-        tipo       = 'saida',
-        motivo     = 'venda',
-        quantidade = 1,
-        observacao = (
-            f'Separação — Pedido {pedido.numero} ({peca.produto.nome})'
-            if pedido else f'Separação — {peca.produto.nome}'
-        ),
-        usuario    = usuario,
-    )
-
-    # ── 2. Materiais da ficha técnica (comportamento já existente) ──
     try:
         ficha = peca.produto.ficha_tecnica
+        eh_kit = _ficha_e_kit(ficha)
+    except peca.produto.__class__.ficha_tecnica.RelatedObjectDoesNotExist:
+        ficha  = None
+        eh_kit = False
+
+    # ── 1. Saída da peça pronta (pulado se for kit) ──
+    if not eh_kit:
+        local_peca = _local_com_saldo(peca.produto, local_preferido, fabrica_padrao, 1)
+        Movimentacao.objects.create(
+            produto    = peca.produto,
+            local      = local_peca,
+            tipo       = 'saida',
+            motivo     = 'venda',
+            quantidade = 1,
+            observacao = (
+                f'Separação — Pedido {pedido.numero} ({peca.produto.nome})'
+                if pedido else f'Separação — {peca.produto.nome}'
+            ),
+            usuario    = usuario,
+        )
+
+    # ── 2. Materiais/peças da ficha técnica ──
+    if ficha:
         for componente in ficha.itens.select_related('material').all():
             local_usar = _local_com_saldo(
                 componente.material, local_preferido, fabrica_padrao, componente.quantidade
@@ -66,8 +88,6 @@ def _debitar_componentes_ficha(peca, pedido, usuario):
                 ),
                 usuario    = usuario,
             )
-    except peca.produto.__class__.ficha_tecnica.RelatedObjectDoesNotExist:
-        pass  # produto sem ficha técnica — já debitado no passo 1 acima
 
 
 @login_required
@@ -149,7 +169,8 @@ def confirmar_montagem(request, token):
         fabrica = Local.objects.filter(tipo='fabrica').first()
 
         try:
-            ficha = peca.produto.ficha_tecnica
+            ficha  = peca.produto.ficha_tecnica
+            eh_kit = _ficha_e_kit(ficha)
             for componente in ficha.itens.select_related('material').all():
                 Movimentacao.objects.create(
                     produto    = componente.material,
@@ -161,18 +182,19 @@ def confirmar_montagem(request, token):
                     usuario    = request.user,
                 )
         except peca.produto.__class__.ficha_tecnica.RelatedObjectDoesNotExist:
-            pass  # produto sem ficha técnica — nada a debitar/creditar aqui
+            eh_kit = False
 
-        # ── Dá entrada na peça pronta no estoque (fecha o ciclo com a separação) ──
-        Movimentacao.objects.create(
-            produto    = peca.produto,
-            local      = fabrica,
-            tipo       = 'entrada',
-            motivo     = 'producao',
-            quantidade = 1,
-            observacao = f'Montagem — {peca.produto.nome} (peça pronta)',
-            usuario    = request.user,
-        )
+        # ── Dá entrada na peça pronta no estoque (pulado se for kit) ──
+        if not eh_kit:
+            Movimentacao.objects.create(
+                produto    = peca.produto,
+                local      = fabrica,
+                tipo       = 'entrada',
+                motivo     = 'producao',
+                quantidade = 1,
+                observacao = f'Montagem — {peca.produto.nome} (peça pronta)',
+                usuario    = request.user,
+            )
 
         peca.status      = 'montado'
         peca.montada_por = request.user

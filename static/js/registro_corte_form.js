@@ -8,7 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const pedidoProdutosEl = document.getElementById('pedido-produtos');
   const PRODUTOS_PEDIDO = pedidoProdutosEl ? JSON.parse(pedidoProdutosEl.textContent) : [];
 
-  let chapaCount = 0;
+  const container   = document.getElementById('produtos-container');
+  const contadorEl   = document.getElementById('produtos-count');
 
   function initTomSelect(el, lista) {
     const options = lista.map(p => ({
@@ -29,95 +30,136 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function addChapa() {
-    const ci = chapaCount++;
-    const chapaDiv = document.createElement('div');
-    chapaDiv.className = 'chapa-block mb-3 border rounded-3 p-3';
-    chapaDiv.dataset.chapaIdx = ci;
+  // ── Renumera tudo após qualquer inclusão/remoção, evitando índices "com
+  //     buraco" que fariam o servidor perder dados silenciosamente ──
+  function renumerar() {
+    const produtos = container.querySelectorAll('.produto-block');
 
-    chapaDiv.innerHTML = `
+    produtos.forEach((produtoDiv, pi) => {
+      produtoDiv.querySelector('.produto-numero').textContent = pi + 1;
+      produtoDiv.querySelector('.produto-select').name = `produto_produto_${pi}`;
+      produtoDiv.querySelector('.produto-qtd').name    = `produto_quantidade_${pi}`;
+
+      const chapasList = produtoDiv.querySelector('.chapas-list');
+      const linhas = chapasList.querySelectorAll('.chapa-linha');
+
+      linhas.forEach((linha, ci) => {
+        linha.querySelector('.chapa-select').name = `produto_chapa_${pi}_produto_${ci}`;
+        linha.querySelector('.chapa-qtd').name    = `produto_chapa_${pi}_quantidade_${ci}`;
+      });
+    });
+
+    contadorEl.textContent = produtos.length;
+  }
+
+  function addProduto(produtoId = null, quantidade = null) {
+    const produtoDiv = document.createElement('div');
+    produtoDiv.className = 'produto-block mb-3 border rounded-3 p-3';
+
+    produtoDiv.innerHTML = `
       <div class="d-flex align-items-center gap-2 mb-3">
-        <span class="text-muted fw-semibold small text-uppercase">Chapa</span>
+        <span class="badge bg-success rounded-pill">
+          Produto <span class="produto-numero">?</span>
+        </span>
         <div class="col">
-          <select id="chapa-select-${ci}" name="entrada_produto_${ci}" required></select>
+          <select class="produto-select" required></select>
         </div>
         <div style="width:90px">
-          <input type="number" name="entrada_quantidade_${ci}"
-                 class="form-control" placeholder="Qtd" min="1" step="1" required>
+          <input type="number" class="form-control produto-qtd" placeholder="Qtd" min="1" step="1"
+                 value="${quantidade || ''}" required>
         </div>
-        <button type="button" class="btn btn-outline-danger btn-sm"
-                onclick="this.closest('.chapa-block').remove()">✕</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm btn-duplicar-produto" title="Duplicar este produto">
+          <i class="bi bi-files"></i>
+        </button>
+        <button type="button" class="btn btn-outline-danger btn-sm btn-remover-produto" title="Remover produto">✕</button>
       </div>
 
-      <div class="ps-3 border-start border-2 border-success-subtle">
-        <p class="text-muted small fw-semibold mb-2">PRODUTOS CORTADOS DESTA CHAPA</p>
-        <div class="saidas-list" data-chapa-idx="${ci}" data-prod-count="0"></div>
-        <button type="button" class="btn btn-sm btn-outline-success mt-1"
-                onclick="window.addProduto(this, ${ci})">+ produto</button>
+      <div class="ps-3 border-start border-2 border-primary-subtle">
+        <p class="text-muted small fw-semibold mb-2">CHAPAS USADAS NESTE PRODUTO</p>
+        <div class="chapas-list"></div>
+        <button type="button" class="btn btn-sm btn-outline-primary mt-1 btn-add-chapa">+ chapa</button>
       </div>
     `;
 
-    document.getElementById('chapas-container').appendChild(chapaDiv);
-    initTomSelect(document.getElementById(`chapa-select-${ci}`), MATERIAIS);
+    container.appendChild(produtoDiv);
+    const ts = initTomSelect(produtoDiv.querySelector('.produto-select'), PRODUTOS_FINAIS);
+    if (produtoId) ts.setValue(String(produtoId));
 
-    return chapaDiv;
+    produtoDiv.querySelector('.btn-add-chapa').addEventListener('click', () => addChapa(produtoDiv));
+    produtoDiv.querySelector('.btn-remover-produto').addEventListener('click', () => {
+      produtoDiv.remove();
+      renumerar();
+    });
+    produtoDiv.querySelector('.btn-duplicar-produto').addEventListener('click', () => duplicarProduto(produtoDiv));
+
+    renumerar();
+    return produtoDiv;
   }
 
-  function addProduto(btn, chapaIdx, produtoId = null, quantidade = null) {
-    const lista = btn.previousElementSibling;
-    const pi    = parseInt(lista.dataset.prodCount);
-    lista.dataset.prodCount = pi + 1;
+  function addChapa(produtoDiv, chapaId = null, quantidade = null) {
+    const lista = produtoDiv.querySelector('.chapas-list');
 
     const div = document.createElement('div');
-    div.className = 'row g-2 mb-2 align-items-center';
-    const selectId = `produto-select-${chapaIdx}-${pi}`;
-
+    div.className = 'row g-2 mb-2 align-items-center chapa-linha';
     div.innerHTML = `
       <div class="col">
-        <select id="${selectId}" name="saida_chapa_${chapaIdx}_produto_${pi}" required></select>
+        <select class="chapa-select" required></select>
       </div>
       <div class="col-3">
-        <input type="number" name="saida_chapa_${chapaIdx}_quantidade_${pi}"
-               class="form-control" placeholder="Qtd" min="1" step="1"
+        <input type="number" class="form-control chapa-qtd" placeholder="Qtd" min="1" step="1"
                value="${quantidade || ''}" required>
       </div>
       <div class="col-auto">
-        <button type="button" class="btn btn-outline-danger btn-sm"
-                onclick="this.closest('.row').remove()">✕</button>
+        <button type="button" class="btn btn-outline-danger btn-sm btn-remover-chapa">✕</button>
       </div>
     `;
     lista.appendChild(div);
 
-    const ts = initTomSelect(document.getElementById(selectId), PRODUTOS_FINAIS);
+    const ts = initTomSelect(div.querySelector('.chapa-select'), MATERIAIS);
+    if (chapaId) ts.setValue(String(chapaId));
 
-    // Pré-seleciona o produto se fornecido
-    if (produtoId) {
-      ts.setValue(String(produtoId));
-    }
+    div.querySelector('.btn-remover-chapa').addEventListener('click', () => {
+      div.remove();
+      renumerar();
+    });
+
+    renumerar();
   }
 
-  window.addProduto = addProduto;
-  document.getElementById('btn-add-chapa').addEventListener('click', addChapa);
+  // ── Duplica um produto inteiro (seleção + chapas), útil quando o mesmo
+  //     produto se repete no mesmo corte ──
+  function duplicarProduto(produtoDivOriginal) {
+    const tsOriginal = produtoDivOriginal.querySelector('.produto-select').tomselect;
+    const qtdOriginal = produtoDivOriginal.querySelector('.produto-qtd').value;
 
-  // ── Pré-preenche produtos do pedido ──
+    const novoProduto = addProduto(
+      tsOriginal ? tsOriginal.getValue() : null,
+      qtdOriginal
+    );
+
+    const linhasOriginais = produtoDivOriginal.querySelectorAll('.chapa-linha');
+    linhasOriginais.forEach(linha => {
+      const tsChapa = linha.querySelector('.chapa-select').tomselect;
+      const qtd     = linha.querySelector('.chapa-qtd').value;
+      addChapa(novoProduto, tsChapa ? tsChapa.getValue() : null, qtd);
+    });
+
+    renumerar();
+  }
+
+  document.getElementById('btn-add-produto').addEventListener('click', () => {
+    const produtoDiv = addProduto();
+    addChapa(produtoDiv);
+  });
+
+  // ── Pré-preenche produtos do pedido, cada um já com uma linha de chapa vazia ──
   if (PRODUTOS_PEDIDO.length > 0) {
-    // Cria uma chapa por padrão e preenche os produtos do pedido nela
-    const chapaDiv = addChapa();
-    const ci       = parseInt(chapaDiv.dataset.chapaIdx);
-    const btn      = chapaDiv.querySelector('.btn-outline-success');
-
-    // Remove o produto vazio que foi adicionado automaticamente pelo addChapa
-    chapaDiv.querySelector('.saidas-list').innerHTML = '';
-    chapaDiv.querySelector('.saidas-list').dataset.prodCount = '0';
-
-    // Adiciona um produto por item do pedido
     PRODUTOS_PEDIDO.forEach(item => {
-      addProduto(btn, ci, item.id, item.quantidade);
+      const produtoDiv = addProduto(item.id, item.quantidade);
+      addChapa(produtoDiv);
     });
   } else {
-    // Corte avulso — começa com uma chapa vazia e um produto vazio
-    const chapaDiv = addChapa();
-    const ci       = parseInt(chapaDiv.dataset.chapaIdx);
-    addProduto(chapaDiv.querySelector('.btn-outline-success'), ci);
+    const produtoDiv = addProduto();
+    addChapa(produtoDiv);
   }
 });

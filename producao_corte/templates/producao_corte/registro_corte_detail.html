@@ -68,32 +68,42 @@
 
       </div>
     </div>
+
+    {# ── Chapas utilizadas (lista independente, totais da sessão) ── #}
+    <div class="card mt-3">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-secondary small mb-3">CHAPAS UTILIZADAS</p>
+        {% for item in registro.itens.all %}
+        <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light">
+          <span class="small">
+            <i class="bi bi-layers me-1 text-info"></i>{{ item.chapa.nome }}
+          </span>
+          <span class="small fw-semibold">{{ item.quantidade_chapa|floatformat:"-2" }}</span>
+        </div>
+        {% empty %}
+        <span class="text-muted small">Nenhuma chapa registrada.</span>
+        {% endfor %}
+      </div>
+    </div>
   </div>
 
   <div class="col-lg-8">
     <div class="card">
       <div class="card-body p-4">
-        <p class="fw-semibold text-secondary small mb-3">CHAPAS E PRODUTOS CORTADOS</p>
+        <p class="fw-semibold text-secondary small mb-3">
+          PRODUTOS CORTADOS
+          <span class="badge bg-secondary rounded-pill ms-1">{{ produtos_cortados|length }}</span>
+        </p>
 
-        {% for item in registro.itens.all %}
-        <div class="mb-4">
-          <div class="fw-semibold mb-2">
-            <i class="bi bi-layers me-1 text-info"></i>
-            {{ item.quantidade_chapa|floatformat:"-2" }}× {{ item.chapa.nome }}
-          </div>
-          <div class="ps-3 border-start border-2 border-success-subtle">
-            {% for pc in item.produtos_cortados.all %}
-            <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light">
-              <span class="small">{{ pc.produto.nome }}</span>
-              <span class="badge bg-secondary bg-opacity-10 text-secondary small">
-                {{ pc.get_status_display }}
-              </span>
-            </div>
-            {% empty %}
-            <span class="text-muted small">Nenhum produto cortado.</span>
-            {% endfor %}
-          </div>
+        {% for pc in produtos_cortados %}
+        <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light">
+          <span class="small">{{ pc.produto.nome }}</span>
+          <span class="badge bg-secondary bg-opacity-10 text-secondary small">
+            {{ pc.get_status_display }}
+          </span>
         </div>
+        {% empty %}
+        <span class="text-muted small">Nenhum produto cortado.</span>
         {% endfor %}
 
       </div>

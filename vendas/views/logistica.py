@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.core.paginator import Paginator
@@ -103,19 +104,31 @@ def _todos_insumos(pedido):
     return True
 
 
-def _processar_uso_estoque(pedido, local, usuario):
+def _processar_uso_estoque(pedido, local, usuario, itens_status=None):
     """
-    Efetiva o uso do estoque para um pedido em AGUARD_PRODUCAO com tudo_ok=True:
+    Efetiva o uso do estoque para um pedido em AGUARD_PRODUCAO:
     - Produto final (peça avulsa já montada): vincula a peça ao pedido e marca
       como separada (já está pronta, veio direto do estoque).
     - Insumo/composto: debita de fato o material via Movimentacao, igual ao
       fluxo normal de separação.
+
+    Se itens_status for informado (retorno de _verificar_estoque_pedido),
+    processa só os itens com ok=True — os demais seguem o fluxo normal de
+    corte/montagem, permitindo cobrir pedidos com estoque parcial (um item
+    disponível, outro precisando ser produzido). Sem esse parâmetro, processa
+    todos os itens do pedido (uso via botão manual, onde tudo_ok já é True).
     """
     from producao_corte.models import ProdutoCortado
 
     agora = timezone.now()
+    ok_por_nome = (
+        {s['nome']: s['ok'] for s in itens_status}
+        if itens_status is not None else None
+    )
 
     for item in pedido.itens.select_related('produto').all():
+        if ok_por_nome is not None and not ok_por_nome.get(item.produto.nome, False):
+            continue  # sem estoque suficiente para este item — segue fluxo normal
 
         if item.produto.categoria == 'produto_final':
             pecas = ProdutoCortado.objects.filter(
@@ -157,6 +170,30 @@ def _processar_uso_estoque(pedido, local, usuario):
                 )
 
 
+def reservar_estoque_parcial(pedido):
+    """
+    Chamada quando o pedido entra em AGUARD_PRODUCAO (ver Pedido.sync_status).
+    Reserva automaticamente, item por item, o que já existir pronto no
+    estoque — mesmo que só parte dos produtos do pedido esteja disponível.
+    O restante segue o fluxo normal de corte/montagem.
+
+    Usa pedido.criado_por como responsável pelas movimentações automáticas,
+    já que não há um usuário confirmando essa ação manualmente.
+    """
+    itens_status, tudo_ok, local = _verificar_estoque_pedido(pedido)
+
+    if not any(s['ok'] for s in itens_status):
+        return  # nada disponível ainda — segue fluxo normal, sem chamadas extras
+
+    with transaction.atomic():
+        _processar_uso_estoque(pedido, local, pedido.criado_por, itens_status=itens_status)
+
+        pedido.refresh_from_db()
+        if tudo_ok and pedido.itens.exists():
+            pedido.status = Pedido.Status.PICKING
+            pedido.save(update_fields=['status', 'atualizado_em'])
+
+
 @logistica_ou_gerente
 def logistica_list(request):
 
@@ -170,7 +207,6 @@ def logistica_list(request):
             _, tudo_ok, local = _verificar_estoque_pedido(pedido)
 
             if tudo_ok:
-                from django.db import transaction
                 with transaction.atomic():
                     _processar_uso_estoque(pedido, local, request.user)
                     pedido.status = Pedido.Status.PICKING

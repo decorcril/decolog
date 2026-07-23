@@ -254,7 +254,6 @@ class Pedido(models.Model):
             if new_status == self.Status.AGUARD_PRODUCAO:
                 _criar_unidades_insumos(self)
 
-
 class ItemPedido(models.Model):
     pedido         = models.ForeignKey(Pedido, on_delete=models.CASCADE, related_name='itens', verbose_name='Pedido')
     produto        = models.ForeignKey(Produto, on_delete=models.PROTECT, related_name='itens_pedido', verbose_name='Produto')
