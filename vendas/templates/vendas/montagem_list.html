@@ -84,7 +84,11 @@
             <span class="badge bg-secondary bg-opacity-10 text-secondary">Avulsa</span>
           </div>
           <p class="text-muted small mb-3">
-            Cortada por {{ peca.cortada_por.get_full_name|default:peca.cortada_por.username|default:"—" }}
+            {% if peca.cortada_por %}
+            Cortada por {{ peca.cortada_por.get_full_name|default:peca.cortada_por.username }}
+            {% else %}
+            Cortada por —
+            {% endif %}
           </p>
           <p class="text-muted small mb-0 text-center">
             <i class="bi bi-qr-code me-1"></i> Escaneie o QR Code para confirmar a montagem
