@@ -87,6 +87,7 @@
       </div>
 
       {# Endereço #}
+      {# Endereço #}
       <div class="card mb-4">
         <div class="card-body p-4">
           <p class="fw-semibold text-secondary small mb-3">ENDEREÇO</p>
@@ -96,66 +97,51 @@
               {{ form.pais }}
             </div>
 
-            {# Campos BR #}
+            {# Campos exclusivos BR #}
             <div id="campos_br" class="col-12 row g-3 m-0 p-0">
-              <div class="col-md-3">
+              <div class="col-md-4">
                 <label class="form-label fw-semibold text-secondary small">CEP</label>
                 {{ form.cep }}
               </div>
-              <div class="col-md-3">
+              <div class="col-md-8">
                 <label class="form-label fw-semibold text-secondary small">ESTADO</label>
                 {{ form.estado }}
               </div>
-              <div class="col-md-6">
-                <label class="form-label fw-semibold text-secondary small">CIDADE</label>
-                {{ form.cidade }}
-              </div>
-              <div class="col-md-8">
-                <label class="form-label fw-semibold text-secondary small">LOGRADOURO</label>
-                {{ form.logradouro }}
-              </div>
-              <div class="col-md-2">
-                <label class="form-label fw-semibold text-secondary small">NÚMERO</label>
-                {{ form.numero }}
-              </div>
-              <div class="col-md-2">
-                <label class="form-label fw-semibold text-secondary small">COMPLEMENTO</label>
-                {{ form.complemento }}
-              </div>
-              <div class="col-md-4">
-                <label class="form-label fw-semibold text-secondary small">BAIRRO</label>
-                {{ form.bairro }}
-              </div>
             </div>
 
-            {# Campos internacionais #}
+            {# Campos exclusivos internacionais #}
             <div id="campos_intl" class="col-12 row g-3 m-0 p-0" style="display:none!important">
-              <div class="col-md-4">
+              <div class="col-md-6">
                 <label class="form-label fw-semibold text-secondary small">CÓDIGO POSTAL / ZIP</label>
                 {{ form.codigo_postal }}
               </div>
-              <div class="col-md-4">
+              <div class="col-md-6">
                 <label class="form-label fw-semibold text-secondary small">ESTADO / PROVINCE / REGION</label>
                 {{ form.regiao }}
               </div>
-              <div class="col-md-4">
-                <label class="form-label fw-semibold text-secondary small">CIDADE / CITY</label>
-                {{ form.cidade }}
-              </div>
-              <div class="col-md-8">
-                <label class="form-label fw-semibold text-secondary small">LOGRADOURO / STREET</label>
-                {{ form.logradouro }}
-              </div>
-              <div class="col-md-2">
-                <label class="form-label fw-semibold text-secondary small">NÚMERO</label>
-                {{ form.numero }}
-              </div>
-              <div class="col-md-2">
-                <label class="form-label fw-semibold text-secondary small">COMPLEMENTO / SUITE</label>
-                {{ form.complemento }}
-              </div>
             </div>
 
+            {# Campos universais — sempre visíveis, uma única vez #}
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-secondary small">CIDADE / CITY</label>
+              {{ form.cidade }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-secondary small">BAIRRO / DISTRICT</label>
+              {{ form.bairro }}
+            </div>
+            <div class="col-md-8">
+              <label class="form-label fw-semibold text-secondary small">LOGRADOURO / STREET</label>
+              {{ form.logradouro }}
+            </div>
+            <div class="col-md-2">
+              <label class="form-label fw-semibold text-secondary small">NÚMERO</label>
+              {{ form.numero }}
+            </div>
+            <div class="col-md-2">
+              <label class="form-label fw-semibold text-secondary small">COMPLEMENTO / SUITE</label>
+              {{ form.complemento }}
+            </div>
           </div>
         </div>
       </div>

@@ -148,14 +148,19 @@
             <p class="fw-semibold mb-0">{{ cliente.cidade }}</p>
           </div>
           {% endif %}
-          {% if cliente.logradouro %}
+          {% if cliente.logradouro or cliente.numero or cliente.complemento or cliente.bairro %}
           <div class="col-12">
             <p class="text-muted small mb-1">ENDEREÇO</p>
             <p class="fw-semibold mb-0">
-              {{ cliente.logradouro }}{% if cliente.numero %}, {{ cliente.numero }}{% endif %}
+              {{ cliente.logradouro|default:"—" }}{% if cliente.numero %}, {{ cliente.numero }}{% endif %}
               {% if cliente.complemento %} — {{ cliente.complemento }}{% endif %}
               {% if cliente.bairro %} — {{ cliente.bairro }}{% endif %}
             </p>
+          </div>
+          {% else %}
+          <div class="col-12">
+            <p class="text-muted small mb-1">ENDEREÇO</p>
+            <p class="text-muted mb-0 fst-italic">Não cadastrado</p>
           </div>
           {% endif %}
         </div>
