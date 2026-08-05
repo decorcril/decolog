@@ -8,7 +8,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
     <h4 class="fw-bold mb-1">Histórico de Montagem</h4>
-    <p class="text-muted small mb-0">{{ page_obj.paginator.count }} peça{{ page_obj.paginator.count|pluralize }} montada{{ page_obj.paginator.count|pluralize }}</p>
+    <p class="text-muted small mb-0">{{ page_obj.paginator.count }} registro{{ page_obj.paginator.count|pluralize }} de montagem</p>
   </div>
 </div>
 
@@ -21,6 +21,7 @@
           <tr>
             <th>Data</th>
             <th>Produto</th>
+            <th class="text-center">Qtd</th>
             <th>Pedido</th>
             <th>Cliente</th>
             <th>Operador</th>
@@ -29,8 +30,9 @@
         <tbody>
           {% for reg in registros %}
           <tr>
-            <td class="small text-muted">{{ reg.montada_em|date:"d/m/Y H:i" }}</td>
+            <td class="small text-muted">{{ reg.data|date:"d/m/Y H:i" }}</td>
             <td class="small fw-semibold">{{ reg.produto.nome }}</td>
+            <td class="small text-center">{{ reg.quantidade }}</td>
             <td class="small fw-semibold">
               {% if reg.pedido %}
                 {% if is_gerente or is_financeiro %}
@@ -42,8 +44,8 @@
                 {% endif %}
               {% else %}—{% endif %}
             </td>
-            <td class="small">{% if reg.pedido %}{{ reg.pedido.cliente.nome }}{% else %}—{% endif %}</td>
-            <td class="small">{{ reg.montada_por.get_full_name|default:reg.montada_por.username }}</td>
+            <td class="small">{% if reg.cliente %}{{ reg.cliente.nome }}{% else %}—{% endif %}</td>
+            <td class="small">{{ reg.operador.get_full_name|default:reg.operador.username }}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -56,7 +58,7 @@
 <div class="d-flex justify-content-between align-items-center mt-4">
   <span class="text-muted small">
     Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
-    — {{ page_obj.paginator.count }} peça(s)
+    — {{ page_obj.paginator.count }} registro(s)
   </span>
   <nav>
     <ul class="pagination pagination-sm mb-0">

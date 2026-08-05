@@ -1,3 +1,4 @@
+from django.utils import timezone
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.core.paginator import Paginator
@@ -251,14 +252,46 @@ def producao_detail(request, pk):
 @montagem_ou_gerente
 def historico_montagem(request):
     from producao_corte.models import ProdutoCortado
-    
-    registros = ProdutoCortado.objects.filter(
-        status='montado'
-    ).select_related(
-        'montada_por', 'produto', 'pedido__cliente'
-    ).order_by('-montada_em')
 
-    paginator = Paginator(registros, 20)
+    historico = []
+
+    # ── Peças montadas via QR code (avulsas ou vinculadas a pedido) ──
+    # NOTA: usa montada_em (fato histórico) em vez de status='montado',
+    # porque o status avança pra 'separado'/'enviado' depois — filtrar
+    # por status atual faria peças já separadas sumirem do histórico.
+    pecas = ProdutoCortado.objects.filter(
+        montada_em__isnull=False
+    ).select_related('montada_por', 'produto', 'pedido__cliente')
+
+    for peca in pecas:
+        historico.append({
+            'data':       peca.montada_em,
+            'produto':    peca.produto,
+            'quantidade': 1,
+            'pedido':     peca.pedido,
+            'cliente':    peca.pedido.cliente if peca.pedido else None,
+            'operador':   peca.montada_por,
+        })
+
+    # ── Produção registrada manualmente para pedidos (RegistroMontagem/ItemMontagem) ──
+    itens = ItemMontagem.objects.select_related(
+        'registro', 'registro__operador', 'registro__pedido__cliente', 'produto'
+    )
+
+    for item in itens:
+        registro = item.registro
+        historico.append({
+            'data':       registro.criado_em,
+            'produto':    item.produto,
+            'quantidade': item.quantidade,
+            'pedido':     registro.pedido,
+            'cliente':    registro.pedido.cliente if registro.pedido else None,
+            'operador':   registro.operador,
+        })
+
+    historico.sort(key=lambda r: r['data'] or timezone.now(), reverse=True)
+
+    paginator = Paginator(historico, 20)
     page_obj  = paginator.get_page(request.GET.get('page', 1))
 
     return render(request, 'montagem/historico.html', {
