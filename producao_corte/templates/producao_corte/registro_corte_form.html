@@ -11,8 +11,8 @@
 <div class="container-fluid px-3 py-3" style="max-width: 800px;">
 
   <div class="d-flex align-items-center mb-3 gap-2">
-    <a href="{% if pedido %}{% url 'vendas:laser_list' %}{% else %}{% url 'producao_corte:list' %}{% endif %}"
-       class="btn btn-sm btn-outline-secondary">←</a>
+    <a href="{% url 'producao_corte:list' %}"
+   class="btn btn-sm btn-outline-secondary">←</a>
     <h5 class="mb-0 fw-bold">
       {% if pedido %}Registro de Corte — Pedido {{ pedido.numero }}{% else %}Registro de Corte{% endif %}
     </h5>

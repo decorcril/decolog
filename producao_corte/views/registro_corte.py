@@ -227,7 +227,6 @@ def registro_corte_create(request):
 
                 if pedido:
                     _atualizar_status_pedido(pedido, request)
-                    return redirect('vendas:laser_list')
 
                 messages.success(request, 'Registro de corte salvo com sucesso!')
                 return redirect('producao_corte:list')

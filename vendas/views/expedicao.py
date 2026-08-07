@@ -23,6 +23,8 @@ def expedir_pedido(request, token):
 
     # ── Confirmação ──
     if request.method == 'POST':
+        from producao_corte.models import ProdutoCortado
+
         if pedido.transportadora == 'Retirada na Loja':
             pedido.status = Pedido.Status.DELIVERED
             pedido.save(update_fields=['status', 'atualizado_em'])
@@ -31,6 +33,11 @@ def expedir_pedido(request, token):
             pedido.status = Pedido.Status.SHIPPED
             pedido.save(update_fields=['status', 'atualizado_em'])
             messages.success(request, f'Envio do pedido {pedido.numero} confirmado!')
+
+        # Avança as peças cortadas do pedido de 'separado' para 'enviado'
+        ProdutoCortado.objects.filter(
+            pedido=pedido, status='separado'
+        ).update(status='enviado')
 
         return redirect('vendas:expedir_pedido', token=token)
 

@@ -443,6 +443,13 @@ def pedido_status(request, pk):
 
                 pedido.status = novo_status
                 pedido.save(update_fields=['status', 'atualizado_em'])
+
+                # Avança as peças cortadas do pedido de 'separado' para 'enviado'
+                from producao_corte.models import ProdutoCortado
+                ProdutoCortado.objects.filter(
+                    pedido=pedido, status='separado'
+                ).update(status='enviado')
+
                 return redirect('vendas:pedido_detail', pk=pedido.pk)
 
             # ── Status normal ──
@@ -454,7 +461,6 @@ def pedido_status(request, pk):
             messages.error(request, 'Status inválido.')
 
     return redirect('vendas:pedido_detail', pk=pedido.pk)
-
 
 @acesso_vendas
 def item_remove(request, pk, item_pk):
