@@ -1,0 +1,283 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load core_extras %}
+
+{% block title %}{{ conta.descricao }} — Decolog{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">{{ conta.descricao }}</h4>
+    <span class="badge
+      {% if conta.status == 'aberto' %}bg-secondary bg-opacity-10 text-secondary
+      {% elif conta.status == 'parcial' %}bg-info bg-opacity-10 text-info
+      {% elif conta.status == 'pago' %}bg-success bg-opacity-10 text-success
+      {% elif conta.status == 'vencido' %}bg-danger bg-opacity-10 text-danger
+      {% elif conta.status == 'cancelado' %}bg-dark bg-opacity-10 text-dark
+      {% endif %}">
+      {{ conta.get_status_display }}
+    </span>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'financeiro:contas_pagar_edit' conta.pk %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-pencil me-1"></i> Editar
+    </a>
+
+    <form method="post" action="{% url 'financeiro:contas_pagar_cancelar' conta.pk %}"
+          onsubmit="return confirm('Cancelar esta conta? As parcelas ainda não pagas serão marcadas como canceladas.');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-warning btn-sm">
+        <i class="bi bi-x-lg me-1"></i> Cancelar
+      </button>
+    </form>
+
+    <form method="post" action="{% url 'financeiro:contas_pagar_delete' conta.pk %}"
+          onsubmit="return confirm('Excluir esta conta PERMANENTEMENTE — incluindo parcelas e pagamentos já registrados? Essa ação não pode ser desfeita.');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-danger btn-sm">
+        <i class="bi bi-trash me-1"></i> Excluir
+      </button>
+    </form>
+
+    <a href="{% url 'financeiro:contas_pagar_list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i> Voltar
+    </a>
+  </div>
+</div>
+
+<div class="row g-3">
+
+  {# Coluna esquerda: dados da conta #}
+<div class="col-lg-5">
+  <div class="card mb-3">
+    <div class="card-body p-4">
+      <h6 class="fw-bold mb-3">Dados</h6>
+
+      <div class="d-flex justify-content-between mb-2">
+        <span class="text-muted small">Fornecedor</span>
+        <span class="fw-semibold">{{ conta.fornecedor.nome }}</span>
+      </div>
+      {% if conta.categoria %}
+      <div class="d-flex justify-content-between mb-2">
+        <span class="text-muted small">Categoria</span>
+        <span class="fw-semibold">{{ conta.get_categoria_display }}</span>
+      </div>
+      {% endif %}
+      {% if conta.numero_documento %}
+      <div class="d-flex justify-content-between mb-2">
+        <span class="text-muted small">Documento</span>
+        <span class="fw-semibold">{{ conta.numero_documento }}</span>
+      </div>
+      {% endif %}
+      <div class="d-flex justify-content-between mb-2">
+        <span class="text-muted small">Competência</span>
+        <span class="fw-semibold">{{ conta.competencia|date:"m/Y" }}</span>
+      </div>
+      <div class="d-flex justify-content-between mb-2">
+        <span class="text-muted small">Emissão</span>
+        <span class="fw-semibold">{{ conta.data_emissao|date:"d/m/Y" }}</span>
+      </div>
+      <div class="d-flex justify-content-between mb-2">
+        <span class="text-muted small">Parcelas</span>
+        <span class="fw-semibold">{{ parcelas|length }}x</span>
+      </div>
+
+      <hr>
+
+      <div class="d-flex justify-content-between mb-2">
+        <span class="text-muted small">Valor Nominal (Nota Fiscal)</span>
+        <span class="fw-bold">{{ conta.valor_total|moeda }}</span>
+      </div>
+      <div class="d-flex justify-content-between mb-2">
+        <span class="text-muted small">Valor Nominal Pago</span>
+        <span class="fw-semibold text-success">{{ conta.valor_pago|moeda }}</span>
+      </div>
+      {% if conta.valor_juros_multa > 0 %}
+      <div class="d-flex justify-content-between mb-2">
+        <span class="text-muted small">Juros/Multa Pagos</span>
+        <span class="fw-semibold text-danger">{{ conta.valor_juros_multa|moeda }}</span>
+      </div>
+      <div class="d-flex justify-content-between mb-2">
+        <span class="text-muted small">Valor Total Pago (Desembolso)</span>
+        <span class="fw-bold">{{ conta.valor_total_pago|moeda }}</span>
+      </div>
+      {% endif %}
+      <div class="d-flex justify-content-between mb-0">
+        <span class="text-muted small">Saldo Devedor</span>
+        <span class="fw-bold {% if conta.saldo_devedor > 0 %}text-danger{% else %}text-success{% endif %}">
+          {{ conta.saldo_devedor|moeda }}
+        </span>
+      </div>
+
+      {% if conta.observacoes %}
+      <hr>
+      <span class="text-muted small d-block mb-1">Observações</span>
+      <p class="mb-0 small">{{ conta.observacoes }}</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+  {# Coluna direita: parcelas #}
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-body p-4">
+        <h6 class="fw-bold mb-3">Parcelas</h6>
+
+        {% if parcelas %}
+        <div class="accordion" id="parcelasAccordion">
+          {% for parcela in parcelas %}
+          <div class="accordion-item mb-2 border rounded">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button"
+                      data-bs-toggle="collapse" data-bs-target="#parcela-{{ parcela.pk }}">
+                <div class="d-flex justify-content-between align-items-center w-100 me-3">
+                  <span>
+                    <strong>{{ parcela.numero }}/{{ parcelas|length }}</strong>
+                    <span class="text-muted small ms-2">venc. {{ parcela.vencimento|date:"d/m/Y" }}</span>
+                  </span>
+                  <span class="d-flex align-items-center gap-2">
+                    <span class="fw-semibold">{{ parcela.valor|moeda }}</span>
+                    <span class="badge
+                      {% if parcela.status_efetivo == 'aberto' %}bg-secondary bg-opacity-10 text-secondary
+                      {% elif parcela.status_efetivo == 'parcial' %}bg-info bg-opacity-10 text-info
+                      {% elif parcela.status_efetivo == 'pago' %}bg-success bg-opacity-10 text-success
+                      {% elif parcela.status_efetivo == 'vencido' %}bg-danger bg-opacity-10 text-danger
+                      {% elif parcela.status_efetivo == 'cancelado' %}bg-dark bg-opacity-10 text-dark
+                      {% endif %}">
+                      {{ parcela.get_status_efetivo_display }}
+                    </span>
+                  </span>
+                </div>
+              </button>
+            </h2>
+            <div id="parcela-{{ parcela.pk }}" class="accordion-collapse collapse" data-bs-parent="#parcelasAccordion">
+              <div class="accordion-body">
+
+                <div class="d-flex justify-content-between mb-1">
+                  <span class="text-muted small">Pago (nominal)</span>
+                  <span class="fw-semibold text-success">{{ parcela.valor_pago|moeda }}</span>
+                </div>
+                {% if parcela.valor_juros_multa > 0 %}
+                <div class="d-flex justify-content-between mb-1">
+                  <span class="text-muted small">Juros/Multa pagos</span>
+                  <span class="fw-semibold text-danger">{{ parcela.valor_juros_multa|moeda }}</span>
+                </div>
+                {% endif %}
+                <div class="d-flex justify-content-between mb-3">
+                  <span class="text-muted small">Saldo</span>
+                  <span class="fw-semibold {% if parcela.saldo_devedor > 0 %}text-danger{% else %}text-success{% endif %}">
+                    {{ parcela.saldo_devedor|moeda }}
+                  </span>
+                </div>
+
+                {% if parcela.pagamentos.all %}
+                <div class="table-responsive mb-3">
+                  <table class="table table-sm align-middle">
+                    <thead>
+                      <tr class="text-muted small">
+                        <th>Data</th>
+                        <th>Nominal Pago</th>
+                        <th>Juros/Multa</th>
+                        <th>Saída de Caixa</th>
+                        <th>Forma</th>
+                        <th>Transação</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for pag in parcela.pagamentos.all %}
+                      <tr>
+                        <td class="small">{{ pag.data_pagamento|date:"d/m/Y" }}</td>
+                        <td class="text-success">{{ pag.valor_pago|moeda }}</td>
+                        <td class="{% if pag.juros_multa > 0 %}text-danger{% else %}text-muted{% endif %}">
+                          {% if pag.juros_multa > 0 %}{{ pag.juros_multa|moeda }}{% else %}—{% endif %}
+                        </td>
+                        <td class="fw-semibold">{{ pag.valor_total_pago|moeda }}</td>
+                        <td class="small">{{ pag.get_forma_pagamento_display }}</td>
+                        <td class="small text-muted">{{ pag.transacao|default:"—" }}</td>
+                        <td>
+                          <form method="post"
+                                action="{% url 'financeiro:pagamento_parcela_delete' conta.pk parcela.pk pag.pk %}"
+                                onsubmit="return confirm('Remover este pagamento?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                              <i class="bi bi-trash"></i>
+                            </button>
+                          </form>
+                        </td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+                {% else %}
+                <p class="text-muted small mb-3">Nenhum pagamento registrado ainda.</p>
+                {% endif %}
+
+                {% if parcela.status_efetivo != 'pago' and parcela.status_efetivo != 'cancelado' %}
+                <form method="post"
+                      action="{% url 'financeiro:pagamento_parcela_add' conta.pk parcela.pk %}">
+                  {% csrf_token %}
+                  <div class="row g-2">
+                    <div class="col-md-4">
+                      <label class="form-label small text-muted">Valor *</label>
+                      <input type="text" name="valor_pago" class="form-control form-control-sm"
+                             placeholder="0,00" data-mask="moeda" required>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label small text-muted">Juros/Multa</label>
+                      <input type="text" name="juros_multa" class="form-control form-control-sm"
+                             placeholder="0,00" data-mask="moeda">
+                      <span class="form-text text-muted">Se houve atraso e a conta cobrou a mais.</span>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label small text-muted">Data *</label>
+                      <input type="date" name="data_pagamento" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label small text-muted">Forma *</label>
+                      <select name="forma_pagamento" class="form-select form-select-sm" required>
+                        <option value="pix">PIX</option>
+                        <option value="boleto">Boleto</option>
+                        <option value="transferencia">Transferência</option>
+                        <option value="dinheiro">Dinheiro</option>
+                        <option value="cartao">Cartão</option>
+                        <option value="cheque">Cheque</option>
+                      </select>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label small text-muted">Nº transação</label>
+                      <input type="text" name="transacao" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label small text-muted">Observação</label>
+                      <input type="text" name="observacao" class="form-control form-control-sm">
+                    </div>
+                  </div>
+                  <div class="d-flex justify-content-end mt-2">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                      <i class="bi bi-check-lg me-1"></i> Registrar Pagamento
+                    </button>
+                  </div>
+                </form>
+                {% endif %}
+
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted small text-center py-3 mb-0">Esta conta ainda não tem parcelas.</p>
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="{% static 'js/mask.js' %}"></script>
+
+{% endblock %}

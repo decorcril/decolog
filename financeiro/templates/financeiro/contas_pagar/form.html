@@ -1,0 +1,252 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ titulo }} — Decolog{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="fw-bold mb-0">{{ titulo }}</h4>
+  <div class="d-flex gap-2">
+    {% if conta.pk %}
+    <form method="post" action="{% url 'financeiro:contas_pagar_cancelar' conta.pk %}"
+          onsubmit="return confirm('Cancelar esta conta? As parcelas ainda não pagas serão marcadas como canceladas.');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-warning btn-sm">
+        <i class="bi bi-x-lg me-1"></i> Cancelar Conta
+      </button>
+    </form>
+
+    <form method="post" action="{% url 'financeiro:contas_pagar_delete' conta.pk %}"
+          onsubmit="return confirm('Excluir esta conta PERMANENTEMENTE — incluindo parcelas e pagamentos já registrados? Essa ação não pode ser desfeita.');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-danger btn-sm">
+        <i class="bi bi-trash me-1"></i> Excluir
+      </button>
+    </form>
+    {% endif %}
+
+    <a href="{% url 'financeiro:contas_pagar_list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i> Voltar
+    </a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-4">
+    <form method="post" id="form-conta-pagar">
+      {% csrf_token %}
+      <input type="hidden" name="form_token" value="{{ form_token }}">
+
+      {% if tem_pagamento %}
+      <div class="alert alert-warning small mb-3">
+        <i class="bi bi-exclamation-triangle me-1"></i>
+        Esta conta já possui pagamentos registrados. Valor total e parcelamento não podem ser alterados
+        — só fornecedor, categoria, descrição, documento, competência, emissão e observações.
+      </div>
+      {% endif %}
+
+      <div class="row g-3">
+
+        <div class="col-md-6">
+          <label class="form-label small text-muted">Fornecedor *</label>
+          <select name="fornecedor" class="form-select" required>
+            <option value="">Selecione...</option>
+            {% for f in fornecedores %}
+              <option value="{{ f.pk }}" {% if conta.fornecedor_id == f.pk %}selected{% endif %}>{{ f.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label small text-muted">Categoria</label>
+          <select name="categoria" class="form-select">
+            <option value="">Sem categoria</option>
+            {% for value, label in categoria_choices %}
+              <option value="{{ value }}" {% if conta.categoria == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-md-8">
+          <label class="form-label small text-muted">Descrição *</label>
+          <input type="text" name="descricao" value="{{ conta.descricao|default:'' }}" class="form-control"
+                 placeholder="Ex: Energia elétrica - Julho/2026" required>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label small text-muted">Nº do Documento</label>
+          <input type="text" name="numero_documento" value="{{ conta.numero_documento|default:'' }}" class="form-control">
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label small text-muted">Valor Total *</label>
+          <input type="text" id="id_valor_total" name="valor_total" value="{{ conta.valor_total|default:'' }}"
+                 class="form-control" placeholder="0,00" data-mask="moeda"
+                 {% if tem_pagamento %}readonly{% endif %} required>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label small text-muted">Competência</label>
+          <input type="month" name="competencia" value="{{ conta.competencia|date:'Y-m'|default:'' }}"
+                 class="form-control">
+          <span class="form-text text-muted">Mês de referência da despesa. Se vazio, usa o mês da emissão.</span>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label small text-muted">Data de Emissão *</label>
+          <input type="date" name="data_emissao" value="{{ conta.data_emissao|date:'Y-m-d'|default:'' }}"
+                 class="form-control" required>
+        </div>
+
+        {% if not tem_pagamento %}
+        <div class="col-md-4">
+          <label class="form-label small text-muted">Quantidade de Parcelas *</label>
+          <input type="number" id="id_parcela_total" min="1" value="{{ parcelas|length|default:1 }}" class="form-control" required>
+          <span class="form-text text-muted">Mudar isso regera a grade abaixo, apagando os valores/vencimentos já ajustados.</span>
+        </div>
+        {% endif %}
+
+        <div class="col-12">
+          <label class="form-label small text-muted">Observações</label>
+          <textarea name="observacoes" rows="3" class="form-control">{{ conta.observacoes|default:'' }}</textarea>
+        </div>
+
+      </div>
+
+      {% if not tem_pagamento %}
+      <div id="grade-parcelas-wrapper" class="mt-4" style="display: none;">
+        <h6 class="fw-bold mb-2">Parcelas</h6>
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr class="text-muted small">
+              <th style="width: 15%">Nº</th>
+              <th>Valor *</th>
+              <th>Vencimento *</th>
+            </tr>
+          </thead>
+          <tbody id="grade-parcelas-body"></tbody>
+        </table>
+        <div class="d-flex justify-content-end align-items-center gap-2">
+          <span class="text-muted small">Diferença:</span>
+          <span id="diferenca-valor" class="fw-bold">R$ 0,00</span>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="d-flex justify-content-end gap-2 mt-4">
+        <a href="{% url 'financeiro:contas_pagar_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" id="btn-salvar" class="btn btn-primary" {% if not conta.pk %}disabled{% endif %}>
+          <i class="bi bi-check-lg me-1"></i> Salvar
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<script src="{% static 'js/mask.js' %}"></script>
+
+{% if not tem_pagamento %}
+<script>
+function parseCentavos(v) {
+  return parseInt((v || '').replace(/\D/g, ''), 10) || 0;
+}
+
+function formatarValor(cents) {
+  const sinal = cents < 0 ? '-' : '';
+  return sinal + 'R$ ' + maskMoeda(String(Math.abs(cents)));
+}
+
+function gerarGrade() {
+  const totalCents = parseCentavos(document.getElementById('id_valor_total').value);
+  const qtd = parseInt(document.getElementById('id_parcela_total').value || '0', 10);
+  const wrapper = document.getElementById('grade-parcelas-wrapper');
+  const body = document.getElementById('grade-parcelas-body');
+  body.innerHTML = '';
+
+  if (!totalCents || !qtd || qtd < 1) {
+    wrapper.style.display = 'none';
+    document.getElementById('btn-salvar').disabled = true;
+    return;
+  }
+
+  wrapper.style.display = 'block';
+
+  const baseCents = Math.floor(totalCents / qtd);
+  const restoCents = totalCents - (baseCents * qtd);
+
+  for (let i = 1; i <= qtd; i++) {
+    const valorCents = (i === qtd) ? (baseCents + restoCents) : baseCents;
+    const valorStr = maskMoeda(String(valorCents));
+
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td class="text-muted small">' + i + '/' + qtd + '</td>' +
+      '<td><input type="text" name="parcela_valor[]" class="form-control form-control-sm" ' +
+      'value="' + valorStr + '" data-mask="moeda"></td>' +
+      '<td><input type="date" name="parcela_vencimento[]" class="form-control form-control-sm" required></td>';
+    body.appendChild(tr);
+  }
+
+  body.querySelectorAll('input[data-mask="moeda"]').forEach(function (input) {
+    applyMask(input, maskMoeda);
+    input.addEventListener('input', recalcularDiferenca);
+  });
+
+  recalcularDiferenca();
+}
+
+function recalcularDiferenca() {
+  const totalCents = parseCentavos(document.getElementById('id_valor_total').value);
+  let somaCents = 0;
+  document.querySelectorAll('input[name="parcela_valor[]"]').forEach(function (input) {
+    somaCents += parseCentavos(input.value);
+  });
+
+  const diffCents = totalCents - somaCents;
+  const diffEl = document.getElementById('diferenca-valor');
+  diffEl.textContent = formatarValor(diffCents);
+  diffEl.classList.toggle('text-danger', diffCents !== 0);
+  diffEl.classList.toggle('text-success', diffCents === 0);
+
+  document.getElementById('btn-salvar').disabled = (diffCents !== 0 || totalCents === 0);
+}
+
+document.getElementById('id_valor_total').addEventListener('input', gerarGrade);
+document.getElementById('id_parcela_total').addEventListener('input', gerarGrade);
+
+// EDIÇÃO: se já existem parcelas salvas, popula a grade com os valores reais
+// (não os recalculados igualmente) assim que a página carrega.
+{% if conta.pk and parcelas %}
+(function preencherParcelasExistentes() {
+  const wrapper = document.getElementById('grade-parcelas-wrapper');
+  const body = document.getElementById('grade-parcelas-body');
+  body.innerHTML = '';
+
+  {% for parcela in parcelas %}
+  (function () {
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td class="text-muted small">{{ parcela.numero }}/{{ parcelas|length }}</td>' +
+      '<td><input type="text" name="parcela_valor[]" class="form-control form-control-sm" ' +
+      'value="{{ parcela.valor|stringformat:".2f" }}" data-mask="moeda"></td>' +
+      '<td><input type="date" name="parcela_vencimento[]" class="form-control form-control-sm" ' +
+      'value="{{ parcela.vencimento|date:"Y-m-d" }}" required></td>';
+    body.appendChild(tr);
+  })();
+  {% endfor %}
+
+  body.querySelectorAll('input[data-mask="moeda"]').forEach(function (input) {
+    applyMask(input, maskMoeda);
+    input.addEventListener('input', recalcularDiferenca);
+  });
+
+  wrapper.style.display = 'block';
+  recalcularDiferenca();
+})();
+{% endif %}
+</script>
+{% endif %}
+
+{% endblock %}

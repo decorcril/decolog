@@ -75,6 +75,14 @@
       {% endif %}
       {% endif %}
 
+      {# -- Financeiro [MOBILE] -- #}
+      {% if is_gerente or is_financeiro or user.is_staff %}
+      <div class="mobile-nav-section">Financeiro</div>
+      <a href="{% url 'financeiro:contas_pagar_list' %}" class="mobile-nav-link">
+        <i class="bi bi-cash-stack"></i> Contas a Pagar
+      </a>
+      {% endif %}
+
       {# -- Estoque [MOBILE] gerente, estoquista e admin -- #}
       {% if is_gerente or is_estoquista or user.is_staff %}
       <div class="mobile-nav-section">Estoque</div>
@@ -277,6 +285,21 @@
         </ul>
       </div>
       {% endif %}
+      {# -- Financeiro [DESKTOP] -- #}
+{% if is_gerente or is_financeiro or user.is_staff %}
+<div class="dropdown">
+  <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+    <i class="bi bi-cash-stack"></i> Financeiro
+  </a>
+  <ul class="dropdown-menu">
+    <li>
+      <a class="dropdown-item" href="{% url 'financeiro:contas_pagar_list' %}">
+        <i class="bi bi-cash-stack"></i> Contas a Pagar
+      </a>
+    </li>
+  </ul>
+</div>
+{% endif %}
 
       {# -- Estoque [DESKTOP] gerente, estoquista e admin -- #}
       {% if is_gerente or is_estoquista or user.is_staff %}
