@@ -31,22 +31,22 @@
         <i class="bi bi-speedometer2"></i> Dashboard
       </a>
 
-      {# -- Cadastros [MOBILE] gerente, estoquista e admin -- #}
-      {% if is_gerente or is_estoquista or user.is_staff %}
-      <div class="mobile-nav-section">Cadastros</div>
-      <a href="{% url 'core:local_list' %}" class="mobile-nav-link">
-        <i class="bi bi-building"></i> Locais
-      </a>
-      <a href="{% url 'core:fornecedor_list' %}" class="mobile-nav-link">
-        <i class="bi bi-truck"></i> Fornecedores
-      </a>
-      <a href="{% url 'produtos:lista' %}" class="mobile-nav-link">
-        <i class="bi bi-box-seam"></i> Produtos
-      </a>
-      <a href="{% url 'core:tag_list' %}" class="mobile-nav-link">
-        <i class="bi bi-tag"></i> Tags de Fornecedores
-      </a>
-      {% endif %}
+      {# -- Cadastros [MOBILE] gerente, estoquista, financeiro e admin -- #}
+{% if is_gerente or is_estoquista or is_financeiro or user.is_staff %}
+<div class="mobile-nav-section">Cadastros</div>
+<a href="{% url 'core:local_list' %}" class="mobile-nav-link">
+  <i class="bi bi-building"></i> Locais
+</a>
+<a href="{% url 'core:fornecedor_list' %}" class="mobile-nav-link">
+  <i class="bi bi-truck"></i> Fornecedores
+</a>
+<a href="{% url 'produtos:lista' %}" class="mobile-nav-link">
+  <i class="bi bi-box-seam"></i> Produtos
+</a>
+<a href="{% url 'core:tag_list' %}" class="mobile-nav-link">
+  <i class="bi bi-tag"></i> Tags de Fornecedores
+</a>
+{% endif %}
 
       {# -- Cadastros [MOBILE] supervisor laser -- #}
       {% if is_supervisor_laser and not is_gerente and not user.is_staff %}
@@ -197,36 +197,37 @@
       </a>
 
       {# -- Cadastros [DESKTOP] gerente, estoquista e admin -- #}
-      {% if is_gerente or is_estoquista or user.is_staff %}
-      <div class="dropdown">
-        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-          <i class="bi bi-grid"></i> Cadastros
-        </a>
-        <ul class="dropdown-menu">
-          <li>
-            <a class="dropdown-item" href="{% url 'core:local_list' %}">
-              <i class="bi bi-building"></i> Locais
-            </a>
-          </li>
-          <li>
-            <a class="dropdown-item" href="{% url 'core:fornecedor_list' %}">
-              <i class="bi bi-truck"></i> Fornecedores
-            </a>
-          </li>
-          <li>
-            <a class="dropdown-item" href="{% url 'produtos:lista' %}">
-              <i class="bi bi-box-seam"></i> Produtos
-            </a>
-          </li>
-          <li><hr class="dropdown-divider" style="border-color: rgba(255,255,255,0.08);"></li>
-          <li>
-            <a class="dropdown-item" href="{% url 'core:tag_list' %}">
-              <i class="bi bi-tag"></i> Tags de Fornecedores
-            </a>
-          </li>
-        </ul>
-      </div>
-      {% endif %}
+      {# -- Cadastros [DESKTOP] gerente, estoquista, financeiro e admin -- #}
+{% if is_gerente or is_estoquista or is_financeiro or user.is_staff %}
+<div class="dropdown">
+  <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+    <i class="bi bi-grid"></i> Cadastros
+  </a>
+  <ul class="dropdown-menu">
+    <li>
+      <a class="dropdown-item" href="{% url 'core:local_list' %}">
+        <i class="bi bi-building"></i> Locais
+      </a>
+    </li>
+    <li>
+      <a class="dropdown-item" href="{% url 'core:fornecedor_list' %}">
+        <i class="bi bi-truck"></i> Fornecedores
+      </a>
+    </li>
+    <li>
+      <a class="dropdown-item" href="{% url 'produtos:lista' %}">
+        <i class="bi bi-box-seam"></i> Produtos
+      </a>
+    </li>
+    <li><hr class="dropdown-divider" style="border-color: rgba(255,255,255,0.08);"></li>
+    <li>
+      <a class="dropdown-item" href="{% url 'core:tag_list' %}">
+        <i class="bi bi-tag"></i> Tags de Fornecedores
+      </a>
+    </li>
+  </ul>
+</div>
+{% endif %}
 
       {# -- Cadastros [DESKTOP] supervisor laser -- #}
       {% if is_supervisor_laser and not is_gerente and not user.is_staff %}
