@@ -14,7 +14,14 @@
     {{ pedido.numero }}
   </p>
   <div class="d-flex justify-content-between align-items-start">
-    <h4 class="fw-bold mb-0">Pedido {{ pedido.numero }}</h4>
+    <div class="d-flex align-items-center gap-2">
+      <h4 class="fw-bold mb-0">Pedido {{ pedido.numero }}</h4>
+      {% if pedido.urgente %}
+      <span class="badge bg-danger">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i>URGENTE
+      </span>
+      {% endif %}
+    </div>
     <div class="d-flex gap-2">
       {% if is_gerente or is_financeiro or pedido.criado_por == request.user %}
       <a href="{% url 'vendas:pedido_edit' pedido.pk %}" class="btn btn-outline-secondary btn-sm">
@@ -26,6 +33,31 @@
 </div>
 
 <div class="row g-4">
+
+  {% if pedido.urgente %}
+  <div class="col-12">
+    <div class="alert alert-danger d-flex align-items-center mb-0">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i>
+      <div><strong>Pedido urgente.</strong> Priorize o processamento deste pedido.</div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if pedido.status == 'shipped' and pedido.transportadora != 'Retirada na Loja' and pedido.comprovantes_envio.all %}
+  <div class="col-12">
+    <div class="alert alert-info d-flex justify-content-between align-items-center mb-0">
+      <div><i class="bi bi-info-circle me-1"></i> Comprovante anexado. Marcar este pedido como Entregue?</div>
+      <form method="post" action="{% url 'vendas:pedido_status' pedido.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="status" value="delivered">
+        <button type="submit" class="btn btn-primary btn-sm">
+          <i class="bi bi-check-circle me-1"></i> Marcar como Entregue
+        </button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
   <div class="col-lg-8">
 
     {# ── Itens ── #}
@@ -269,6 +301,31 @@
     </div>
     {% endif %}
 
+    {# ── Card de devolução ── #}
+    {% if pedido.status == 'devolvido' %}
+    <div class="card mb-4 border-danger">
+      <div class="card-body p-4">
+        <p class="fw-semibold text-danger small mb-3">
+          PEDIDO DEVOLVIDO
+        </p>
+        <div class="d-flex flex-column gap-2">
+          <div class="d-flex justify-content-between">
+            <span class="text-muted small">Devolução registrada por</span>
+            <span class="small fw-semibold">{{ pedido.registrado_devolucao_por.get_full_name|default:pedido.registrado_devolucao_por.username }}</span>
+          </div>
+          <div class="d-flex justify-content-between">
+            <span class="text-muted small">Devolvido em</span>
+            <span class="small fw-semibold">{{ pedido.devolvido_em|date:"d/m/Y" }}</span>
+          </div>
+          <div>
+            <p class="text-muted small mb-1">Motivo</p>
+            <p class="small fw-semibold mb-0">{{ pedido.motivo_devolucao }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
   </div>
 
   <div class="col-lg-4">
@@ -315,7 +372,7 @@
     {# ── Status ── #}
     <div class="card mb-4">
       <div class="card-body p-4">
-        <p class="fw-semibold text-secondary small mb-3">STATUS</p>
+        <p class="fw-semibold text-secondary small mb-3">DETALHES DO PEDIDO</p>
 
         <div class="mb-3">
           <span class="text-muted small">Status</span>
@@ -339,6 +396,7 @@
               {% elif pedido.status == 'shipped' %}bg-success
               {% elif pedido.status == 'delivered' %}bg-success
               {% elif pedido.status == 'canceled' %}bg-danger
+              {% elif pedido.status == 'devolvido' %}bg-danger
               {% endif %}">
               {{ pedido.get_status_display }}
             </span>
@@ -385,6 +443,13 @@
         </div>
         {% endif %}
 
+        {% if pedido.observacoes_internas and is_gerente or pedido.observacoes_internas and is_financeiro %}
+        <div class="mb-3">
+          <span class="text-muted small">Observações Internas</span>
+          <div class="fw-semibold">{{ pedido.observacoes_internas }}</div>
+        </div>
+        {% endif %}
+
         {# Mudar status #}
         {% if is_gerente or is_financeiro %}
         <div class="mt-3 pt-3 border-top">
@@ -395,7 +460,7 @@
             </button>
             <ul class="dropdown-menu w-100">
               {% for value, label in status_choices %}
-              {% if value != pedido.status and value != 'canceled' %}
+              {% if value != pedido.status and value != 'canceled' and value != 'devolvido' %}
               <li>
                 <form method="post" action="{% url 'vendas:pedido_status' pedido.pk %}">
                   {% csrf_token %}
@@ -408,6 +473,14 @@
 
               {% if pedido.status != 'canceled' %}
               <li><hr class="dropdown-divider"></li>
+              {% if pedido.status == 'shipped' or pedido.status == 'delivered' %}
+              <li>
+                <a class="dropdown-item text-danger" href="#"
+                   data-bs-toggle="modal" data-bs-target="#modalDevolucao">
+                  <i class="bi bi-arrow-return-left me-1"></i> Registrar Devolução
+                </a>
+              </li>
+              {% endif %}
               <li>
                 <a class="dropdown-item text-danger" href="#"
                    data-bs-toggle="modal" data-bs-target="#modalCancelar">
@@ -486,6 +559,43 @@
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Voltar</button>
           <button type="submit" class="btn btn-danger">
             <i class="bi bi-x-circle me-1"></i> Confirmar Cancelamento
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# ── Modal devolução ── #}
+{% if is_gerente or is_financeiro %}
+<div class="modal fade" id="modalDevolucao" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-danger">
+          <i class="bi bi-arrow-return-left me-1"></i> Registrar Devolução
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'vendas:pedido_status' pedido.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="status" value="devolvido">
+        <div class="modal-body">
+          <p class="text-muted small mb-3">
+            Tem certeza que deseja registrar a devolução do pedido <strong>{{ pedido.numero }}</strong>?
+            O estorno do estoque deve ser feito manualmente pelo responsável. Esta ação não pode ser desfeita.
+          </p>
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Motivo da devolução</label>
+            <input type="text" name="motivo_devolucao" class="form-control"
+                   placeholder="Informe o motivo..." required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Voltar</button>
+          <button type="submit" class="btn btn-danger">
+            <i class="bi bi-arrow-return-left me-1"></i> Confirmar Devolução
           </button>
         </div>
       </form>

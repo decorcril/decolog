@@ -48,6 +48,7 @@ class Pedido(models.Model):
         SHIPPED         = "shipped",         "Enviado"
         DELIVERED       = "delivered",       "Entregue"
         CANCELED        = "canceled",        "Cancelado"
+        DEVOLVIDO = "devolvido", "Devolução"
 
     class TipoVenda(models.TextChoices):
         DIRECT      = "direct",      "Venda direta"
@@ -62,6 +63,7 @@ class Pedido(models.Model):
     criado_por         = models.ForeignKey(User, on_delete=models.PROTECT, related_name='pedidos_criados', verbose_name='Criado por')
     responsavel        = models.ForeignKey(User, on_delete=models.PROTECT, related_name='pedidos_responsavel', null=True, blank=True, verbose_name='Responsável')
     status             = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN, db_index=True, verbose_name='Status')
+    urgente            = models.BooleanField(default=False, verbose_name='Urgente')
     tipo_venda         = models.CharField(max_length=20, choices=TipoVenda.choices, blank=True, verbose_name='Tipo de Venda')
     pedido_cliente     = models.CharField(max_length=100, blank=True, verbose_name='Pedido do Cliente')
     condicao_pagamento = models.CharField(max_length=100, blank=True, verbose_name='Condição de Pagamento')
@@ -92,6 +94,14 @@ class Pedido(models.Model):
     )
     motivo_cancelamento = models.TextField(blank=True, verbose_name='Motivo do Cancelamento')
     cancelado_em        = models.DateTimeField(null=True, blank=True, verbose_name='Cancelado em')
+    registrado_devolucao_por = models.ForeignKey(
+        User, on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='pedidos_devolvidos',
+        verbose_name='Devolução registrada por'
+    )
+    motivo_devolucao = models.TextField(blank=True, verbose_name='Motivo da Devolução')
+    devolvido_em     = models.DateTimeField(null=True, blank=True, verbose_name='Devolvido em')
     operador_corte      = models.ForeignKey(
         User, on_delete=models.SET_NULL,
         null=True, blank=True,
@@ -107,6 +117,8 @@ class Pedido(models.Model):
         verbose_name='Token de Separação'
     )
     separado         = models.BooleanField(default=False, verbose_name='Separado')
+
+    
 
     class Meta:
         verbose_name        = 'Pedido'
@@ -229,6 +241,7 @@ class Pedido(models.Model):
             self.Status.SHIPPED,
             self.Status.DELIVERED,
             self.Status.CANCELED,
+            self.Status.DEVOLVIDO,
         }
         if self.status in protected:
             return

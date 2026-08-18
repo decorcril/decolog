@@ -138,6 +138,7 @@ def pedido_list(request):
     q           = request.GET.get('q', '')
     status      = request.GET.get('status', '')
     pendentes   = request.GET.get('pendentes', '')
+    urgentes    = request.GET.get('urgentes', '')
     transacao   = request.GET.get('transacao', '')
     tipo_venda  = request.GET.get('tipo_venda', '')
     data_inicio = request.GET.get('data_inicio', '')
@@ -167,6 +168,9 @@ def pedido_list(request):
     if data_fim:
         pedidos = pedidos.filter(criado_em__date__lte=data_fim)
 
+    if urgentes == '1':
+        pedidos = pedidos.filter(urgente=True)
+
     if pendentes == '1':
         pedidos = pedidos.annotate(
             total_pago_ann=Coalesce(Sum('pagamentos__valor'), Decimal('0.00'))
@@ -189,6 +193,7 @@ def pedido_list(request):
         'q':                  q,
         'status':             status,
         'pendentes':          pendentes,
+        'urgentes':           urgentes,
         'transacao':          transacao,
         'tipo_venda':         tipo_venda,
         'data_inicio':        data_inicio,
@@ -206,6 +211,7 @@ def pedido_create(request):
         cliente_id           = request.POST.get('cliente')
         tipo_venda           = request.POST.get('tipo_venda')
         condicao_pagamento   = request.POST.get('condicao_pagamento', '')
+        urgente              = request.POST.get('urgente') == 'on'
         contato              = request.POST.get('contato', '')
         transportadora       = request.POST.get('transportadora', '')
         local_saida_id       = request.POST.get('local_saida', '') or None
@@ -236,6 +242,7 @@ def pedido_create(request):
                     cliente              = cliente,
                     tipo_venda           = tipo_venda,
                     condicao_pagamento   = condicao_pagamento,
+                    urgente              = urgente,
                     contato              = contato,
                     transportadora       = transportadora,
                     local_saida          = local_saida,
@@ -314,6 +321,7 @@ def pedido_edit(request, pk):
 
         pedido.tipo_venda           = request.POST.get('tipo_venda', pedido.tipo_venda)
         pedido.condicao_pagamento   = request.POST.get('condicao_pagamento', '')
+        pedido.urgente              = request.POST.get('urgente') == 'on'
         pedido.contato              = request.POST.get('contato', '')
         pedido.transportadora       = request.POST.get('transportadora', '')
         pedido.local_saida          = local_saida
@@ -382,6 +390,40 @@ def pedido_status(request, pk):
             messages.success(request, f'Pedido {pedido.numero} cancelado.')
             return redirect('vendas:pedido_detail', pk=pedido.pk)
 
+        # ── Devolução ──
+        if novo_status == 'devolvido':
+            grupos = request.user.groups.values_list('name', flat=True)
+            pode_devolver = (
+                request.user.is_staff or 'Gerente' in grupos or 'Financeiro' in grupos
+            )
+            if not pode_devolver:
+                messages.error(request, 'Você não tem permissão para registrar devolução.')
+                return redirect('vendas:pedido_detail', pk=pedido.pk)
+
+            if pedido.status not in [Pedido.Status.SHIPPED, Pedido.Status.DELIVERED]:
+                messages.error(request, 'Só é possível devolver pedidos enviados ou entregues.')
+                return redirect('vendas:pedido_detail', pk=pedido.pk)
+
+            motivo = request.POST.get('motivo_devolucao', '').strip()
+            if not motivo:
+                messages.error(request, 'Informe o motivo da devolução.')
+                return redirect('vendas:pedido_detail', pk=pedido.pk)
+
+            pedido.status                   = Pedido.Status.DEVOLVIDO
+            pedido.registrado_devolucao_por = request.user
+            pedido.motivo_devolucao         = motivo
+            pedido.devolvido_em             = timezone.now()
+            pedido.save(update_fields=[
+                'status', 'registrado_devolucao_por', 'motivo_devolucao',
+                'devolvido_em', 'atualizado_em'
+            ])
+            messages.success(
+                request,
+                f'Devolução do pedido {pedido.numero} registrada. '
+                f'O estorno do estoque deve ser feito manualmente.'
+            )
+            return redirect('vendas:pedido_detail', pk=pedido.pk)
+
         if novo_status in dict(Pedido.Status.choices):
 
             # ── Reabrir pedido cancelado ──
@@ -421,21 +463,15 @@ def pedido_status(request, pk):
 
             # ── Envio / Entrega — baixa estoque ──
             if novo_status in ['shipped', 'delivered']:
-                if pedido.status != Pedido.Status.PICKING:
-                    messages.error(request, 'O pedido precisa estar em separação para ser enviado ou entregue.')
-                    return redirect('vendas:pedido_detail', pk=pedido.pk)
-
-                if pedido.saldo_restante > 0 and not pedido.is_free_sale:
-                    messages.error(
-                        request,
-                        f'Não é possível enviar o pedido com saldo pendente de {pedido.saldo_restante}. '
-                        f'Quite o pagamento antes de prosseguir.'
-                    )
-                    return redirect('vendas:pedido_detail', pk=pedido.pk)
+                veio_de_enviado_para_entregue = (
+                    novo_status == 'delivered' and pedido.status == Pedido.Status.SHIPPED
+                )
 
                 if novo_status == 'shipped' and pedido.transportadora == 'Retirada na Loja':
                     novo_status = 'delivered'
                     messages.success(request, f'Pedido {pedido.numero} marcado como entregue (retirada na loja).')
+                elif veio_de_enviado_para_entregue:
+                    messages.success(request, f'Pedido {pedido.numero} marcado como entregue!')
                 else:
                     messages.success(request, f'Status atualizado para {pedido.get_status_display()}.')
 
@@ -443,6 +479,7 @@ def pedido_status(request, pk):
                 pedido.save(update_fields=['status', 'atualizado_em'])
 
                 # Avança as peças cortadas do pedido de 'separado' para 'enviado'
+                # (não faz nada se já estiverem 'enviado', ex: transição shipped->delivered)
                 from producao_corte.models import ProdutoCortado
                 ProdutoCortado.objects.filter(
                     pedido=pedido, status='separado'
