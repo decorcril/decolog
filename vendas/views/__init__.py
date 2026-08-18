@@ -7,6 +7,8 @@ from .pedido import (
     item_add,
     item_remove,
     item_update,
+    comprovante_envio_add,
+    comprovante_envio_delete,
 )
 
 from .pagamento import (

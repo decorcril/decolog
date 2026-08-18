@@ -3,6 +3,10 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from vendas.models.pedido import Pedido
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
+
+
 
 TWO = Decimal("0.01")
 
@@ -68,3 +72,32 @@ class Pagamento(models.Model):
         pedido = self.pedido
         super().delete(*args, **kwargs)
         pedido.sync_status()
+
+class ComprovanteEnvio(models.Model):
+    pedido        = models.ForeignKey(
+        Pedido, on_delete=models.CASCADE,
+        related_name='comprovantes_envio', verbose_name='Pedido'
+    )
+    arquivo       = models.FileField(upload_to='comprovantes_envio/%Y/%m/', verbose_name='Arquivo')
+    nome_original = models.CharField(max_length=255, blank=True, verbose_name='Nome Original do Arquivo')
+    enviado_em    = models.DateTimeField(auto_now_add=True, verbose_name='Anexado em')
+    enviado_por   = models.ForeignKey(
+        User, on_delete=models.PROTECT, verbose_name='Anexado por'
+    )
+
+    class Meta:
+        verbose_name        = 'Comprovante de Envio/Retirada'
+        verbose_name_plural = 'Comprovantes de Envio/Retirada'
+        ordering             = ['-enviado_em']
+
+    def __str__(self):
+        return f'Comprovante — {self.pedido.numero} ({self.nome_original})'
+
+
+
+@receiver(post_delete, sender=ComprovanteEnvio)
+def deletar_arquivo_comprovante(sender, instance, **kwargs):
+    """Garante que o arquivo no bucket seja removido sempre que o registro for apagado,
+    não importa o caminho (view, admin, cascade, shell)."""
+    if instance.arquivo:
+        instance.arquivo.delete(save=False)

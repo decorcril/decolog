@@ -36,4 +36,6 @@ urlpatterns = [
     path('expedir/<str:token>/', views.expedir_pedido, name='expedir_pedido'),
     path('<int:pk>/etiquetas/', views.etiquetas_pedido, name='etiquetas_pedido'),
     path('unidade/<str:token>/', views.unidade_pedido, name='unidade_pedido'),
+    path('<int:pk>/comprovantes/adicionar/', views.comprovante_envio_add, name='comprovante_envio_add'),
+    path('<int:pk>/comprovantes/<int:comprovante_pk>/remover/', views.comprovante_envio_delete, name='comprovante_envio_delete'),
 ]

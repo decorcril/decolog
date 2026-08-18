@@ -79,7 +79,6 @@ def _baixar_estoque_pedido(pedido, user):
             ficha = item.produto.ficha_tecnica
             for componente in ficha.itens.select_related('material').all():
                 quantidade_total = componente.quantidade * item.quantidade
-                # Usa local_saida se tiver estoque suficiente, senão usa fábrica
                 from estoque.models import Estoque
                 saldo = Estoque.objects.filter(produto=componente.material, local=local).first()
                 local_usar = local if saldo and saldo.quantidade >= quantidade_total else fabrica
@@ -129,7 +128,7 @@ def _estornar_estoque_pedido(pedido, user):
 TRANSPORTADORA_CHOICES = [
     'Contratação Remetente - CIF',
     'Contratação Destinatário - FOB',
-    'Envio pela Decorcril',
+    'Envio pela Empresa',
     'Retirada na Loja',
 ]
 
@@ -267,14 +266,13 @@ def pedido_create(request):
     })
 
 
-
 @acesso_vendas
 def pedido_detail(request, pk):
     from vendas.models import UnidadePedido
 
     pedido = get_object_or_404(
         Pedido.objects.select_related('cliente', 'criado_por', 'responsavel', 'local_saida')
-                      .prefetch_related('itens__produto', 'pagamentos'),
+                      .prefetch_related('itens__produto', 'pagamentos', 'comprovantes_envio__enviado_por'),
         pk=pk
     )
 
@@ -462,6 +460,7 @@ def pedido_status(request, pk):
 
     return redirect('vendas:pedido_detail', pk=pedido.pk)
 
+
 @acesso_vendas
 def item_remove(request, pk, item_pk):
     pedido = get_object_or_404(Pedido, pk=pk)
@@ -533,3 +532,38 @@ def item_add(request, pk):
         })
 
     return JsonResponse({'ok': False})
+
+
+@acesso_vendas
+def comprovante_envio_add(request, pk):
+    pedido = get_object_or_404(Pedido, pk=pk)
+
+    if request.method == 'POST' and request.FILES.get('arquivo'):
+        from vendas.models import ComprovanteEnvio
+
+        arquivo = request.FILES['arquivo']
+        ComprovanteEnvio.objects.create(
+            pedido        = pedido,
+            arquivo       = arquivo,
+            nome_original = arquivo.name,
+            enviado_por   = request.user,
+        )
+        messages.success(request, 'Comprovante anexado com sucesso!')
+    else:
+        messages.error(request, 'Selecione um arquivo para anexar.')
+
+    return redirect('vendas:pedido_detail', pk=pedido.pk)
+
+
+@acesso_vendas
+def comprovante_envio_delete(request, pk, comprovante_pk):
+    from vendas.models import ComprovanteEnvio
+
+    pedido      = get_object_or_404(Pedido, pk=pk)
+    comprovante = get_object_or_404(ComprovanteEnvio, pk=comprovante_pk, pedido=pedido)
+
+    if request.method == 'POST':
+        comprovante.delete()  # o signal post_delete já remove o arquivo do bucket
+        messages.success(request, 'Comprovante removido.')
+
+    return redirect('vendas:pedido_detail', pk=pedido.pk)
