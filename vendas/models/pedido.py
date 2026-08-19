@@ -58,6 +58,12 @@ class Pedido(models.Model):
         ADVERTISING = "advertising", "Publicidade"
         COMODATO    = "comodato",    "Comodato"
 
+    class PrazoConfeccao(models.TextChoices):
+        DIAS_15 = "15", "15 dias"
+        DIAS_20 = "20", "20 dias"
+        DIAS_25 = "25", "25 dias"
+        DIAS_30 = "30", "30 dias"
+
     numero             = models.CharField(max_length=10, unique=True, blank=True, verbose_name='Número do Pedido', db_index=True)
     cliente            = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='pedidos', verbose_name='Cliente')
     criado_por         = models.ForeignKey(User, on_delete=models.PROTECT, related_name='pedidos_criados', verbose_name='Criado por')
@@ -76,7 +82,10 @@ class Pedido(models.Model):
         verbose_name='Local de Saída'
     )
     frete              = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Frete')
-    percentual_entrada = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0.00"), blank=True, verbose_name='Entrada (%)')
+    prazo_confeccao    = models.CharField(
+        max_length=2, choices=PrazoConfeccao.choices, blank=True,
+        verbose_name='Prazo de Confecção'
+    )
     data_entrega       = models.DateField(null=True, blank=True, verbose_name='Data de Entrega')
     observacoes        = models.TextField(blank=True, verbose_name='Observações')
     observacoes_internas = models.TextField(blank=True, verbose_name='Observações Internas')
@@ -156,10 +165,6 @@ class Pedido(models.Model):
     @property
     def saldo_restante(self) -> Decimal:
         return max(Decimal("0.00"), self.total_geral - self.total_pago)
-
-    @property
-    def valor_entrada(self) -> Decimal:
-        return (self.total_geral * self.percentual_entrada / 100).quantize(TWO)
 
     @property
     def progresso_corte(self):
@@ -250,14 +255,7 @@ class Pedido(models.Model):
             new_status = self.Status.AGUARD_PRODUCAO
         else:
             if self.pagamentos.exists():
-                if self.percentual_entrada > 0:
-                    new_status = (
-                        self.Status.AGUARD_PRODUCAO
-                        if self.total_pago >= self.valor_entrada
-                        else self.Status.AGUARD_PAGAMENTO
-                    )
-                else:
-                    new_status = self.Status.AGUARD_PRODUCAO
+                new_status = self.Status.AGUARD_PRODUCAO
             else:
                 new_status = self.Status.OPEN
 

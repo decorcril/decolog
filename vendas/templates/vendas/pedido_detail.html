@@ -410,6 +410,11 @@
         </div>
 
         <div class="mb-3">
+          <span class="text-muted small">Prazo de Confecção</span>
+          <div class="fw-semibold">{{ pedido.get_prazo_confeccao_display|default:"—" }}</div>
+        </div>
+
+        <div class="mb-3">
           <span class="text-muted small">Entrega</span>
           <div class="fw-semibold">{{ pedido.transportadora|default:"—" }}</div>
         </div>

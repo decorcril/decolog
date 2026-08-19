@@ -19,10 +19,15 @@
 <div class="row g-3">
   {% for item in pedidos %}
   <div class="col-md-6 col-lg-4">
-    <div class="card h-100 border-warning">
+    <div class="card h-100 border-warning {% if item.pedido.urgente %}border-danger{% endif %}">
       <div class="card-body p-4">
         <div class="d-flex justify-content-between align-items-start mb-2">
-          <span class="fw-bold">{{ item.pedido.numero }}</span>
+          <span class="fw-bold">
+            {% if item.pedido.urgente %}
+            <i class="bi bi-exclamation-triangle-fill text-danger me-1" title="Pedido urgente"></i>
+            {% endif %}
+            {{ item.pedido.numero }}
+          </span>
           <span class="badge bg-warning bg-opacity-10 text-warning">Em Montagem</span>
         </div>
         <p class="fw-semibold mb-1">{{ item.pedido.cliente.nome }}</p>

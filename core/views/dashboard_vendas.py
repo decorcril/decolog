@@ -155,6 +155,7 @@ def dashboard_vendas(request):
         'total_picking':          contadores_dict.get('picking', 0),
         'total_shipped':          contadores_dict.get('shipped', 0),
         'total_delivered':        contadores_dict.get('delivered', 0),
+        'total_devolvido':        contadores_dict.get('devolvido', 0),
 
         # Gráfico
         'meses_labels': json.dumps(meses_labels),

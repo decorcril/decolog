@@ -51,7 +51,7 @@ def dashboard_financeiro(request):
 
     # ── Total a receber (inadimplência) ──
     pedidos_pendentes = Pedido.objects.filter(
-        status__in=['open', 'aguard_pagamento', 'aguard_producao',
+        status__in=['open', 'aguard_producao',
                     'cutting', 'assembling', 'picking', 'shipped'],
     ).exclude(status='canceled').select_related('cliente', 'criado_por')
 
@@ -65,11 +65,15 @@ def dashboard_financeiro(request):
 
     pendentes_lista.sort(key=lambda p: p.saldo_restante, reverse=True)
 
-    # ── Pedidos com pagamento vencido (data_entrega < hoje e saldo > 0) ──
-    vencidos = [
-        p for p in pendentes_lista
-        if p.data_entrega and p.data_entrega < hoje
-    ]
+    # ── Pedidos devolvidos recentes ──
+    devolvidos = Pedido.objects.filter(
+        status='devolvido',
+    ).select_related('cliente', 'criado_por', 'registrado_devolucao_por').order_by('-devolvido_em')[:10]
+
+    total_devolvidos_mes = Pedido.objects.filter(
+        status='devolvido',
+        devolvido_em__date__gte=inicio_mes,
+    ).count()
 
     # ── Pedidos cancelados recentes ──
     cancelados_recentes = Pedido.objects.filter(
@@ -101,7 +105,7 @@ def dashboard_financeiro(request):
 
     # ── Contadores gerais ──
     total_pedidos_abertos   = Pedido.objects.filter(status='open').count()
-    total_aguard_pagamento  = Pedido.objects.filter(status='aguard_pagamento').count()
+    total_aguard_producao   = Pedido.objects.filter(status='aguard_producao').count()
     total_cancelados_mes    = Pedido.objects.filter(
         status='canceled',
         cancelado_em__date__gte=inicio_mes,
@@ -117,16 +121,18 @@ def dashboard_financeiro(request):
         'total_a_receber':  total_a_receber,
         'qtd_pendentes':    len(pendentes_lista),
         'pendentes_lista':  pendentes_lista[:10],
-        'vencidos':         vencidos[:10],
-        'qtd_vencidos':     len(vencidos),
+
+        # Devoluções
+        'devolvidos':           devolvidos,
+        'total_devolvidos_mes': total_devolvidos_mes,
 
         # Cancelados
         'cancelados_recentes': cancelados_recentes,
         'total_cancelados_mes': total_cancelados_mes,
 
         # Contadores
-        'total_pedidos_abertos':  total_pedidos_abertos,
-        'total_aguard_pagamento': total_aguard_pagamento,
+        'total_pedidos_abertos': total_pedidos_abertos,
+        'total_aguard_producao': total_aguard_producao,
 
         # Gráfico
         'meses_labels': json.dumps(meses_labels),

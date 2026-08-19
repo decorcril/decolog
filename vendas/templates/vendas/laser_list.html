@@ -25,13 +25,16 @@
 <div class="row g-3 mb-4">
   {% for pedido in pedidos_aguardando %}
   <div class="col-md-6 col-lg-4">
-    <div class="card h-100 border-warning">
+    <div class="card h-100 border-warning {% if pedido.urgente %}border-danger{% endif %}">
       <div class="card-body p-4">
 
         {# Cabeçalho #}
         <div class="d-flex justify-content-between align-items-start mb-2">
           <div>
             <a href="{% url 'vendas:pedido_detail' pedido.pk %}" class="fw-bold text-decoration-none">
+              {% if pedido.urgente %}
+              <i class="bi bi-exclamation-triangle-fill text-danger me-1" title="Pedido urgente"></i>
+              {% endif %}
               {{ pedido.numero }}
             </a>
             <p class="text-muted small mb-0">{{ pedido.cliente.nome }}</p>
@@ -126,13 +129,16 @@
 <div class="row g-3 mb-4">
   {% for pedido in pedidos_em_corte %}
   <div class="col-md-6 col-lg-4">
-    <div class="card h-100 border-primary">
+    <div class="card h-100 border-primary {% if pedido.urgente %}border-danger{% endif %}">
       <div class="card-body p-4">
 
         {# Cabeçalho #}
         <div class="d-flex justify-content-between align-items-start mb-2">
           <div>
             <a href="{% url 'vendas:pedido_detail' pedido.pk %}" class="fw-bold text-decoration-none">
+              {% if pedido.urgente %}
+              <i class="bi bi-exclamation-triangle-fill text-danger me-1" title="Pedido urgente"></i>
+              {% endif %}
               {{ pedido.numero }}
             </a>
             <p class="text-muted small mb-0">{{ pedido.cliente.nome }}</p>

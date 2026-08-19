@@ -54,17 +54,6 @@
   </div>
 </div>
 
-{# ── Alertas ── #}
-{% if qtd_vencidos > 0 %}
-<div class="alert alert-danger d-flex align-items-center mb-4 py-2">
-  <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
-  <span>
-    <strong>{{ qtd_vencidos }} pedido{{ qtd_vencidos|pluralize }}</strong>
-    com pagamento vencido — data de entrega ultrapassada e saldo em aberto.
-  </span>
-</div>
-{% endif %}
-
 {# ── Gráfico + Contadores ── #}
 <div class="row g-4 mb-4">
   <div class="col-lg-8">
@@ -85,16 +74,16 @@
             <span class="fw-bold fs-5">{{ total_pedidos_abertos }}</span>
           </div>
           <div class="d-flex justify-content-between align-items-center p-3 rounded" style="background:#fff3e0;">
-            <span class="small fw-semibold">Ag. Pagamento</span>
-            <span class="fw-bold fs-5 text-warning">{{ total_aguard_pagamento }}</span>
+            <span class="small fw-semibold">Ag. Produção</span>
+            <span class="fw-bold fs-5 text-warning">{{ total_aguard_producao }}</span>
           </div>
           <div class="d-flex justify-content-between align-items-center p-3 rounded" style="background:#fce4ec;">
             <span class="small fw-semibold">Cancelados no Mês</span>
             <span class="fw-bold fs-5 text-danger">{{ total_cancelados_mes }}</span>
           </div>
           <div class="d-flex justify-content-between align-items-center p-3 rounded" style="background:#fce4ec;">
-            <span class="small fw-semibold">Vencidos</span>
-            <span class="fw-bold fs-5 text-danger">{{ qtd_vencidos }}</span>
+            <span class="small fw-semibold">Devolvidos no Mês</span>
+            <span class="fw-bold fs-5 text-danger">{{ total_devolvidos_mes }}</span>
           </div>
         </div>
       </div>
@@ -102,13 +91,13 @@
   </div>
 </div>
 
-{# ── Pagamentos vencidos ── #}
-{% if vencidos %}
+{# ── Pedidos devolvidos ── #}
+{% if devolvidos %}
 <div class="card mb-4 border-danger">
   <div class="card-body p-4">
     <p class="fw-semibold text-danger small mb-3">
-      <i class="bi bi-exclamation-circle me-1"></i>
-      PAGAMENTOS VENCIDOS — data de entrega ultrapassada
+      <i class="bi bi-arrow-return-left me-1"></i>
+      PEDIDOS DEVOLVIDOS
     </p>
     <div class="table-responsive">
       <table class="table table-sm mb-0">
@@ -117,14 +106,14 @@
             <th>Pedido</th>
             <th>Cliente</th>
             <th>Vendedor</th>
+            <th>Registrado por</th>
+            <th>Devolvido em</th>
             <th class="text-end">Total</th>
-            <th class="text-end">Pago</th>
-            <th class="text-end">Saldo</th>
-            <th>Entrega prevista</th>
+            <th>Motivo</th>
           </tr>
         </thead>
         <tbody>
-          {% for pedido in vencidos %}
+          {% for pedido in devolvidos %}
           <tr>
             <td>
               <a href="{% url 'vendas:pedido_detail' pedido.pk %}" class="text-decoration-none fw-semibold">
@@ -133,10 +122,14 @@
             </td>
             <td class="small">{{ pedido.cliente.nome }}</td>
             <td class="small text-muted">{{ pedido.criado_por.get_full_name|default:pedido.criado_por.username }}</td>
+            <td class="small">{{ pedido.registrado_devolucao_por.get_full_name|default:pedido.registrado_devolucao_por.username }}</td>
+            <td class="small text-muted">{{ pedido.devolvido_em|date:"d/m/Y" }}</td>
             <td class="text-end small">{{ pedido.total_geral|moeda }}</td>
-            <td class="text-end small text-success">{{ pedido.total_pago|moeda }}</td>
-            <td class="text-end small text-danger fw-semibold">{{ pedido.saldo_restante|moeda }}</td>
-            <td class="small text-danger">{{ pedido.data_entrega|date:"d/m/Y" }}</td>
+            <td class="small text-muted" style="max-width:200px;">
+              <span title="{{ pedido.motivo_devolucao }}">
+                {{ pedido.motivo_devolucao|truncatechars:40 }}
+              </span>
+            </td>
           </tr>
           {% endfor %}
         </tbody>
@@ -180,7 +173,6 @@
             <td>
               <span class="badge
                 {% if pedido.status == 'open' %}bg-secondary bg-opacity-10 text-secondary
-                {% elif pedido.status == 'aguard_pagamento' %}bg-warning bg-opacity-10 text-warning
                 {% elif pedido.status == 'aguard_producao' %}bg-info bg-opacity-10 text-info
                 {% elif pedido.status == 'cutting' %}bg-primary bg-opacity-10 text-primary
                 {% elif pedido.status == 'assembling' %}bg-warning bg-opacity-10 text-warning

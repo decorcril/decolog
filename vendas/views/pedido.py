@@ -214,9 +214,9 @@ def pedido_create(request):
         urgente              = request.POST.get('urgente') == 'on'
         contato              = request.POST.get('contato', '')
         transportadora       = request.POST.get('transportadora', '')
+        prazo_confeccao      = request.POST.get('prazo_confeccao', '')
         local_saida_id       = request.POST.get('local_saida', '') or None
         frete                = _parse_decimal(request.POST.get('frete', '0'))
-        percentual_entrada   = _parse_decimal(request.POST.get('percentual_entrada', '0'))
         total_desconto       = _parse_decimal(request.POST.get('total_desconto', '0'))
         observacoes          = request.POST.get('observacoes', '')
         observacoes_internas = request.POST.get('observacoes_internas', '')
@@ -247,7 +247,7 @@ def pedido_create(request):
                     transportadora       = transportadora,
                     local_saida          = local_saida,
                     frete                = frete,
-                    percentual_entrada   = percentual_entrada,
+                    prazo_confeccao      = prazo_confeccao,
                     total_desconto       = total_desconto,
                     observacoes          = observacoes,
                     observacoes_internas = observacoes_internas,
@@ -266,10 +266,11 @@ def pedido_create(request):
 
     locais = Local.objects.all().order_by('nome')
     return render(request, 'vendas/pedido_form.html', {
-        'titulo':                 'Novo Pedido',
-        'tipo_venda_choices':     Pedido.TipoVenda.choices,
-        'transportadora_choices': TRANSPORTADORA_CHOICES,
-        'locais':                 locais,
+        'titulo':                  'Novo Pedido',
+        'tipo_venda_choices':      Pedido.TipoVenda.choices,
+        'transportadora_choices':  TRANSPORTADORA_CHOICES,
+        'prazo_confeccao_choices': Pedido.PrazoConfeccao.choices,
+        'locais':                  locais,
     })
 
 
@@ -326,7 +327,7 @@ def pedido_edit(request, pk):
         pedido.transportadora       = request.POST.get('transportadora', '')
         pedido.local_saida          = local_saida
         pedido.frete                = _parse_decimal(request.POST.get('frete', '0'))
-        pedido.percentual_entrada   = _parse_decimal(request.POST.get('percentual_entrada', '0'))
+        pedido.prazo_confeccao      = request.POST.get('prazo_confeccao', '')
         pedido.total_desconto       = _parse_decimal(request.POST.get('total_desconto', '0'))
         pedido.observacoes          = request.POST.get('observacoes', '')
         pedido.observacoes_internas = request.POST.get('observacoes_internas', '')
@@ -337,11 +338,12 @@ def pedido_edit(request, pk):
 
     locais = Local.objects.all().order_by('nome')
     return render(request, 'vendas/pedido_edit_form.html', {
-        'titulo':                 f'Editar Pedido {pedido.numero}',
-        'pedido':                 pedido,
-        'tipo_venda_choices':     Pedido.TipoVenda.choices,
-        'transportadora_choices': TRANSPORTADORA_CHOICES,
-        'locais':                 locais,
+        'titulo':                  f'Editar Pedido {pedido.numero}',
+        'pedido':                  pedido,
+        'tipo_venda_choices':      Pedido.TipoVenda.choices,
+        'transportadora_choices':  TRANSPORTADORA_CHOICES,
+        'prazo_confeccao_choices': Pedido.PrazoConfeccao.choices,
+        'locais':                  locais,
     })
 
 

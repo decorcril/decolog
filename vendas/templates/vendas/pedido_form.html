@@ -45,9 +45,9 @@
               {% endif %}
             </div>
             <div class="col-md-4">
-              <label class="form-label fw-semibold text-secondary small">Responsável pelo Recebimento</label>
+              <label class="form-label fw-semibold text-secondary small">CONTATO</label>
               <input type="text" name="contato" class="form-control"
-                     value="{{ pedido.contato|default:'' }}" placeholder="Nome do responsável pelo recebimento">
+                     value="{{ pedido.contato|default:'' }}" placeholder="Nome do contato">
             </div>
           </div>
         </div>
@@ -104,10 +104,15 @@
                value="{{ pedido.frete|default:'0' }}" data-mask="moeda">
       </div>
       <div class="col-md-3">
-        <label class="form-label fw-semibold text-secondary small">SINAL (%)</label>
-        <input type="number" name="percentual_entrada" class="form-control"
-               value="{{ pedido.percentual_entrada|default:'0' }}"
-               min="0" max="100" step="0.01">
+        <label class="form-label fw-semibold text-secondary small">PRAZO DE CONFECÇÃO</label>
+        <select name="prazo_confeccao" class="form-select">
+          <option value="">Selecione...</option>
+          {% for value, label in prazo_confeccao_choices %}
+            <option value="{{ value }}" {% if pedido and pedido.prazo_confeccao == value %}selected{% endif %}>
+              {{ label }}
+            </option>
+          {% endfor %}
+        </select>
       </div>
       <div class="col-md-3 d-flex align-items-end">
         <div class="form-check">
