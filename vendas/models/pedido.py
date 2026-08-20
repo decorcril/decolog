@@ -59,10 +59,11 @@ class Pedido(models.Model):
         COMODATO    = "comodato",    "Comodato"
 
     class PrazoConfeccao(models.TextChoices):
-        DIAS_15 = "15", "15 dias"
-        DIAS_20 = "20", "20 dias"
-        DIAS_25 = "25", "25 dias"
-        DIAS_30 = "30", "30 dias"
+        DIAS_15        = "15",     "15 dias"
+        DIAS_20        = "20",     "20 dias"
+        DIAS_25        = "25",     "25 dias"
+        DIAS_30        = "30",     "30 dias"
+        PRONTA_ENTREGA = "pronta", "À Pronta Entrega"
 
     numero             = models.CharField(max_length=10, unique=True, blank=True, verbose_name='Número do Pedido', db_index=True)
     cliente            = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='pedidos', verbose_name='Cliente')
@@ -82,10 +83,10 @@ class Pedido(models.Model):
         verbose_name='Local de Saída'
     )
     frete              = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Frete')
-    prazo_confeccao    = models.CharField(
-        max_length=2, choices=PrazoConfeccao.choices, blank=True,
-        verbose_name='Prazo de Confecção'
-    )
+    prazo_confeccao = models.CharField(
+    max_length=10, choices=PrazoConfeccao.choices, blank=True,
+    verbose_name='Prazo de Confecção'
+)
     data_entrega       = models.DateField(null=True, blank=True, verbose_name='Data de Entrega')
     observacoes        = models.TextField(blank=True, verbose_name='Observações')
     observacoes_internas = models.TextField(blank=True, verbose_name='Observações Internas')
