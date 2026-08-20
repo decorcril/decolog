@@ -221,12 +221,14 @@
 
         {% if pedido.comprovantes_envio.all %}
         <div class="table-responsive mb-3">
-          <table class="table table-sm mb-0">
+          <table class="table table-sm mb-0 align-middle">
             <thead class="table-light">
               <tr>
                 <th>Arquivo</th>
-                <th>Anexado em</th>
-                <th>Anexado por</th>
+                <th>Transportadora</th>
+                <th>Código de Rastreio</th>
+                <th>Data</th>
+                <th>Responsável</th>
                 <th></th>
               </tr>
             </thead>
@@ -237,6 +239,30 @@
                   <a href="{{ comp.arquivo.url }}" target="_blank" class="text-decoration-none">
                     <i class="bi bi-paperclip me-1"></i>{{ comp.nome_original }}
                   </a>
+                </td>
+                <td>
+                  <form method="post" action="{% url 'vendas:comprovante_envio_editar_info' pedido.pk comp.pk %}"
+                        class="d-flex gap-1">
+                    {% csrf_token %}
+                    <input type="text" name="transportadora" value="{{ comp.transportadora }}"
+                           class="form-control form-control-sm" placeholder="—" style="min-width:120px;">
+                    <input type="hidden" name="codigo_rastreio" value="{{ comp.codigo_rastreio }}">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary" title="Salvar">
+                      <i class="bi bi-check-lg"></i>
+                    </button>
+                  </form>
+                </td>
+                <td>
+                  <form method="post" action="{% url 'vendas:comprovante_envio_editar_info' pedido.pk comp.pk %}"
+                        class="d-flex gap-1">
+                    {% csrf_token %}
+                    <input type="hidden" name="transportadora" value="{{ comp.transportadora }}">
+                    <input type="text" name="codigo_rastreio" value="{{ comp.codigo_rastreio }}"
+                           class="form-control form-control-sm" placeholder="—" style="min-width:120px;">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary" title="Salvar">
+                      <i class="bi bi-check-lg"></i>
+                    </button>
+                  </form>
                 </td>
                 <td class="text-muted small">{{ comp.enviado_em|date:"d/m/Y H:i" }}</td>
                 <td class="text-muted small">{{ comp.enviado_por.get_full_name|default:comp.enviado_por.username }}</td>
@@ -261,11 +287,19 @@
         <form method="post" action="{% url 'vendas:comprovante_envio_add' pedido.pk %}"
               enctype="multipart/form-data" class="row g-2">
           {% csrf_token %}
-          <div class="col-md-9">
+          <div class="col-md-5">
             <input type="file" name="arquivo" class="form-control form-control-sm"
                    accept="image/*,.pdf" required>
           </div>
           <div class="col-md-3">
+            <input type="text" name="transportadora" class="form-control form-control-sm"
+                   placeholder="Transportadora">
+          </div>
+          <div class="col-md-2">
+            <input type="text" name="codigo_rastreio" class="form-control form-control-sm"
+                   placeholder="Rastreio">
+          </div>
+          <div class="col-md-2">
             <button type="submit" class="btn btn-success btn-sm w-100">
               <i class="bi bi-upload me-1"></i> Anexar
             </button>
@@ -372,7 +406,7 @@
     {# ── Status ── #}
     <div class="card mb-4">
       <div class="card-body p-4">
-        <p class="fw-semibold text-secondary small mb-3">DETALHES DO PEDIDO</p>
+        <p class="fw-semibold text-secondary small mb-3">STATUS</p>
 
         <div class="mb-3">
           <span class="text-muted small">Status</span>

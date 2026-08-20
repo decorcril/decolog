@@ -59,7 +59,10 @@
     `).join('');
 
     lista.querySelectorAll('.notif-item').forEach(item => {
-      item.addEventListener('click', function () {
+      item.addEventListener('click', function (e) {
+        e.preventDefault();
+        const destino = this.href;
+
         fetch(`${URL_LIDA}${this.dataset.pedidoPk}/lida/`, {
           method:  'POST',
           headers: {
@@ -67,8 +70,8 @@
             'Content-Type': 'application/x-www-form-urlencoded',
           },
           body: `tipo=${encodeURIComponent(this.dataset.tipo)}`,
-        }).then(() => {
-          buscarNotificacoes();
+        }).finally(() => {
+          window.location.href = destino;
         });
       });
     });

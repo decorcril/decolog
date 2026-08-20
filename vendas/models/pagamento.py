@@ -74,14 +74,16 @@ class Pagamento(models.Model):
         pedido.sync_status()
 
 class ComprovanteEnvio(models.Model):
-    pedido        = models.ForeignKey(
+    pedido           = models.ForeignKey(
         Pedido, on_delete=models.CASCADE,
         related_name='comprovantes_envio', verbose_name='Pedido'
     )
-    arquivo       = models.FileField(upload_to='comprovantes_envio/%Y/%m/', verbose_name='Arquivo')
-    nome_original = models.CharField(max_length=255, blank=True, verbose_name='Nome Original do Arquivo')
-    enviado_em    = models.DateTimeField(auto_now_add=True, verbose_name='Anexado em')
-    enviado_por   = models.ForeignKey(
+    arquivo          = models.FileField(upload_to='comprovantes_envio/%Y/%m/', verbose_name='Arquivo')
+    nome_original    = models.CharField(max_length=255, blank=True, verbose_name='Nome Original do Arquivo')
+    transportadora   = models.CharField(max_length=100, blank=True, verbose_name='Transportadora')
+    codigo_rastreio  = models.CharField(max_length=100, blank=True, verbose_name='Código de Rastreio')
+    enviado_em       = models.DateTimeField(auto_now_add=True, verbose_name='Anexado em')
+    enviado_por      = models.ForeignKey(
         User, on_delete=models.PROTECT, verbose_name='Anexado por'
     )
 

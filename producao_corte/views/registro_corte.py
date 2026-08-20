@@ -155,6 +155,43 @@ def _atualizar_status_pedido(pedido, request):
         messages.warning(request, f'Corte parcial registrado. Faltam: {faltam}')
 
 
+def _reverter_status_pedido_apos_exclusao(pedido, request):
+    """
+    Depois de apagar um registro de corte (e suas ProdutoCortado em cascata),
+    reavalia o status do pedido — ele pode não ter mais peças suficientes
+    para justificar 'assembling' ou 'picking'. Isso garante que o pedido
+    saia da Fila de Montagem quando as peças que o colocaram lá deixam de
+    existir.
+    """
+    if not pedido:
+        return
+
+    pedido.refresh_from_db()
+
+    protegidos_sem_reavaliacao = {
+        pedido.Status.SHIPPED,
+        pedido.Status.DELIVERED,
+        pedido.Status.CANCELED,
+        pedido.Status.DEVOLVIDO,
+    }
+    if pedido.status in protegidos_sem_reavaliacao:
+        return
+
+    progresso   = pedido.progresso_corte
+    incompletos = [p for p in progresso if not p['completo']]
+
+    if incompletos:
+        # Ainda falta cortar algo (ou tudo, se zerou geral) — volta pra Corte
+        if pedido.status != pedido.Status.CUTTING:
+            pedido.status = pedido.Status.CUTTING
+            pedido.save(update_fields=['status', 'atualizado_em'])
+            messages.warning(
+                request,
+                f'Pedido {pedido.numero} voltou para "Em Corte" — '
+                f'peças precisam ser recortadas.'
+            )
+
+
 @producao_ou_gerente
 def registro_corte_create(request):
     from vendas.models import Pedido
@@ -324,6 +361,8 @@ def registro_corte_delete(request, pk):
     registro = get_object_or_404(RegistroCorte, pk=pk)
 
     if request.method == 'POST':
+        pedido = registro.pedido  # captura antes de apagar, para reavaliar status depois
+
         try:
             from django.db import transaction
             with transaction.atomic():
@@ -337,8 +376,14 @@ def registro_corte_delete(request, pk):
                         observacao=f'Estorno do corte em {registro.data.strftime("%d/%m/%Y")}',
                         usuario=request.user,
                     )
-                registro.delete()
+                registro.delete()  # cascade apaga ItemCorte e ProdutoCortado relacionados
                 messages.success(request, 'Registro excluído e estoque estornado com sucesso!')
+
+            # Fora da transação principal: se o pedido perdeu peças, ele pode
+            # não ter mais o que justificar estar em 'assembling'/'picking' —
+            # reavalia e tira ele da Fila de Montagem se for o caso.
+            _reverter_status_pedido_apos_exclusao(pedido, request)
+
         except Exception as e:
             messages.error(request, f'Erro ao excluir: {e}')
 

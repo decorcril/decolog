@@ -263,11 +263,23 @@ def notificacoes_marcar_lida(request, pedido_pk):
         tipo   = request.POST.get('tipo')
 
         if tipo:
-            Notificacao.objects.update_or_create(
+            # .update() funciona com 0, 1 ou vários registros encontrados —
+            # diferente de update_or_create (que usa .get() internamente e
+            # quebra com MultipleObjectsReturned se houver duplicatas).
+            atualizados = Notificacao.objects.filter(
                 destinatario=request.user,
                 pedido=pedido,
                 tipo=tipo,
-                defaults={'lida': True},
-            )
+            ).update(lida=True)
+
+            # Se não existia nenhum registro (tipos "ao vivo", sem persistência
+            # prévia), cria um novo já marcado como lido.
+            if atualizados == 0:
+                Notificacao.objects.create(
+                    destinatario=request.user,
+                    pedido=pedido,
+                    tipo=tipo,
+                    lida=True,
+                )
 
     return JsonResponse({'ok': True})

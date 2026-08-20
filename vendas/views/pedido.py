@@ -159,7 +159,12 @@ def pedido_list(request):
             Q(numero__icontains=q) | Q(cliente__nome__icontains=q)
         )
 
-    if status:
+    # "Aguardando Envio" não é um status real no banco — é 'picking' com
+    # tudo já separado (status_separacao.tudo_separado). Como isso depende
+    # de uma property calculada, filtramos em Python depois da query.
+    if status == 'aguardando_envio':
+        pedidos = pedidos.filter(status='picking')
+    elif status:
         pedidos = pedidos.filter(status=status)
 
     if data_inicio:
@@ -184,6 +189,9 @@ def pedido_list(request):
             transacao__icontains=transacao
         ).values_list('pedido_id', flat=True)
         pedidos = pedidos.filter(pk__in=pedido_ids)
+
+    if status == 'aguardando_envio':
+        pedidos = [p for p in pedidos if p.status_separacao['tudo_separado']]
 
     paginator = Paginator(pedidos, 20)
     pedidos   = paginator.get_page(request.GET.get('page', 1))
@@ -582,10 +590,12 @@ def comprovante_envio_add(request, pk):
 
         arquivo = request.FILES['arquivo']
         ComprovanteEnvio.objects.create(
-            pedido        = pedido,
-            arquivo       = arquivo,
-            nome_original = arquivo.name,
-            enviado_por   = request.user,
+            pedido          = pedido,
+            arquivo         = arquivo,
+            nome_original   = arquivo.name,
+            transportadora  = request.POST.get('transportadora', '').strip(),
+            codigo_rastreio = request.POST.get('codigo_rastreio', '').strip(),
+            enviado_por     = request.user,
         )
         messages.success(request, 'Comprovante anexado com sucesso!')
     else:
@@ -604,5 +614,21 @@ def comprovante_envio_delete(request, pk, comprovante_pk):
     if request.method == 'POST':
         comprovante.delete()  # o signal post_delete já remove o arquivo do bucket
         messages.success(request, 'Comprovante removido.')
+
+    return redirect('vendas:pedido_detail', pk=pedido.pk)
+
+
+@acesso_vendas
+def comprovante_envio_editar_info(request, pk, comprovante_pk):
+    from vendas.models import ComprovanteEnvio
+
+    pedido      = get_object_or_404(Pedido, pk=pk)
+    comprovante = get_object_or_404(ComprovanteEnvio, pk=comprovante_pk, pedido=pedido)
+
+    if request.method == 'POST':
+        comprovante.transportadora  = request.POST.get('transportadora', '').strip()
+        comprovante.codigo_rastreio = request.POST.get('codigo_rastreio', '').strip()
+        comprovante.save(update_fields=['transportadora', 'codigo_rastreio'])
+        messages.success(request, 'Informações atualizadas.')
 
     return redirect('vendas:pedido_detail', pk=pedido.pk)

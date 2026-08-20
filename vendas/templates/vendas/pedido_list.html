@@ -37,6 +37,9 @@
           <label class="form-label fw-semibold text-secondary small mb-1">STATUS</label>
           <select name="status" class="form-select">
             <option value="">Todos</option>
+            <option value="aguardando_envio" {% if status == 'aguardando_envio' %}selected{% endif %}>
+              Aguardando Envio
+            </option>
             {% for value, label in status_choices %}
               <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
             {% endfor %}

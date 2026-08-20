@@ -95,8 +95,11 @@
               {% elif mov.motivo == 'uso_interno' %}bg-warning bg-opacity-10 text-dark
               {% elif mov.tipo == 'transferencia' %}bg-info bg-opacity-10 text-info
               {% else %}bg-secondary bg-opacity-10 text-dark{% endif %}">
-              {% if mov.motivo %}{{ mov.get_motivo_display }}{% else %}{{ mov.get_tipo_display }}{% endif %}
+              {{ mov.get_tipo_display }}
             </span>
+            {% if mov.motivo %}
+            <div class="text-muted small mt-1">{{ mov.get_motivo_display }}</div>
+            {% endif %}
           </td>
           <td class="text-center">
             <span class="fw-semibold">{{ mov.produto.nome }}</span>

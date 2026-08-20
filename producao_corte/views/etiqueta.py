@@ -47,14 +47,14 @@ def etiquetas_registro_corte(request, pk):
         buffer,
         pagesize=(LARGURA, ALTURA),
         leftMargin=MARGEM, rightMargin=MARGEM,
-        topMargin=20 * mm,  bottomMargin=MARGEM,
+        topMargin=6 * mm,  bottomMargin=MARGEM,
     )
 
     conteudo_w = LARGURA - 2 * MARGEM - QR_SIZE - 4 * mm
 
-    s_codigo  = ParagraphStyle('codigo',  fontSize=25,  fontName='Helvetica', leading=15, alignment=TA_LEFT, textColor=colors.HexColor('#666666'))
-    s_produto = ParagraphStyle('produto', fontSize=19, fontName='Helvetica-Bold', leading=24, alignment=TA_LEFT)
-    s_obs     = ParagraphStyle('obs',     fontSize=15,  fontName='Helvetica-Bold', leading=15, alignment=TA_LEFT, textColor=colors.HexColor('#444444'))
+    s_codigo  = ParagraphStyle('codigo',  fontSize=30,  fontName='Helvetica', leading=15, alignment=TA_LEFT, textColor=colors.HexColor('#666666'))
+    s_produto = ParagraphStyle('produto', fontSize=23, fontName='Helvetica-Bold', leading=24, alignment=TA_LEFT)
+    s_obs     = ParagraphStyle('obs',     fontSize=16,  fontName='Helvetica-Bold', leading=17, alignment=TA_LEFT, textColor=colors.HexColor('#444444'))
     s_hint    = ParagraphStyle('hint',    fontSize=10, fontName='Helvetica',      leading=8,  alignment=TA_CENTER, textColor=colors.HexColor('#888888'))
 
     elementos   = []
@@ -66,18 +66,11 @@ def etiquetas_registro_corte(request, pk):
 
         obs = peca.produto.descricao or ''
 
-        lado_esq = [
-            Paragraph(peca.produto.codigo or '', s_codigo),
-            Spacer(1, 8 * mm),
-            Paragraph(peca.produto.nome, s_produto),
-        ]
+        # ── Bloco 1: código, bem no topo, largura inteira ──
+        bloco = [Paragraph(peca.produto.codigo or '', s_codigo)]
 
-        if obs:
-            lado_esq += [
-                Spacer(1, 8 * mm),
-                Paragraph(obs, s_obs),
-            ]
-
+        # ── Bloco 2: nome do produto (esquerda) + QR (direita) ──
+        lado_esq = [Paragraph(peca.produto.nome, s_produto)]
         lado_dir = [
             qr_img,
             Paragraph('escaneie para registrar.', s_hint),
@@ -96,7 +89,16 @@ def etiquetas_registro_corte(request, pk):
             ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
         ]))
 
-        elementos.append(KeepTogether(tabela))
+        bloco += [Spacer(1, 6 * mm), tabela]
+
+        # ── Bloco 3: observação, embaixo, largura inteira ──
+        if obs:
+            bloco += [
+                Spacer(1, 6 * mm),
+                Paragraph(obs, s_obs),
+            ]
+
+        elementos.append(KeepTogether(bloco))
 
         if idx < total_pecas - 1:
             elementos.append(Spacer(1, 3 * mm))
