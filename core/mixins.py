@@ -70,3 +70,23 @@ def estoque_ou_logistica(view_func):
         'Estoquista', 'Gerente', 'Logistica Loja',
         'Vendedor', 'Operador de Laser', 'Supervisor de Laser'
     )(view_func)
+
+
+def loja_do_usuario(user):
+    """
+    Retorna a loja (Local) vinculada ao usuário via PerfilVendedor, ou None
+    se ele for staff/Gerente, ou não tiver loja definida — nesses casos,
+    o usuário enxerga o estoque de todas as lojas normalmente.
+    """
+    if user.is_staff:
+        return None
+
+    grupos = user.groups.values_list('name', flat=True)
+    if 'Gerente' in grupos:
+        return None
+
+    perfil = getattr(user, 'perfil_vendedor', None)
+    if perfil and perfil.loja:
+        return perfil.loja
+
+    return None

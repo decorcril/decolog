@@ -4,3 +4,4 @@ from .perfil import PerfilUsuario
 from .tag_fornecedor import TagFornecedor
 from .sequence import Sequence
 from .notificacao import Notificacao
+from .perfil_vendedor import PerfilVendedor

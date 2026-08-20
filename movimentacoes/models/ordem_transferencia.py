@@ -81,15 +81,22 @@ class OrdemTransferencia(models.Model):
 
     @transaction.atomic
     def confirmar_recebimento(self, usuario):
-        from estoque.models import Estoque
+        from movimentacoes.models import Movimentacao
         from django.utils import timezone
 
         if self.status != self.STATUS_TRANSITO:
             raise ValueError('Apenas ordens em trânsito podem ser confirmadas.')
 
         for item in self.itens.all():
-            saldo_destino = Estoque.get_or_create_saldo(item.produto, self.local_destino)
-            saldo_destino.adicionar(item.quantidade)
+            Movimentacao.objects.create(
+                produto=item.produto,
+                local=self.local_destino,
+                tipo=Movimentacao.TIPO_ENTRADA,
+                motivo='transferencia',
+                quantidade=item.quantidade,
+                observacao=f'Recebimento — Ordem de Transferência {self.numero}',
+                usuario=usuario,
+            )
 
         self.status          = self.STATUS_RECEBIDO
         self.recebido_por    = usuario
@@ -97,15 +104,22 @@ class OrdemTransferencia(models.Model):
         self.save()
 
     @transaction.atomic
-    def cancelar(self):
-        from estoque.models import Estoque
+    def cancelar(self, usuario):
+        from movimentacoes.models import Movimentacao
 
         if self.status != self.STATUS_TRANSITO:
             raise ValueError('Apenas ordens em trânsito podem ser canceladas.')
 
         for item in self.itens.all():
-            saldo_origem = Estoque.get_or_create_saldo(item.produto, self.local_origem)
-            saldo_origem.adicionar(item.quantidade)
+            Movimentacao.objects.create(
+                produto=item.produto,
+                local=self.local_origem,
+                tipo=Movimentacao.TIPO_ENTRADA,
+                motivo='ajuste',
+                quantidade=item.quantidade,
+                observacao=f'Estorno — Ordem de Transferência {self.numero} cancelada',
+                usuario=usuario,
+            )
 
         self.status = self.STATUS_CANCELADO
         self.save()

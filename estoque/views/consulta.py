@@ -7,16 +7,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.core.paginator import Paginator
 from core.models import Local
-from produtos.models import Produto
-from estoque.models import Estoque
-
-
-from django.db.models import Q
-from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
-from django.shortcuts import render
-from django.core.paginator import Paginator
-from core.models import Local
+from core.mixins import loja_do_usuario
 from produtos.models import Produto
 from estoque.models import Estoque
 
@@ -26,6 +17,13 @@ def estoque_list(request):
     q = request.GET.get('q', '')
     local_id = request.GET.get('local', '')
     categoria = request.GET.get('categoria', '')
+
+    loja_restrita = loja_do_usuario(request.user)
+
+    # Se o usuário está restrito a uma loja, ignora qualquer local_id vindo
+    # da URL e força o filtro pra loja dele — evita bypass via ?local=999.
+    if loja_restrita:
+        local_id = str(loja_restrita.pk)
 
     produtos = Produto.objects.filter(ativo=True)
 
@@ -54,10 +52,14 @@ def estoque_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
+    # Dropdown de locais: se restrito, mostra só a loja dele (sem opção de trocar).
+    locais = Local.objects.filter(pk=loja_restrita.pk) if loja_restrita else Local.objects.filter(ativo=True)
+
     return render(request, 'estoque/consulta/list.html', {
         'produtos': page_obj,
         'page_obj': page_obj,
-        'locais': Local.objects.filter(ativo=True),
+        'locais': locais,
+        'loja_restrita': loja_restrita,
         'q': q,
         'local_id': local_id,
         'categoria': categoria,
@@ -67,10 +69,15 @@ def estoque_list(request):
 
 @login_required
 def saldo_por_produto(request, produto_id):
+    loja_restrita = loja_do_usuario(request.user)
+
     estoques = Estoque.objects.filter(
         produto_id=produto_id,
         quantidade__gt=0
     ).select_related('local')
+
+    if loja_restrita:
+        estoques = estoques.filter(local=loja_restrita)
 
     dados = [
         {

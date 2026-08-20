@@ -6,10 +6,9 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
-from movimentacoes.models import OrdemTransferencia, ItemOrdemTransferencia
+from movimentacoes.models import OrdemTransferencia, ItemOrdemTransferencia, Movimentacao
 from movimentacoes.forms import OrdemTransferenciaForm
 from produtos.models import Produto
-from estoque.models import Estoque
 from core.mixins import estoquista_ou_admin
 
 
@@ -51,8 +50,18 @@ def ordem_criar(request):
                     if quantidade <= 0:
                         continue
 
-                    saldo = Estoque.get_or_create_saldo(produto, origem)
-                    saldo.subtrair(quantidade)
+                    # Cria a Movimentacao de saída — ela mesma se encarrega de
+                    # debitar o Estoque via _aplicar_movimentacao(), incluindo
+                    # a validação de saldo insuficiente.
+                    Movimentacao.objects.create(
+                        produto=produto,
+                        local=origem,
+                        tipo=Movimentacao.TIPO_SAIDA,
+                        motivo='transferencia',
+                        quantidade=quantidade,
+                        observacao=f'Envio — Ordem de Transferência {ordem.numero}',
+                        usuario=request.user,
+                    )
 
                     ItemOrdemTransferencia.objects.create(
                         ordem=ordem,
@@ -130,7 +139,7 @@ def ordem_cancelar(request, pk):
 
     if request.method == 'POST':
         try:
-            ordem.cancelar()
+            ordem.cancelar(request.user)
             messages.success(request, f'Ordem {ordem.numero} cancelada. Estoque revertido.')
         except ValueError as e:
             messages.error(request, str(e))
