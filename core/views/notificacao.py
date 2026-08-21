@@ -194,7 +194,7 @@ def _notificacao_pronto_para_envio(user, grupos):
     return [
         {
             'tipo':      'picking',
-            'label':     'Pronto para envio — imprimir ficha',
+            'label':     'Pronto para envio.',
             'pedido':    pedido.numero,
             'cliente':   pedido.cliente.nome,
             'url':       f'/vendas/{pedido.pk}/',

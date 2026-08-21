@@ -83,10 +83,10 @@ class Pedido(models.Model):
         verbose_name='Local de Saída'
     )
     frete              = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Frete')
-    prazo_confeccao = models.CharField(
-    max_length=10, choices=PrazoConfeccao.choices, blank=True,
-    verbose_name='Prazo de Confecção'
-)
+    prazo_confeccao    = models.CharField(
+        max_length=10, choices=PrazoConfeccao.choices, blank=True,
+        verbose_name='Prazo de Confecção'
+    )
     data_entrega       = models.DateField(null=True, blank=True, verbose_name='Data de Entrega')
     observacoes        = models.TextField(blank=True, verbose_name='Observações')
     observacoes_internas = models.TextField(blank=True, verbose_name='Observações Internas')
@@ -128,8 +128,6 @@ class Pedido(models.Model):
     )
     separado         = models.BooleanField(default=False, verbose_name='Separado')
 
-    
-
     class Meta:
         verbose_name        = 'Pedido'
         verbose_name_plural = 'Pedidos'
@@ -145,7 +143,7 @@ class Pedido(models.Model):
     def save(self, *args, **kwargs):
         if not self.pk and not self.numero:
             from core.models import Sequence
-            self.numero = Sequence.next_formatted('pedido', start=3000)
+            self.numero = Sequence.next_formatted('pedido', start=4000)
         if not self.responsavel:
             self.responsavel = self.criado_por
         if not self.token_expedicao:

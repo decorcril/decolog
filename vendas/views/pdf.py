@@ -1,8 +1,10 @@
 from io import BytesIO
 from datetime import datetime
+from functools import partial
 import os
 import zoneinfo
 
+from django.conf import settings
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 
@@ -11,11 +13,11 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
+from reportlab.lib.utils import ImageReader
 from reportlab.platypus import (
     SimpleDocTemplate, Table, TableStyle, Paragraph,
     Spacer, HRFlowable, KeepTogether,
 )
-from reportlab.platypus import Image as RLImage
 import qrcode
 
 from core.mixins import acesso_vendas
@@ -34,6 +36,9 @@ PAGE_W, PAGE_H = A4
 MARGIN         = 6 * mm
 CONTENT_W      = PAGE_W - 2 * MARGIN
 
+# Caminho do logo/mascote — ajuste se o arquivo estiver em outro lugar
+LOGO_PATH = os.path.join(settings.BASE_DIR, 'static', 'img', 'mascote.png')
+
 
 # ══════════════════════════════════════════════════════════════
 # HELPERS
@@ -43,7 +48,8 @@ def _fmt_brl(value) -> str:
     return f"R$ {value:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
 
 
-def _build_qr(url: str, size_mm: float) -> RLImage:
+def _build_qr_image(url: str) -> ImageReader:
+    """Gera o QR code como ImageReader, pronto para desenhar direto no canvas."""
     qr = qrcode.QRCode(
         version=None,
         error_correction=qrcode.constants.ERROR_CORRECT_M,
@@ -55,7 +61,42 @@ def _build_qr(url: str, size_mm: float) -> RLImage:
     buf = BytesIO()
     img.save(buf, format="PNG")
     buf.seek(0)
-    return RLImage(buf, width=size_mm * mm, height=size_mm * mm)
+    return ImageReader(buf)
+
+
+def _draw_footer_extras(canvas, doc, pedido, request, s):
+    """
+    Desenha, fixos no rodapé da página (independente do conteúdo do
+    documento): o QR code no canto inferior esquerdo, e o logo/mascote no
+    canto inferior direito, ambos na mesma altura.
+    """
+    canvas.saveState()
+
+    # ── QR code — canto inferior esquerdo ──
+    url     = request.build_absolute_uri(f'/vendas/expedir/{pedido.token_expedicao}/')
+    qr_img  = _build_qr_image(url)
+    qr_size = 31 * mm
+    qr_x    = MARGIN
+    qr_y    = MARGIN
+
+    canvas.drawImage(qr_img, qr_x, qr_y, width=qr_size, height=qr_size)
+    canvas.setFont('Helvetica', 7)
+    canvas.setFillColor(C_TEXT_MUTED)
+    canvas.drawCentredString(qr_x + qr_size / 2, qr_y - 3 * mm, 'escaneie para confirmar')
+
+    # ── Logo/mascote — canto inferior direito, mesma altura do QR ──
+    if os.path.exists(LOGO_PATH):
+        logo_size = 31 * mm
+        logo_x    = PAGE_W - MARGIN - logo_size
+        logo_y    = MARGIN - 2 * mm
+
+        canvas.drawImage(
+            LOGO_PATH, logo_x, logo_y,
+            width=logo_size, height=logo_size,
+            preserveAspectRatio=True, mask='auto',
+        )
+
+    canvas.restoreState()
 
 
 def _build_address(cliente) -> str:
@@ -122,7 +163,6 @@ def _section_title(text: str, s: dict) -> Paragraph:
 def _info_grid(rows: list, col_widths: list, s: dict) -> Table:
     table_rows = []
     for row_pair in rows:
-        # Filtra pares onde label e valor estão vazios
         pares_validos = [(label, value) for label, value in row_pair if label and value]
 
         if not pares_validos:
@@ -133,7 +173,6 @@ def _info_grid(rows: list, col_widths: list, s: dict) -> Table:
             cells.append(Paragraph(label, s['label']))
             cells.append(Paragraph(str(value), s['value']))
 
-        # Preenche células vazias se a linha ficou com só 1 par (mantém o layout)
         while len(cells) < len(col_widths):
             cells.append(Paragraph('', s['label']))
 
@@ -174,23 +213,6 @@ def _full_width_row(label: str, value: str, col_lbl: float, content_w: float, s:
     return t
 
 
-def _build_compact_qr(pedido, request, qr_width: float, s: dict) -> Table:
-    url    = request.build_absolute_uri(f'/vendas/expedir/{pedido.token_expedicao}/')
-    qr_img = _build_qr(url, size_mm=30)
-
-    inner = Table(
-        [[qr_img], [Paragraph('escaneie para confirmar', s['qr_hint'])]],
-        colWidths=[qr_width],
-    )
-    inner.setStyle(TableStyle([
-        ('ALIGN',         (0, 0), (-1, -1), 'CENTER'),
-        ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
-        ('TOPPADDING',    (0, 0), (-1, -1), 0),
-        ('BOTTOMPADDING', (0, 1), (0, 1),   2),
-    ]))
-    return inner
-
-
 def _build_items_table(pedido, content_w: float, s: dict) -> list:
     def _th(text): return Paragraph(text, s['th'])
     def _th_c(text): return Paragraph(text, s['th_c'])
@@ -198,18 +220,20 @@ def _build_items_table(pedido, content_w: float, s: dict) -> list:
     def _td_c(text): return Paragraph(str(text), s['td_c'])
     def _td_r(text, bold=False): return Paragraph(str(text), s['td_r_bold'] if bold else s['td_r'])
 
-    COL_QTD   = 16 * mm
-    COL_PRICE = 28 * mm
-    COL_TOTAL = 28 * mm
-    COL_DESC  = content_w - COL_QTD - COL_PRICE - COL_TOTAL
+    COL_QTD    = 14 * mm
+    COL_CODIGO = 22 * mm
+    COL_PRICE  = 28 * mm
+    COL_TOTAL  = 28 * mm
+    COL_DESC   = content_w - COL_QTD - COL_CODIGO - COL_PRICE - COL_TOTAL
 
-    header_row = [_th_c('Qtd'), _th('Produto'), _th_c('Vlr. Unit.'), _th_c('Total')]
-    col_widths = [COL_QTD, COL_DESC, COL_PRICE, COL_TOTAL]
+    header_row = [_th_c('Qtd'), _th_c('Código'), _th('Produto'), _th_c('Vlr. Unit.'), _th_c('Total')]
+    col_widths = [COL_QTD, COL_CODIGO, COL_DESC, COL_PRICE, COL_TOTAL]
 
     rows = [header_row]
     for item in pedido.itens.select_related('produto').all():
         rows.append([
             _td_c(item.quantidade),
+            _td_c(item.produto.codigo or '—'),
             _td(item.produto.nome),
             _td_r(_fmt_brl(item.preco_unitario)),
             _td_r(_fmt_brl(item.subtotal), bold=True),
@@ -223,8 +247,8 @@ def _build_items_table(pedido, content_w: float, s: dict) -> list:
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [C_WHITE, C_LIGHT_BG]),
         ('GRID',           (0, 0), (-1, -1), 0.8, colors.HexColor('#000')),
         ('VALIGN',         (0, 0), (-1, -1), 'TOP'),
-        ('ALIGN',          (0, 0), (0, -1),  'CENTER'),
-        ('ALIGN',          (2, 0), (-1, -1), 'RIGHT'),
+        ('ALIGN',          (0, 0), (1, -1),  'CENTER'),
+        ('ALIGN',          (3, 0), (-1, -1), 'RIGHT'),
         ('LEFTPADDING',    (0, 0), (-1, -1), 4),
         ('RIGHTPADDING',   (0, 0), (-1, -1), 4),
         ('TOPPADDING',     (0, 1), (-1, -1), 5),
@@ -300,19 +324,25 @@ def pedido_pdf(request, pk):
     doc    = SimpleDocTemplate(
         buffer, pagesize=A4,
         leftMargin=MARGIN, rightMargin=MARGIN,
-        topMargin=MARGIN,  bottomMargin=MARGIN,
+        topMargin=MARGIN,  bottomMargin=MARGIN + 30 * mm,  # reserva espaço pro QR/logo fixos no rodapé
         title=f"Pedido #{pedido.numero}", author='Decorcril',
     )
 
     el = []
+###
 
+
+
+
+###
     # ── Cabeçalho ──
     left_col = [
         Paragraph("DECORCRIL", s['company']),
         Spacer(1, 2 * mm),
         Paragraph("Decorcril Acrílicos e Artesanatos Ltda.", s['company_sub']),
-        Paragraph("Rua Prudente de Moraes, 1327 — Suzano/SP", s['company_sub']),
+        Paragraph("Endereço: Rua Prudente de Moraes, 1327 — Suzano/SP, 08610-005 ", s['company_sub']),
         Paragraph("CNPJ: 45.401.044/0001-61", s['company_sub']),
+        Paragraph("WhatsApp (11) 97899-9091", s['company_sub']),
     ]
     right_col = [
         Paragraph("PEDIDO DE VENDA",     s['doc_label']),
@@ -322,9 +352,9 @@ def pedido_pdf(request, pk):
     ]
     header = Table(
         [[left_col, right_col]],
-        colWidths=[CONTENT_W * 0.55, CONTENT_W * 0.45],
+        colWidths=[CONTENT_W * 0.65, CONTENT_W * 0.35],   # era 0.55 / 0.45
         rowHeights=[30 * mm],
-    )
+)
     header.setStyle(TableStyle([
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('LEFTPADDING', (0, 0), (-1, -1), 4 * mm),
@@ -343,7 +373,8 @@ def pedido_pdf(request, pk):
          ('Data',       pedido.criado_em.strftime('%d/%m/%Y'))],
         [('Telefone',   cliente.telefone or '—'),
          ('WhatsApp',   cliente.whatsapp or '—')],
-        [('Contato',    pedido.contato )],
+        [('Email',      cliente.email or '—'),
+         ('Responsável',    pedido.contato or '—')],
     ], cw, s))
     el.append(_full_width_row('Endereço', _build_address(cliente), col_lbl, CONTENT_W, s, bg=C_LIGHT_BG))
     el.append(Spacer(1, 4 * mm))
@@ -383,25 +414,13 @@ def pedido_pdf(request, pk):
         el.append(obs)
         el.append(Spacer(1, 4 * mm))
 
-    # ── Resumo Financeiro + QR Code ──
+    # ── Resumo Financeiro (só totais — QR e logo fixos no rodapé via canvas) ──
     el.append(_section_title('Resumo Financeiro', s))
     el.append(Spacer(1, 2 * mm))
+    el.append(_build_totals_table(pedido, CONTENT_W, s))
 
-    qr_width     = 40 * mm
-    totals_width = CONTENT_W - qr_width - 5 * mm
-
-    side_by_side = Table(
-        [[_build_compact_qr(pedido, request, qr_width, s), _build_totals_table(pedido, totals_width, s)]],
-        colWidths=[qr_width, totals_width],
-    )
-    side_by_side.setStyle(TableStyle([
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 0),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-    ]))
-    el.append(KeepTogether(side_by_side))
-
-    doc.build(el)
+    draw_footer = partial(_draw_footer_extras, pedido=pedido, request=request, s=s)
+    doc.build(el, onFirstPage=draw_footer, onLaterPages=draw_footer)
 
     pdf = buffer.getvalue()
     buffer.close()
