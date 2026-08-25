@@ -18,6 +18,13 @@
             <i class="bi bi-check-circle me-1"></i> Confirmar Separação
           </button>
         </form>
+
+        {% if peca.produto.is_kit %}
+        <a href="{% url 'producao_corte:desmembrar_kit' token=peca.token %}"
+           class="btn btn-sm btn-outline-danger w-100 mt-2">
+          <i class="bi bi-box-seam me-1"></i> Desmembrar em peças avulsas
+        </a>
+        {% endif %}
       </div>
     </div>
   </div>

@@ -70,6 +70,22 @@ class Produto(models.Model):
     def is_materia_prima(self):
         return self.categoria in (self.CATEGORIA_INSUMO, self.CATEGORIA_CHAPA)
 
+    @property
+    def is_kit(self):
+        """
+        True se este produto_final é um Kit — ou seja, tem FichaTecnica e
+        todos os componentes dela também são produto_final (peças prontas
+        que se juntam num conjunto, ex: Trio = P + M + G).
+
+        Diferente de um produto_final "composto" cuja FichaTecnica lista
+        insumo/chapa (isso é receita de produção, não Kit — continua
+        resolvido via Estoque agregado, não via ProdutoCortado avulso).
+        """
+        ficha = getattr(self, 'ficha_tecnica', None)
+        if not ficha:
+            return False
+        return ficha.is_kit
+
     def estoque_total(self):
         from estoque.models import Estoque
         result = Estoque.objects.filter(produto=self).aggregate(

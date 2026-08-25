@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}Desmembrar Kit{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center">
+  <div class="card" style="max-width: 520px; width: 100%;">
+    <div class="card-body p-4">
+
+      <h5 class="fw-bold mb-1">Desmembrar {{ peca.produto.nome }}</h5>
+      <p class="text-muted small mb-4">Peça {{ peca.token|slice:":8" }}</p>
+
+      {% if tinha_pedido %}
+      <div class="alert alert-warning small mb-3">
+        <i class="bi bi-exclamation-triangle me-1"></i>
+        Esta peça está vinculada ao <strong>Pedido {{ tinha_pedido.numero }}</strong>
+        ({{ tinha_pedido.cliente.nome }}). Ao desmembrar, o registro original fica
+        marcado como histórico e <strong>sai da contagem de separação</strong> desse
+        pedido. As {{ componentes|length }} peça(s) novas nascem <strong>avulsas</strong>
+        — não ficam vinculadas a nenhum pedido automaticamente. Se o pedido ainda
+        precisa desses componentes, vincule cada peça manualmente depois.
+      </div>
+      {% endif %}
+
+      <p class="fw-semibold text-secondary small mb-2">VAI GERAR</p>
+      <table class="table table-sm mb-4">
+        <thead class="table-light">
+          <tr>
+            <th>Componente</th>
+            <th class="text-center">Qtd</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in componentes %}
+          <tr>
+            <td class="small">{{ item.material.nome }}</td>
+            <td class="text-center small">{{ item.quantidade|floatformat:"-0" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <p class="text-muted small mb-3">
+        <i class="bi bi-qr-code me-1"></i>
+        Cada peça nova recebe um QR/etiqueta próprio — imprima e cole antes de
+        separar as peças fisicamente.
+      </p>
+
+      <form method="post">
+        {% csrf_token %}
+        <div class="d-flex gap-2">
+          <a href="{% url 'montagem:confirmar_montagem' token=peca.token %}"
+             class="btn btn-outline-secondary flex-grow-1">Cancelar</a>
+          <button type="submit" class="btn btn-danger flex-grow-1"
+                  onclick="return confirm('Confirma o desmembramento de {{ peca.produto.nome }} em {{ componentes|length }} peça(s)? Essa ação não pode ser desfeita.')">
+            Confirmar desmembramento
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

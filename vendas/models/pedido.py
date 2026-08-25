@@ -225,11 +225,12 @@ class Pedido(models.Model):
         total     += UnidadePedido.objects.filter(item__pedido=self).count()
         separadas += UnidadePedido.objects.filter(item__pedido=self, separada=True).count()
 
-        # Itens de produto final (cortados/montados) — rastreados via ProdutoCortado
-        total     += ProdutoCortado.objects.filter(pedido=self).count()
-        separadas += ProdutoCortado.objects.filter(
-            pedido=self, status__in=['separado', 'enviado']
-        ).count()
+        # Itens de produto final (cortados/montados) — rastreados via ProdutoCortado.
+        # Exclui 'desmembrado': é um registro histórico (o Kit virou outras
+        # peças), não algo pendente de separação/envio para este pedido.
+        pecas = ProdutoCortado.objects.filter(pedido=self).exclude(status='desmembrado')
+        total     += pecas.count()
+        separadas += pecas.filter(status__in=['separado', 'enviado']).count()
 
         return {
             'total':         total,

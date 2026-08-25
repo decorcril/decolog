@@ -23,3 +23,18 @@ class FichaTecnica(models.Model):
 
     def __str__(self):
         return f'Ficha Técnica — {self.produto.nome}'
+
+    @property
+    def is_kit(self):
+        """
+        True se todos os componentes desta ficha são produto_final — ou
+        seja, ela representa um Kit (conjunto de peças prontas que se
+        vendem juntas, ex: Trio = P + M + G), e não uma receita de
+        produção (componentes insumo/chapa consumidos como matéria-prima).
+
+        Precisa de pelo menos 1 item — ficha vazia não é Kit.
+        """
+        itens = list(self.itens.select_related('material').all())
+        return bool(itens) and all(
+            item.material.categoria == 'produto_final' for item in itens
+        )

@@ -67,10 +67,11 @@ class ProdutoCortado(models.Model):
     status       = models.CharField(
         max_length=20,
         choices=[
-            ('aguardando', 'Aguardando Montagem'),
-            ('montado',    'Montado'),
-            ('separado',   'Separado'),
-            ('enviado',    'Enviado'),
+            ('aguardando',  'Aguardando Montagem'),
+            ('montado',     'Montado'),
+            ('separado',    'Separado'),
+            ('enviado',     'Enviado'),
+            ('desmembrado', 'Desmembrado'),
         ],
         default='aguardando',
         verbose_name='Status'
@@ -100,6 +101,24 @@ class ProdutoCortado(models.Model):
         verbose_name='Separada por'
     )
     separada_em  = models.DateTimeField(null=True, blank=True, verbose_name='Separada em')
+
+    # ── Desmembramento de Kit (ex: Trio → P + M + G avulsos) ──
+    desmembrada_por = models.ForeignKey(
+        User, on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='pecas_desmembradas',
+        verbose_name='Desmembrada por'
+    )
+    desmembrada_em = models.DateTimeField(
+        null=True, blank=True, verbose_name='Desmembrada em'
+    )
+    origem_desmembramento = models.ForeignKey(
+        'self', on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='pecas_geradas',
+        verbose_name='Origem do desmembramento',
+        help_text='Se esta peça nasceu de um desmembramento, aponta pro Kit original.'
+    )
 
     class Meta:
         verbose_name        = 'Peça Cortada'

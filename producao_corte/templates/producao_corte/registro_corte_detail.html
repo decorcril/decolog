@@ -20,6 +20,15 @@
          class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-tag me-1"></i> Imprimir Etiquetas
       </a>
+      {% if produtos_cortados %}
+      <form method="post" action="{% url 'producao_corte:confirmar_montagem_lote' registro.pk %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-success"
+                onclick="return confirm('Confirmar montagem de TODAS as peças aguardando deste registro? Isso pula a verificação individual por QR.')">
+          <i class="bi bi-check-all me-1"></i> Confirmar Montagem de Todos
+        </button>
+      </form>
+      {% endif %}
       {% if is_supervisor %}
       <a href="{% url 'producao_corte:delete' registro.pk %}?page={{ page }}{% if operador_id %}&operador={{ operador_id }}{% endif %}"
          class="btn btn-sm btn-outline-danger">

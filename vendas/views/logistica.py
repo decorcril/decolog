@@ -10,11 +10,10 @@ from vendas.models import Pedido, UnidadePedido
 from movimentacoes.models import Movimentacao
 from estoque.models import Estoque
 from core.models import Local
+from producao_corte.services import disponibilidade_produto_final, consumir_produto_final
 
 
 def _verificar_estoque_pedido(pedido):
-    from producao_corte.models import ProdutoCortado
-
     local = pedido.local_saida
     if not local:
         local = Local.objects.filter(tipo='fabrica').first()
@@ -24,26 +23,24 @@ def _verificar_estoque_pedido(pedido):
 
     for item in pedido.itens.select_related('produto').all():
 
-        # ── Produto final — verifica peças montadas no estoque ──
+        # ── Produto final — peça direta, ou Kit decomposto em avulsas ──
         if item.produto.categoria == 'produto_final':
-            disponiveis = ProdutoCortado.objects.filter(
-                produto=item.produto,
-                status='montado',
-                pedido=None,
-            ).count()
-            ok = disponiveis >= item.quantidade
+            ok, n_diretas, componentes = disponibilidade_produto_final(
+                item.produto, item.quantidade
+            )
             if not ok:
                 tudo_ok = False
             resultado.append({
-                'nome':       item.produto.nome,
-                'quantidade': item.quantidade,
-                'composto':   False,
-                'disponivel': disponiveis,
-                'ok':         ok,
+                'nome':        item.produto.nome,
+                'quantidade':  item.quantidade,
+                'composto':    bool(componentes),
+                'disponivel':  n_diretas,
+                'componentes': componentes,
+                'ok':          ok,
             })
 
         else:
-            # ── Insumo ou composto — verifica estoque normal ──
+            # ── Insumo ou receita com matéria-prima — verifica Estoque normal ──
             try:
                 ficha = item.produto.ficha_tecnica
                 itens_ok    = True
@@ -87,18 +84,14 @@ def _verificar_estoque_pedido(pedido):
 
 
 def _todos_insumos(pedido):
-    """Retorna True se todos os itens são insumos OU produto_final com peças no estoque."""
-    from producao_corte.models import ProdutoCortado
+    """Retorna True se todos os itens são insumos OU produto_final (simples
+    ou Kit) já resolvíveis com peças avulsas em estoque."""
     for item in pedido.itens.select_related('produto').all():
         if item.produto.categoria == 'insumo':
             continue
         if item.produto.categoria == 'produto_final':
-            disponiveis = ProdutoCortado.objects.filter(
-                produto=item.produto,
-                status='montado',
-                pedido=None,
-            ).count()
-            if disponiveis >= item.quantidade:
+            ok, _, _ = disponibilidade_produto_final(item.produto, item.quantidade)
+            if ok:
                 continue
         return False
     return True
@@ -107,20 +100,15 @@ def _todos_insumos(pedido):
 def _processar_uso_estoque(pedido, local, usuario, itens_status=None):
     """
     Efetiva o uso do estoque para um pedido em AGUARD_PRODUCAO:
-    - Produto final (peça avulsa já montada): vincula a peça ao pedido e marca
-      como separada (já está pronta, veio direto do estoque).
-    - Insumo/composto: debita de fato o material via Movimentacao, igual ao
-      fluxo normal de separação.
+    - Produto final (simples ou Kit): vincula peça(s) reais via
+      producao_corte.services.consumir_produto_final — direta e/ou por
+      componentes avulsos, cada uma com seu próprio QR.
+    - Insumo/receita com matéria-prima: debita via Movimentacao, como antes.
 
     Se itens_status for informado (retorno de _verificar_estoque_pedido),
     processa só os itens com ok=True — os demais seguem o fluxo normal de
-    corte/montagem, permitindo cobrir pedidos com estoque parcial (um item
-    disponível, outro precisando ser produzido). Sem esse parâmetro, processa
-    todos os itens do pedido (uso via botão manual, onde tudo_ok já é True).
+    corte/montagem. Sem esse parâmetro, processa todos os itens do pedido.
     """
-    from producao_corte.models import ProdutoCortado
-
-    agora = timezone.now()
     ok_por_nome = (
         {s['nome']: s['ok'] for s in itens_status}
         if itens_status is not None else None
@@ -131,18 +119,7 @@ def _processar_uso_estoque(pedido, local, usuario, itens_status=None):
             continue  # sem estoque suficiente para este item — segue fluxo normal
 
         if item.produto.categoria == 'produto_final':
-            pecas = ProdutoCortado.objects.filter(
-                produto=item.produto,
-                status='montado',
-                pedido=None,
-            ).order_by('id')[:item.quantidade]
-
-            for peca in pecas:
-                peca.pedido       = pedido
-                peca.status       = 'separado'
-                peca.separada_por = usuario
-                peca.separada_em  = agora
-                peca.save(update_fields=['pedido', 'status', 'separada_por', 'separada_em'])
+            consumir_produto_final(item.produto, item.quantidade, pedido, usuario)
 
         else:
             try:
