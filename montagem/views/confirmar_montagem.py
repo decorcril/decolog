@@ -3,10 +3,11 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 
 from producao_corte.models import ProdutoCortado
-from producao_corte.services import debitar_componentes_ficha, pedidos_precisando_peca
-from movimentacoes.models import Movimentacao
-from core.models import Local
-
+from producao_corte.services import (
+    debitar_componentes_ficha,
+    pedidos_precisando_peca,
+    confirmar_montagem_peca,
+)
 
 @login_required
 def confirmar_montagem(request, token):
