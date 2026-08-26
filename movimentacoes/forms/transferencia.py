@@ -57,10 +57,6 @@ class TransferenciaForm(forms.Form):
         if origem and destino and origem == destino:
             raise forms.ValidationError('Origem e destino não podem ser iguais.')
 
-        if destino and produto:
-            if destino.is_loja and produto.is_materia_prima:
-                raise forms.ValidationError('Loja não pode receber matéria-prima.')
-
         if produto and origem and quantidade:
             try:
                 saldo = Estoque.objects.get(produto=produto, local=origem)

@@ -106,10 +106,6 @@ class Movimentacao(models.Model):
         )
 
     def clean(self):
-        if self.local and self.produto:
-            if self.local.is_loja and self.produto.is_materia_prima:
-                raise ValidationError('Loja não pode receber matéria-prima.')
-
         if self.quantidade is not None:
             if self.tipo == self.TIPO_AJUSTE:
                 if self.quantidade < 0:
