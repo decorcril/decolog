@@ -18,6 +18,13 @@ class Orcamento(models.Model):
         REJECTED = 'rejected', 'Rejeitado'
         EXPIRED  = 'expired',  'Expirado'
 
+    class PrazoConfeccao(models.TextChoices):
+        DIAS_15        = "15",     "15 dias"
+        DIAS_20        = "20",     "20 dias"
+        DIAS_25        = "25",     "25 dias"
+        DIAS_30        = "30",     "30 dias"
+        PRONTA_ENTREGA = "pronta", "À Pronta Entrega"
+
     numero               = models.CharField(max_length=20, unique=True, editable=False)
     cliente              = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='orcamentos')
     tipo_venda           = models.CharField(max_length=20, choices=[
@@ -32,7 +39,11 @@ class Orcamento(models.Model):
     contato              = models.CharField(max_length=100, blank=True)
     transportadora       = models.CharField(max_length=100, blank=True)
     frete                = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    percentual_entrada   = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    prazo_confeccao      = models.CharField(
+        max_length=10, choices=PrazoConfeccao.choices, blank=True,
+        verbose_name='Prazo de Confecção'
+    )
+    urgente              = models.BooleanField(default=False, verbose_name='Urgente')
     total_desconto       = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     observacoes          = models.TextField(blank=True)
     observacoes_internas = models.TextField(blank=True)

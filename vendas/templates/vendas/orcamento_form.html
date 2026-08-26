@@ -47,7 +47,7 @@
         </div>
       </div>
 
-      {# Comercial #}
+            {# Comercial #}
       <div class="card mb-4">
         <div class="card-body p-4">
           <p class="fw-semibold text-secondary small mb-3">DADOS COMERCIAIS</p>
@@ -75,16 +75,28 @@
                 {% endfor %}
               </select>
             </div>
-            <div class="col-md-3">
-              <label class="form-label fw-semibold text-secondary small">SINAL (%)</label>
-              <input type="number" name="percentual_entrada" class="form-control"
-                     value="0" min="0" max="100" step="0.01">
-            </div>
-            <div class="col-md-3">
+            <div class="col-md-4">
               <label class="form-label fw-semibold text-secondary small">FRETE (R$)</label>
               <input type="text" name="frete" id="id_frete" class="form-control"
                      value="0" data-mask="moeda">
               <small class="text-muted">Ou calcule pelo Melhor Envio abaixo.</small>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold text-secondary small">PRAZO DE CONFECÇÃO</label>
+              <select name="prazo_confeccao" class="form-select">
+                <option value="">Selecione...</option>
+                {% for value, label in prazo_confeccao_choices %}
+                  <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+              <div class="form-check">
+                <input type="checkbox" name="urgente" id="id_urgente" class="form-check-input">
+                <label class="form-check-label fw-semibold text-secondary small" for="id_urgente">
+                  Urgente
+                </label>
+              </div>
             </div>
           </div>
         </div>

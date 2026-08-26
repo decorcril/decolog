@@ -67,7 +67,8 @@ def orcamento_create(request):
         tipo_venda           = request.POST.get('tipo_venda')
         condicao_pagamento   = request.POST.get('condicao_pagamento', '')
         contato              = request.POST.get('contato', '')
-        percentual_entrada   = request.POST.get('percentual_entrada', '0') or '0'
+        prazo_confeccao      = request.POST.get('prazo_confeccao', '')
+        urgente              = request.POST.get('urgente') == 'on'
         total_desconto       = request.POST.get('total_desconto', '0').replace('.', '').replace(',', '.') or '0'
         observacoes          = request.POST.get('observacoes', '')
         observacoes_internas = request.POST.get('observacoes_internas', '')
@@ -105,7 +106,8 @@ def orcamento_create(request):
                     contato              = contato,
                     transportadora       = transportadora,
                     frete                = frete,
-                    percentual_entrada   = Decimal(percentual_entrada),
+                    prazo_confeccao      = prazo_confeccao,
+                    urgente              = urgente,
                     total_desconto       = Decimal(total_desconto),
                     observacoes          = observacoes,
                     observacoes_internas = observacoes_internas,
@@ -125,6 +127,7 @@ def orcamento_create(request):
         'titulo':                 'Novo Orçamento',
         'tipo_venda_choices':     Orcamento._meta.get_field('tipo_venda').choices,
         'transportadora_choices': TRANSPORTADORA_CHOICES,
+        'prazo_confeccao_choices': Orcamento.PrazoConfeccao.choices,
     })
 
 
@@ -162,7 +165,8 @@ def orcamento_aprovar(request, pk):
             contato              = orcamento.contato,
             transportadora       = orcamento.transportadora,
             frete                = orcamento.frete,
-            percentual_entrada   = orcamento.percentual_entrada,
+            prazo_confeccao      = orcamento.prazo_confeccao,
+            urgente              = orcamento.urgente,
             total_desconto       = orcamento.total_desconto,
             observacoes          = orcamento.observacoes,
             observacoes_internas = orcamento.observacoes_internas,

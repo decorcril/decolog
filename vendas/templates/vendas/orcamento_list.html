@@ -54,7 +54,12 @@
         <div class="card-body p-4">
 
           <div class="d-flex justify-content-between align-items-start mb-2">
-            <span class="fw-bold">{{ orc.numero }}</span>
+            <span class="fw-bold">
+              {{ orc.numero }}
+              {% if orc.urgente %}
+              <i class="bi bi-exclamation-triangle-fill text-danger me-1" title="Urgente"></i>
+              {% endif %}
+            </span>
             <span class="badge
               {% if orc.status == 'draft' %}bg-warning bg-opacity-10 text-warning
               {% elif orc.status == 'approved' %}bg-success bg-opacity-10 text-success

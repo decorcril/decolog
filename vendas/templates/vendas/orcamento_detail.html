@@ -7,7 +7,14 @@
 
 <div class="d-flex justify-content-between align-items-start mb-4">
   <div>
-    <h4 class="fw-bold mb-1">Orçamento {{ orcamento.numero }}</h4>
+    <h4 class="fw-bold mb-1">
+      Orçamento {{ orcamento.numero }}
+      {% if orcamento.urgente %}
+      <span class="badge bg-danger bg-opacity-10 text-danger ms-1">
+        <i class="bi bi-lightning-fill me-1"></i> Urgente
+      </span>
+      {% endif %}
+    </h4>
     <p class="text-muted small mb-0">
       <a href="{% url 'vendas:orcamento_list' %}" class="text-muted text-decoration-none">
         <i class="bi bi-file-earmark-text me-1"></i>Orçamentos
@@ -21,13 +28,15 @@
   <div class="d-flex gap-2">
     <form method="post" action="{% url 'vendas:orcamento_aprovar' orcamento.pk %}">
       {% csrf_token %}
-      <button type="submit" class="btn btn-success">
+      <button type="submit" class="btn btn-success"
+              onclick="return confirm('Tem certeza que deseja aprovar esse orçamento?')">
         <i class="bi bi-check-lg me-1"></i> Aprovar
       </button>
     </form>
     <form method="post" action="{% url 'vendas:orcamento_rejeitar' orcamento.pk %}">
       {% csrf_token %}
-      <button type="submit" class="btn btn-outline-danger">
+      <button type="submit" class="btn btn-outline-danger"
+              onclick="return confirm('Tem certeza que deseja rejeitar esse orçamento?')">
         <i class="bi bi-x-lg me-1"></i> Rejeitar
       </button>
     </form>
@@ -108,19 +117,20 @@
           <div class="d-flex justify-content-between align-items-center">
             <span class="text-muted small">Status</span>
             <span class="badge
-              {% if pedido.status == 'open' %}bg-secondary bg-opacity-10 text-secondary
-              {% elif pedido.status == 'aguard_pagamento' %}bg-warning bg-opacity-10 text-warning
-              {% elif pedido.status == 'aguard_producao' %}bg-info bg-opacity-10 text-info
-              {% elif pedido.status == 'cutting' %}bg-primary bg-opacity-10 text-primary
-              {% elif pedido.status == 'assembling' %}bg-warning bg-opacity-10 text-warning
-              {% elif pedido.status == 'picking' %}bg-info bg-opacity-10 text-info
-              {% elif pedido.status == 'shipped' %}bg-primary bg-opacity-10 text-primary
-              {% elif pedido.status == 'delivered' %}bg-success bg-opacity-10 text-success
-              {% elif pedido.status == 'canceled' %}bg-danger bg-opacity-10 text-danger
+              {% if orcamento.status == 'draft' %}bg-secondary bg-opacity-10 text-secondary
+              {% elif orcamento.status == 'approved' %}bg-success bg-opacity-10 text-success
+              {% elif orcamento.status == 'rejected' %}bg-danger bg-opacity-10 text-danger
+              {% elif orcamento.status == 'expired' %}bg-warning bg-opacity-10 text-warning
               {% endif %}">
-              {{ pedido.get_status_display }}
+              {{ orcamento.get_status_display }}
             </span>
           </div>
+          {% if orcamento.prazo_confeccao %}
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Prazo de Confecção</span>
+            <span class="small fw-semibold">{{ orcamento.get_prazo_confeccao_display }}</span>
+          </div>
+          {% endif %}
           <div class="d-flex justify-content-between align-items-center">
             <span class="text-muted small">Válido até</span>
             <span class="small fw-semibold {% if orcamento.expirado %}text-danger{% endif %}">
