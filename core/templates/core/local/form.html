@@ -52,7 +52,8 @@
           <hr class="my-3" style="border-color: #f0f2f5;">
 
           <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-primary px-4">
+            <button type="submit" class="btn btn-primary px-4"
+            onclick="return confirm('Tem certeza que deseja salvar?')">
               <i class="bi bi-check-lg me-1"></i> Salvar
             </button>
             <a href="{% url 'core:local_list' %}" class="btn btn-outline-secondary px-4">

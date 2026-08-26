@@ -164,7 +164,8 @@
       </div>
 
       <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary px-4">
+        <button type="submit" class="btn btn-primary px-4"
+        onclick="return confirm('Tem certeza que deseja salvar?')">
           <i class="bi bi-check-lg me-1"></i> Salvar
         </button>
         <a href="{% if cliente %}{% url 'clientes:detail' cliente.pk %}{% else %}{% url 'clientes:list' %}{% endif %}"
