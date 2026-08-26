@@ -47,6 +47,9 @@ def acesso_vendas(view_func):
         'Supervisor de Montagem', 'Operador de Montagem', 'Logistica Loja'
     )(view_func)
 
+def acesso_orcamentos(view_func):
+    return grupo_requerido('Vendedor', 'Financeiro', 'Gerente')(view_func)
+
 def laser_ou_gerente(view_func):
     return grupo_requerido('Operador de Laser', 'Supervisor de Laser', 'Gerente')(view_func)
 

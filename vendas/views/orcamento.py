@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from clientes.models import Cliente
-from core.mixins import vendedor_ou_gerente
+from core.mixins import acesso_orcamentos
 from vendas.models import Pedido, ItemPedido
 from vendas.models.orcamento import Orcamento, ItemOrcamento
 
@@ -21,7 +21,7 @@ TRANSPORTADORA_CHOICES = [
 ]
 
 
-@vendedor_ou_gerente
+@acesso_orcamentos
 def orcamento_list(request):
     q      = request.GET.get('q', '')
     status = request.GET.get('status', '')
@@ -60,7 +60,7 @@ def orcamento_list(request):
     })
 
 
-@vendedor_ou_gerente
+@acesso_orcamentos
 def orcamento_create(request):
     if request.method == 'POST':
         cliente_id           = request.POST.get('cliente')
@@ -131,7 +131,7 @@ def orcamento_create(request):
     })
 
 
-@vendedor_ou_gerente
+@acesso_orcamentos
 def orcamento_detail(request, pk):
     orcamento = get_object_or_404(
         Orcamento.objects.select_related('cliente', 'criado_por')
@@ -143,7 +143,7 @@ def orcamento_detail(request, pk):
     })
 
 
-@vendedor_ou_gerente
+@acesso_orcamentos
 def orcamento_aprovar(request, pk):
     orcamento = get_object_or_404(Orcamento, pk=pk)
 
@@ -190,7 +190,7 @@ def orcamento_aprovar(request, pk):
     return redirect('vendas:orcamento_detail', pk=orcamento.pk)
 
 
-@vendedor_ou_gerente
+@acesso_orcamentos
 def orcamento_rejeitar(request, pk):
     orcamento = get_object_or_404(Orcamento, pk=pk)
 
