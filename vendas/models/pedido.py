@@ -59,10 +59,10 @@ class Pedido(models.Model):
         COMODATO    = "comodato",    "Comodato"
 
     class PrazoConfeccao(models.TextChoices):
-        DIAS_15        = "15",     "15 dias"
-        DIAS_20        = "20",     "20 dias"
-        DIAS_25        = "25",     "25 dias"
-        DIAS_30        = "30",     "30 dias"
+        DIAS_15        = "15",     "15 dias úteis"
+        DIAS_20        = "20",     "20 dias úteis"
+        DIAS_25        = "25",     "25 dias úteis"
+        DIAS_30        = "30",     "30 dias úteis"
         PRONTA_ENTREGA = "pronta", "À Pronta Entrega"
 
     numero             = models.CharField(max_length=10, unique=True, blank=True, verbose_name='Número do Pedido', db_index=True)
