@@ -24,27 +24,19 @@ def autocomplete_cliente(request):
                 'telefone':  c.telefone,
                 'cidade':    c.cidade,
                 'estado':    c.estado,
-                'cep':       c.cep or '',  # ← adiciona o CEP
+                'cep':       c.cep or '',
             }
             for c in clientes
         ]
     })
 
 def autocomplete_produto(request):
-    q          = request.GET.get('q', '')
-    tipo_venda = request.GET.get('tipo_venda', '')
+    q = request.GET.get('q', '')
 
-    tipos_com_insumo = {'exchange', 'replacement', 'advertising', 'comodato'}
-
-    if tipo_venda in tipos_com_insumo:
-        produtos = Produto.objects.filter(
-            ativo=True,
-            categoria__in=['produto_final', 'insumo']
-        )
-    else:
-        produtos = Produto.objects.filter(
-            ativo=True, categoria='produto_final'
-        )
+    produtos = Produto.objects.filter(
+        ativo=True,
+        categoria__in=['produto_final', 'insumo']
+    )
 
     if q:
         produtos = produtos.filter(

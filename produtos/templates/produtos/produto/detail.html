@@ -83,8 +83,7 @@
       </div>
     </div>
 
-    {# Preço — só para produtos finais #}
-    {% if produto.is_produto_final %}
+    {# Preço — disponível para qualquer categoria #}
     <div class="card">
       <div class="card-body p-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -115,7 +114,6 @@
         {% endif %}
       </div>
     </div>
-    {% endif %}
 
   </div>
 
