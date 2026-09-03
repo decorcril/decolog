@@ -39,6 +39,16 @@ def _verificar_estoque_pedido(pedido):
                 'ok':          ok,
             })
 
+        # ── Insumo cobrável — sem controle de estoque, sempre ok ──
+        elif item.produto.categoria == 'insumo' and item.produto.is_insumo_cobravel:
+            resultado.append({
+                'nome':       item.produto.nome,
+                'quantidade': item.quantidade,
+                'composto':   False,
+                'disponivel': item.quantidade,
+                'ok':         True,
+            })
+
         else:
             # ── Insumo ou receita com matéria-prima — verifica Estoque normal ──
             try:
@@ -103,6 +113,7 @@ def _processar_uso_estoque(pedido, local, usuario, itens_status=None):
     - Produto final (simples ou Kit): vincula peça(s) reais via
       producao_corte.services.consumir_produto_final — direta e/ou por
       componentes avulsos, cada uma com seu próprio QR.
+    - Insumo cobrável: nada a fazer, é só item de cobrança.
     - Insumo/receita com matéria-prima: debita via Movimentacao, como antes.
 
     Se itens_status for informado (retorno de _verificar_estoque_pedido),
@@ -120,6 +131,9 @@ def _processar_uso_estoque(pedido, local, usuario, itens_status=None):
 
         if item.produto.categoria == 'produto_final':
             consumir_produto_final(item.produto, item.quantidade, pedido, usuario)
+
+        elif item.produto.categoria == 'insumo' and item.produto.is_insumo_cobravel:
+            continue  # item de cobrança — nada a debitar/vincular
 
         else:
             try:
@@ -279,7 +293,6 @@ def logistica_historico(request):
 
     return render(request, 'vendas/logistica_historico.html', {
         'pedidos':     page_obj,
-        'page_obj':    page_obj,
         'q':           q,
         'data_inicio': data_inicio,
         'data_fim':    data_fim,

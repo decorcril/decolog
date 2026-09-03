@@ -13,10 +13,12 @@ FREE_SALE_TYPES = {"exchange", "maintenance", "advertising", "replacement", "com
 
 
 def _criar_unidades_insumos(pedido):
-    """Cria UnidadePedido automaticamente para itens do tipo insumo."""
+    """Cria UnidadePedido automaticamente para itens do tipo insumo —
+    exceto insumo cobrável (tem preço cadastrado, sem controle de estoque,
+    ex: Caixa MDF): esse só entra no total do pedido, sem UnidadePedido."""
     from vendas.models.unidade_pedido import UnidadePedido
     for item in pedido.itens.select_related('produto').all():
-        if item.produto.categoria == 'insumo':
+        if item.produto.categoria == 'insumo' and not item.produto.is_insumo_cobravel:
             ja_existentes = item.unidades.count()
             for n in range(item.quantidade):
                 numero = ja_existentes + n + 1

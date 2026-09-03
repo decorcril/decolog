@@ -44,27 +44,3 @@ class ItemMontagem(models.Model):
 
     def __str__(self):
         return f'{self.quantidade}x {self.produto.nome}'
-    
-@property
-def progresso_montagem(self):
-    """Retorna lista com progresso de montagem por produto do pedido."""
-    from montagem.models import ItemMontagem
-    resultado = []
-    for item in self.itens.select_related('produto').all():
-        montado = ItemMontagem.objects.filter(
-            registro__pedido=self,
-            produto=item.produto,
-        ).aggregate(total=sum('quantidade'))['total'] or Decimal('0')
-        resultado.append({
-            'nome':     item.produto.nome,
-            'montado':  montado,
-            'total':    item.quantidade,
-            'completo': montado >= item.quantidade,
-            'falta':    max(Decimal('0'), Decimal(str(item.quantidade)) - Decimal(str(montado))),
-        })
-    return resultado
-
-@property
-def montagem_completa(self):
-    """True se todos os produtos do pedido foram montados."""
-    return all(p['completo'] for p in self.progresso_montagem)

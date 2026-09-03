@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
 from core.models.perfil_vendedor import PerfilVendedor
+from core.models import Local
 
 
 class PerfilVendedorInline(admin.StackedInline):
@@ -18,3 +19,10 @@ class UserAdmin(DjangoUserAdmin):
 
 admin.site.unregister(User)
 admin.site.register(User, UserAdmin)
+
+
+@admin.register(Local)
+class LocalAdmin(admin.ModelAdmin):
+    list_display  = ['nome', 'tipo', 'ativo']
+    list_filter   = ['tipo', 'ativo']
+    search_fields = ['nome']

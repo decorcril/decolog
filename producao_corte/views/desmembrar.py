@@ -1,10 +1,10 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.db import transaction
-from django.utils import timezone
 
 from core.mixins import estoque_ou_gerente
 from producao_corte.models import ProdutoCortado
+from producao_corte.services import desmembrar_peca
 
 
 @estoque_ou_gerente
@@ -23,30 +23,8 @@ def desmembrar_kit(request, token):
     componentes = ficha.itens.select_related('material').all()
 
     if request.method == 'POST':
-        agora = timezone.now()
         with transaction.atomic():
-            novas = []
-            for item in componentes:
-                for _ in range(int(item.quantidade)):
-                    nova = ProdutoCortado.objects.create(
-                        item_corte=peca.item_corte,
-                        produto=item.material,
-                        status='montado',
-                        cortada_por=peca.cortada_por,
-                        montada_por=peca.montada_por,
-                        montada_em=peca.montada_em,
-                        origem_desmembramento=peca,
-                        observacao=(
-                            f'Gerada por desmembramento de {peca.produto.nome} '
-                            f'(peça {peca.token[:8]})'
-                        ),
-                    )
-                    novas.append(nova)
-
-            peca.status          = 'desmembrado'
-            peca.desmembrada_por = request.user
-            peca.desmembrada_em  = agora
-            peca.save(update_fields=['status', 'desmembrada_por', 'desmembrada_em'])
+            novas = desmembrar_peca(peca, request.user)
 
         messages.success(
             request,

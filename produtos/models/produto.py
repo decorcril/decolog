@@ -86,6 +86,23 @@ class Produto(models.Model):
             return False
         return ficha.is_kit
 
+    @property
+    def is_insumo_cobravel(self):
+        """
+        True se é um insumo COM preço de venda cadastrado — cobrado como
+        item no pedido, mas sem nenhum controle de estoque pelo sistema
+        (sem UnidadePedido, sem checagem/débito de Estoque ou Movimentacao).
+        Existe fisicamente e é comprado normalmente, só não é rastreado
+        pelo sistema (ex: Caixa MDF).
+
+        Insumo sem preço cadastrado continua no fluxo normal de controle
+        de estoque (UnidadePedido + Estoque).
+        """
+        if self.categoria != self.CATEGORIA_INSUMO:
+            return False
+        preco = getattr(self, 'preco', None)
+        return bool(preco and preco.preco_venda)
+
     def estoque_total(self):
         from estoque.models import Estoque
         result = Estoque.objects.filter(produto=self).aggregate(

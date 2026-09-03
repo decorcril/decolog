@@ -157,11 +157,14 @@
       </a>
       {% endif %}
 
-      {# -- Logística [MOBILE] -- #}
+            {# -- Logística [MOBILE] -- #}
       {% if is_logistica or is_gerente or user.is_staff %}
       <div class="mobile-nav-section">Logística</div>
       <a href="{% url 'vendas:logistica_list' %}" class="mobile-nav-link">
         <i class="bi bi-box-seam"></i> Fila de Separação
+      </a>
+      <a href="{% url 'vendas:logistica_historico' %}" class="mobile-nav-link">
+        <i class="bi bi-clock-history"></i> Histórico de Envios
       </a>
       {% endif %}
 

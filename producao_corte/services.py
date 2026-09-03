@@ -5,65 +5,99 @@ from estoque.models import Estoque
 from core.models import Local
 
 
+def _kit_que_contem(produto):
+    """
+    Retorna o produto Kit (produto_final) cuja ficha inclui `produto` como
+    componente, se houver um Kit reconhecido (is_kit=True) contendo-o.
+    Usado pro "desmembramento reverso": pedido de 1 componente solto (ex:
+    Cubo P) sem avulsa própria, mas com um Kit inteiro (Trio) disponível
+    que o contém.
+    """
+    from produtos.models import FichaTecnica
+    fichas = FichaTecnica.objects.filter(itens__material=produto).distinct()
+    for ficha in fichas:
+        if ficha.is_kit:
+            return ficha.produto
+    return None
+
+
 def disponibilidade_produto_final(produto, quantidade):
     """
     Verifica quantas unidades de `produto` (produto_final) já estão prontas
-    como ProdutoCortado avulso (peça física com QR), sem precisar cortar
-    de novo.
+    em estoque avulso, sem precisar cortar de novo.
 
-    Combina duas fontes, nessa ordem:
-    1. Peças cortadas diretamente como esse produto — vale tanto pra
-       produto simples quanto pra Kit cortado como peça única.
-    2. Se sobrar quantidade e o produto for Kit (`produto.is_kit`): peças
-       avulsas dos componentes, decompostas via FichaTecnica.
+    Combina, nessa ordem:
+    1. Peças cortadas diretamente como esse produto.
+    2. Se sobrar quantidade e o produto for Kit: peças avulsas dos
+       componentes, decompostas via FichaTecnica.
+    3. Se sobrar quantidade e o produto NÃO for Kit, mas for componente de
+       algum Kit: Kits inteiros disponíveis que podem ser desmembrados pra
+       liberar esse componente.
 
-    Retorna (ok, n_diretas, componentes):
-    - ok: True se a quantidade pedida está totalmente coberta
-    - n_diretas: quantas peças diretas (já prontas como o próprio produto) usar
-    - componentes: disponibilidade de cada material do Kit (vazia se não
-      precisou decompor / não é Kit)
+    Retorna (ok, n_diretas, componentes).
     """
     from producao_corte.models import ProdutoCortado
 
-    diretas_qs = ProdutoCortado.objects.filter(
-        produto=produto, status='montado', pedido=None,
-    ).order_by('id')
+    fabrica = Local.objects.filter(tipo='fabrica').first()
 
-    n_diretas = min(diretas_qs.count(), quantidade)
+    def _disponivel_real(prod):
+        n_pecas = ProdutoCortado.objects.filter(
+            produto=prod, status='montado', pedido=None,
+        ).count()
+
+        if prod.is_kit:
+            # Kit não tem Estoque próprio por design — a entrada da peça
+            # pronta é pulada de propósito na montagem (confirmar_montagem_peca).
+            return n_pecas
+
+        saldo = Estoque.objects.filter(produto=prod, local=fabrica).first()
+        n_estoque = int(saldo.quantidade) if saldo else 0
+        return min(n_pecas, n_estoque)
+
+    n_diretas = min(_disponivel_real(produto), quantidade)
     restante  = quantidade - n_diretas
 
     if restante <= 0:
         return True, n_diretas, []
 
-    if not produto.is_kit:
+    if produto.is_kit:
+        ficha = produto.ficha_tecnica
+        componentes = []
+        ok = True
+        for item in ficha.itens.select_related('material').all():
+            necessario = item.quantidade * restante
+            disponivel = _disponivel_real(item.material)
+            item_ok    = disponivel >= necessario
+            if not item_ok:
+                ok = False
+            componentes.append({
+                'nome':       item.material.nome,
+                'necessario': necessario,
+                'disponivel': disponivel,
+                'ok':         item_ok,
+            })
+        return ok, n_diretas, componentes
+
+    # ── Produto não é Kit — checa se é componente de algum Kit disponível ──
+    kit = _kit_que_contem(produto)
+    if not kit:
         return False, n_diretas, []
 
-    ficha = produto.ficha_tecnica
-    componentes = []
-    ok = True
-    for item in ficha.itens.select_related('material').all():
-        necessario = item.quantidade * restante
-        disponivel = ProdutoCortado.objects.filter(
-            produto=item.material, status='montado', pedido=None,
-        ).count()
-        item_ok = disponivel >= necessario
-        if not item_ok:
-            ok = False
-        componentes.append({
-            'nome':       item.material.nome,
-            'necessario': necessario,
-            'disponivel': disponivel,
-            'ok':         item_ok,
-        })
-
+    disponivel_kit = _disponivel_real(kit)
+    ok = disponivel_kit >= restante
+    componentes = [{
+        'nome':       f'{kit.nome} (desmembrar)',
+        'necessario': restante,
+        'disponivel': disponivel_kit,
+        'ok':         ok,
+    }]
     return ok, n_diretas, componentes
 
 
 def _local_com_saldo(produto, local_preferido, local_fallback, quantidade):
     """
     Usa o local preferido se ele tiver saldo suficiente do produto;
-    caso contrário, cai para o local de fallback (fábrica). Evita tentar
-    debitar de um local que nunca recebeu o material.
+    caso contrário, cai para o local de fallback (fábrica).
     """
     if local_preferido:
         saldo = Estoque.objects.filter(produto=produto, local=local_preferido).first()
@@ -74,23 +108,9 @@ def _local_com_saldo(produto, local_preferido, local_fallback, quantidade):
 
 def debitar_componentes_ficha(peca, pedido, usuario):
     """
-    Ao separar uma peça (ProdutoCortado) — seja via escaneamento manual do
-    QR (montagem/views/confirmar_montagem.py), seja via resolução
-    automática de pedido com peças avulsas (consumir_produto_final,
-    abaixo) — debita do Estoque agregado:
-
-    1. A própria peça pronta (produto final), fechando o ciclo aberto na
-       montagem (onde ela deu entrada). PULADO se a peça for um Kit — ela
-       não tem estoque próprio (ver Produto.is_kit).
-    2. Os materiais/peças da ficha técnica, se houver (receita normal de
-       produção — não confundir com a decomposição de Kit em peças
-       avulsas, que já aconteceu antes desta função ser chamada).
-
-    Existe pra manter o Estoque agregado sincronizado com o ProdutoCortado
-    individual, que é quem efetivamente controla a existência física da
-    peça — as duas rotas de separação (manual e automática) precisam
-    gerar exatamente os mesmos efeitos colaterais, ou o agregado desvia
-    do real.
+    Ao separar uma peça (ProdutoCortado), debita do Estoque agregado:
+    1. A própria peça pronta (pulado se for Kit — não tem estoque próprio).
+    2. Os materiais/peças da ficha técnica, se houver.
     """
     fabrica_padrao  = Local.objects.filter(tipo='fabrica').first()
     local_preferido = pedido.local_saida if pedido else None
@@ -98,7 +118,6 @@ def debitar_componentes_ficha(peca, pedido, usuario):
     ficha  = getattr(peca.produto, 'ficha_tecnica', None)
     eh_kit = peca.produto.is_kit
 
-    # ── 1. Saída da peça pronta (pulado se for Kit) ──
     if not eh_kit:
         local_peca = _local_com_saldo(peca.produto, local_preferido, fabrica_padrao, 1)
         Movimentacao.objects.create(
@@ -114,7 +133,6 @@ def debitar_componentes_ficha(peca, pedido, usuario):
             usuario    = usuario,
         )
 
-    # ── 2. Materiais/peças da ficha técnica ──
     if ficha:
         for componente in ficha.itens.select_related('material').all():
             local_usar = _local_com_saldo(
@@ -134,16 +152,64 @@ def debitar_componentes_ficha(peca, pedido, usuario):
             )
 
 
+def desmembrar_peca(peca, usuario):
+    """
+    Desmembra uma peça Kit (ProdutoCortado) em peças avulsas novas, uma por
+    componente da FichaTecnica (respeitando a quantidade de cada um).
+    Marca a peça original como 'desmembrado' (mantida pra auditoria, sai
+    das contagens de disponibilidade e de status_separacao) e cria uma
+    ProdutoCortado nova por componente, com origem_desmembramento apontando
+    pra ela.
+
+    Pressupõe peca.produto.is_kit — não revalida.
+    Usada tanto pelo desmembramento manual (producao_corte/views/desmembrar.py)
+    quanto pelo desmembramento automático em consumir_produto_final, quando
+    um pedido de componente solto só pode ser resolvido quebrando um Kit
+    inteiro.
+
+    Retorna a lista de ProdutoCortado novas.
+    """
+    from producao_corte.models import ProdutoCortado
+
+    agora = timezone.now()
+    ficha = peca.produto.ficha_tecnica
+    novas = []
+
+    for item in ficha.itens.select_related('material').all():
+        for _ in range(int(item.quantidade)):
+            nova = ProdutoCortado.objects.create(
+                item_corte=peca.item_corte,
+                produto=item.material,
+                status='montado',
+                cortada_por=peca.cortada_por,
+                montada_por=peca.montada_por,
+                montada_em=peca.montada_em,
+                origem_desmembramento=peca,
+                observacao=(
+                    f'Gerada por desmembramento de {peca.produto.nome} '
+                    f'(peça {peca.token[:8]})'
+                ),
+            )
+            novas.append(nova)
+
+    peca.status          = 'desmembrado'
+    peca.desmembrada_por = usuario
+    peca.desmembrada_em  = agora
+    peca.save(update_fields=['status', 'desmembrada_por', 'desmembrada_em'])
+
+    return novas
+
+
 def consumir_produto_final(produto, quantidade, pedido, usuario):
     """
     Vincula ao `pedido` peças ProdutoCortado reais que resolvem `quantidade`
-    unidades de `produto` — direta e/ou via componentes de Kit — marcando
-    cada uma como 'separado' e debitando o Estoque agregado correspondente
-    (via debitar_componentes_ficha), exatamente como a separação manual via
-    QR já faz.
+    unidades de `produto` — direta, via componentes de Kit, ou via
+    desmembramento automático de um Kit inteiro (quando `produto` é um
+    componente avulso sem estoque próprio suficiente) — marcando cada uma
+    como 'separado' e debitando o Estoque agregado correspondente.
 
     Pressupõe que disponibilidade_produto_final(produto, quantidade) já
-    retornou ok=True para esse produto/quantidade; não revalida.
+    retornou ok=True; não revalida.
 
     Retorna a lista de ProdutoCortado vinculados.
     """
@@ -152,12 +218,7 @@ def consumir_produto_final(produto, quantidade, pedido, usuario):
     agora      = timezone.now()
     vinculadas = []
 
-    _, n_diretas, _ = disponibilidade_produto_final(produto, quantidade)
-
-    diretas = ProdutoCortado.objects.filter(
-        produto=produto, status='montado', pedido=None,
-    ).order_by('id')[:n_diretas]
-    for peca in diretas:
+    def _vincular(peca):
         debitar_componentes_ficha(peca, pedido, usuario)
         peca.pedido       = pedido
         peca.status       = 'separado'
@@ -166,8 +227,19 @@ def consumir_produto_final(produto, quantidade, pedido, usuario):
         peca.save(update_fields=['pedido', 'status', 'separada_por', 'separada_em'])
         vinculadas.append(peca)
 
+    _, n_diretas, _ = disponibilidade_produto_final(produto, quantidade)
+
+    diretas = ProdutoCortado.objects.filter(
+        produto=produto, status='montado', pedido=None,
+    ).order_by('id')[:n_diretas]
+    for peca in diretas:
+        _vincular(peca)
+
     restante = quantidade - n_diretas
-    if restante > 0 and produto.is_kit:
+    if restante <= 0:
+        return vinculadas
+
+    if produto.is_kit:
         ficha = produto.ficha_tecnica
         for comp in ficha.itens.select_related('material').all():
             qtd_necessaria = int(comp.quantidade * restante)
@@ -175,26 +247,32 @@ def consumir_produto_final(produto, quantidade, pedido, usuario):
                 produto=comp.material, status='montado', pedido=None,
             ).order_by('id')[:qtd_necessaria]
             for peca in pecas_comp:
-                debitar_componentes_ficha(peca, pedido, usuario)
-                peca.pedido       = pedido
-                peca.status       = 'separado'
-                peca.separada_por = usuario
-                peca.separada_em  = agora
-                peca.save(update_fields=['pedido', 'status', 'separada_por', 'separada_em'])
-                vinculadas.append(peca)
+                _vincular(peca)
+        return vinculadas
+
+    # ── Componente solto sem avulsa própria — desmembra Kit(s) inteiro(s) ──
+    kit = _kit_que_contem(produto)
+    if kit:
+        kits_disponiveis = ProdutoCortado.objects.filter(
+            produto=kit, status='montado', pedido=None,
+        ).order_by('id')[:restante]
+        for kit_peca in kits_disponiveis:
+            novas = desmembrar_peca(kit_peca, usuario)
+            for nova in novas:
+                if restante > 0 and nova.produto_id == produto.id:
+                    _vincular(nova)
+                    restante -= 1
+                # demais componentes (ex: M, G) ficam avulsas — já nasceram
+                # 'montado', pedido=None — disponíveis pra outros pedidos.
 
     return vinculadas
+
 
 def pedidos_precisando_peca(peca):
     """
     Encontra pedidos (picking/aguard_producao) que precisam desta peça
     avulsa — direto (item do pedido = produto da peça) OU como componente
-    de um Kit ainda não totalmente resolvido (ex: peça = Cubo P avulso,
-    pedido pede "Trio de Cubos" e ainda falta vincular Cubo P suficiente).
-
-    Pra Kit, só inclui o pedido se ele ainda PRECISA de mais unidades desse
-    componente especificamente — evita reoferecer um pedido cujo Cubo P já
-    foi todo resolvido, mas que ainda espera Cubo M/G.
+    de um Kit ainda não totalmente resolvido.
     """
     from vendas.models import Pedido
     from producao_corte.models import ProdutoCortado
@@ -227,19 +305,13 @@ def pedidos_precisando_peca(peca):
 
     return (diretos | Pedido.objects.filter(pk__in=kits_ids)).distinct().select_related('cliente')
 
+
 def confirmar_montagem_peca(peca, usuario):
     """
     Confirma a montagem de uma peça (ProdutoCortado): aguardando -> montado.
-
-    Dá entrada no Estoque agregado — peça pronta (pulado se Kit, que não
-    tem estoque próprio) + componentes da ficha técnica, se houver. Espelho
-    de debitar_componentes_ficha, mas na direção de entrada em vez de saída.
-
-    Se a peça já pertence a um pedido e essa foi a última peça faltando
-    montar, avança o pedido para PICKING.
-
-    Usada tanto pelo escaneamento individual (montagem/views/confirmar_montagem.py)
-    quanto pela confirmação em lote (producao_corte/views/montagem_lote.py).
+    Dá entrada no Estoque agregado — peça pronta (pulado se Kit) + componentes
+    da ficha técnica, se houver. Avança o pedido pra PICKING se essa era a
+    última peça faltando montar.
     """
     from producao_corte.models import ProdutoCortado
 
@@ -259,7 +331,6 @@ def confirmar_montagem_peca(peca, usuario):
                 usuario    = usuario,
             )
 
-    # ── Dá entrada na peça pronta (pulado se for Kit) ──
     if not eh_kit:
         Movimentacao.objects.create(
             produto    = peca.produto,

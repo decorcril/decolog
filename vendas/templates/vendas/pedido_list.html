@@ -27,10 +27,16 @@
 
       {# Linha 1 — busca principal #}
       <div class="row g-2 mb-2">
-        <div class="col-md-4">
+        <div class="col-md-3">
           <label class="form-label fw-semibold text-secondary small mb-1">BUSCAR</label>
           <input type="text" name="q" value="{{ q }}" class="form-control"
                  placeholder="Número do pedido, cliente...">
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label fw-semibold text-secondary small mb-1">PRODUTO</label>
+          <input type="text" name="produto" value="{{ produto_q }}" class="form-control"
+                 placeholder="Nome ou código do produto...">
         </div>
 
         <div class="col-md-2">
@@ -55,7 +61,9 @@
             {% endfor %}
           </select>
         </div>
+      </div>
 
+      <div class="row g-2 mb-2">
         <div class="col-md-2">
           <label class="form-label fw-semibold text-secondary small mb-1">DE</label>
           <input type="date" name="data_inicio" value="{{ data_inicio }}" class="form-control">
@@ -74,6 +82,18 @@
           <label class="form-label fw-semibold text-secondary small mb-1">Nº TRANSAÇÃO</label>
           <input type="text" name="transacao" value="{{ transacao }}" class="form-control"
                  placeholder="Nº de transação...">
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label fw-semibold text-secondary small mb-1">VENDEDOR</label>
+          <select name="vendedor" class="form-select">
+            <option value="">Todos</option>
+            {% for v in vendedores %}
+              <option value="{{ v.pk }}" {% if vendedor_id == v.pk|stringformat:"s" %}selected{% endif %}>
+                {{ v.get_full_name|default:v.username }}
+              </option>
+            {% endfor %}
+          </select>
         </div>
         {% endif %}
 
@@ -213,10 +233,10 @@
     <ul class="pagination pagination-sm mb-0">
       {% if pedidos.has_previous %}
       <li class="page-item">
-        <a class="page-link" href="?page=1&q={{ q }}&status={{ status }}&tipo_venda={{ tipo_venda }}&transacao={{ transacao }}&pendentes={{ pendentes }}&urgentes={{ urgentes }}&data_inicio={{ data_inicio }}&data_fim={{ data_fim }}">«</a>
+        <a class="page-link" href="?page=1&q={{ q }}&produto={{ produto_q }}&status={{ status }}&tipo_venda={{ tipo_venda }}&transacao={{ transacao }}&pendentes={{ pendentes }}&urgentes={{ urgentes }}&data_inicio={{ data_inicio }}&data_fim={{ data_fim }}&vendedor={{ vendedor_id }}">«</a>
       </li>
       <li class="page-item">
-        <a class="page-link" href="?page={{ pedidos.previous_page_number }}&q={{ q }}&status={{ status }}&tipo_venda={{ tipo_venda }}&transacao={{ transacao }}&pendentes={{ pendentes }}&urgentes={{ urgentes }}&data_inicio={{ data_inicio }}&data_fim={{ data_fim }}">‹</a>
+        <a class="page-link" href="?page={{ pedidos.previous_page_number }}&q={{ q }}&produto={{ produto_q }}&status={{ status }}&tipo_venda={{ tipo_venda }}&transacao={{ transacao }}&pendentes={{ pendentes }}&urgentes={{ urgentes }}&data_inicio={{ data_inicio }}&data_fim={{ data_fim }}&vendedor={{ vendedor_id }}">‹</a>
       </li>
       {% endif %}
       {% for num in pedidos.paginator.page_range %}
@@ -224,16 +244,16 @@
           <li class="page-item active"><span class="page-link">{{ num }}</span></li>
         {% elif num > pedidos.number|add:'-3' and num < pedidos.number|add:'3' %}
           <li class="page-item">
-            <a class="page-link" href="?page={{ num }}&q={{ q }}&status={{ status }}&tipo_venda={{ tipo_venda }}&transacao={{ transacao }}&pendentes={{ pendentes }}&urgentes={{ urgentes }}&data_inicio={{ data_inicio }}&data_fim={{ data_fim }}">{{ num }}</a>
+            <a class="page-link" href="?page={{ num }}&q={{ q }}&produto={{ produto_q }}&status={{ status }}&tipo_venda={{ tipo_venda }}&transacao={{ transacao }}&pendentes={{ pendentes }}&urgentes={{ urgentes }}&data_inicio={{ data_inicio }}&data_fim={{ data_fim }}&vendedor={{ vendedor_id }}">{{ num }}</a>
           </li>
         {% endif %}
       {% endfor %}
       {% if pedidos.has_next %}
       <li class="page-item">
-        <a class="page-link" href="?page={{ pedidos.next_page_number }}&q={{ q }}&status={{ status }}&tipo_venda={{ tipo_venda }}&transacao={{ transacao }}&pendentes={{ pendentes }}&urgentes={{ urgentes }}&data_inicio={{ data_inicio }}&data_fim={{ data_fim }}">›</a>
+        <a class="page-link" href="?page={{ pedidos.next_page_number }}&q={{ q }}&produto={{ produto_q }}&status={{ status }}&tipo_venda={{ tipo_venda }}&transacao={{ transacao }}&pendentes={{ pendentes }}&urgentes={{ urgentes }}&data_inicio={{ data_inicio }}&data_fim={{ data_fim }}&vendedor={{ vendedor_id }}">›</a>
       </li>
       <li class="page-item">
-        <a class="page-link" href="?page={{ pedidos.paginator.num_pages }}&q={{ q }}&status={{ status }}&tipo_venda={{ tipo_venda }}&transacao={{ transacao }}&pendentes={{ pendentes }}&urgentes={{ urgentes }}&data_inicio={{ data_inicio }}&data_fim={{ data_fim }}">»</a>
+        <a class="page-link" href="?page={{ pedidos.paginator.num_pages }}&q={{ q }}&produto={{ produto_q }}&status={{ status }}&tipo_venda={{ tipo_venda }}&transacao={{ transacao }}&pendentes={{ pendentes }}&urgentes={{ urgentes }}&data_inicio={{ data_inicio }}&data_fim={{ data_fim }}&vendedor={{ vendedor_id }}">»</a>
       </li>
       {% endif %}
     </ul>

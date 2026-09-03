@@ -143,6 +143,8 @@ def pedido_list(request):
     tipo_venda  = request.GET.get('tipo_venda', '')
     data_inicio = request.GET.get('data_inicio', '')
     data_fim    = request.GET.get('data_fim', '')
+    vendedor_id = request.GET.get('vendedor', '')
+    produto_q   = request.GET.get('produto', '')
 
     pedidos = Pedido.objects.select_related('cliente', 'criado_por').all()
 
@@ -190,11 +192,25 @@ def pedido_list(request):
         ).values_list('pedido_id', flat=True)
         pedidos = pedidos.filter(pk__in=pedido_ids)
 
+    if vendedor_id:
+        pedidos = pedidos.filter(criado_por_id=vendedor_id)
+
+    if produto_q:
+        pedidos = pedidos.filter(
+            Q(itens__produto__nome__icontains=produto_q) |
+            Q(itens__produto__codigo__icontains=produto_q)
+        ).distinct()
+
     if status == 'aguardando_envio':
         pedidos = [p for p in pedidos if p.status_separacao['tudo_separado']]
 
     paginator = Paginator(pedidos, 20)
     pedidos   = paginator.get_page(request.GET.get('page', 1))
+
+    from django.contrib.auth.models import User
+    vendedores = User.objects.filter(
+        groups__name='Vendedor'
+    ).distinct().order_by('first_name', 'username')
 
     return render(request, 'vendas/pedido_list.html', {
         'pedidos':            pedidos,
@@ -206,10 +222,12 @@ def pedido_list(request):
         'tipo_venda':         tipo_venda,
         'data_inicio':        data_inicio,
         'data_fim':           data_fim,
+        'vendedor_id':        vendedor_id,
+        'vendedores':         vendedores,
+        'produto_q':          produto_q,
         'status_choices':     Pedido.Status.choices,
         'tipo_venda_choices': Pedido.TipoVenda.choices,
     })
-
 
 @vendedor_ou_gerente
 def pedido_create(request):
