@@ -39,4 +39,5 @@ urlpatterns = [
     path('<int:pk>/comprovantes/adicionar/', views.comprovante_envio_add, name='comprovante_envio_add'),
     path('<int:pk>/comprovantes/<int:comprovante_pk>/remover/', views.comprovante_envio_delete, name='comprovante_envio_delete'),
     path('<int:pk>/comprovantes/<int:comprovante_pk>/editar-info/', views.comprovante_envio_editar_info, name='comprovante_envio_editar_info'),
+    path('orcamentos/<int:pk>/pdf/', views.orcamento_pdf, name='orcamento_pdf'),
 ]

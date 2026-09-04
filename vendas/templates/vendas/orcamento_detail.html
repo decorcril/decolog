@@ -155,6 +155,18 @@
       </div>
     </div>
 
+    {# PDF do Orçamento #}
+    <div class="card mb-4">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <p class="fw-semibold text-secondary small mb-0">DOCUMENTO DO ORÇAMENTO</p>
+          <a href="{% url 'vendas:orcamento_pdf' orcamento.pk %}" target="_blank" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-printer me-1"></i> Gerar PDF
+          </a>
+        </div>
+      </div>
+    </div>
+
     {# Cliente #}
     <div class="card mb-4">
       <div class="card-body p-4">

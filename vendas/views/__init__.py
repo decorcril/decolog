@@ -44,3 +44,4 @@ from .pdf import pedido_pdf
 from .expedicao import expedir_pedido
 from .etiqueta import etiquetas_pedido
 from .unidade import unidade_pedido
+from .orcamento_pdf import orcamento_pdf
