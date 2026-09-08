@@ -14,12 +14,10 @@ services:
     restart: always
     depends_on:
       - db
+    env_file:
+      - .env
     environment:
-      - SECRET_KEY=${SECRET_KEY}
-      - DEBUG=${DEBUG}
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
       - DATABASE_URL=postgres://decolog_user:${DB_PASSWORD}@db/decolog
-      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS}
     volumes:
       - static_files:/app/staticfiles
 
