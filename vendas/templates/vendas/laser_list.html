@@ -9,9 +9,30 @@
   <div>
     <h4 class="fw-bold mb-1">Fila de Corte a Laser</h4>
     <p class="text-muted small mb-0">
-      {{ pedidos_aguardando|length }} aguardando —
-      {{ pedidos_em_corte|length }} em corte
+      {{ total_aguardando }} aguardando —
+      {{ total_corte }} em corte
     </p>
+  </div>
+</div>
+
+{# ── Busca ── #}
+<div class="card mb-4">
+  <div class="card-body p-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-8">
+        <label class="form-label fw-semibold text-secondary small mb-1">BUSCAR</label>
+        <input type="text" name="q" value="{{ q }}" class="form-control"
+               placeholder="Número do pedido, cliente ou produto...">
+      </div>
+      <div class="col-md-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-search me-1"></i> Buscar
+        </button>
+        <a href="{% url 'vendas:laser_list' %}" class="btn btn-outline-secondary">
+          <i class="bi bi-x-lg me-1"></i> Limpar
+        </a>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -22,7 +43,7 @@
 </p>
 
 {% if pedidos_aguardando %}
-<div class="row g-3 mb-4">
+<div class="row g-3 mb-2">
   {% for pedido in pedidos_aguardando %}
   <div class="col-md-6 col-lg-4">
     <div class="card h-100 border-warning {% if pedido.urgente %}border-danger{% endif %}">
@@ -111,6 +132,39 @@
   {% endfor %}
 </div>
 
+{% if pedidos_aguardando.has_other_pages %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <span class="text-muted small">
+    Página {{ pedidos_aguardando.number }} de {{ pedidos_aguardando.paginator.num_pages }}
+  </span>
+  <nav>
+    <ul class="pagination pagination-sm mb-0">
+      {% if pedidos_aguardando.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?q={{ q }}&page_aguardando={{ pedidos_aguardando.previous_page_number }}&page_corte={{ pedidos_em_corte.number }}">‹</a>
+      </li>
+      {% endif %}
+      {% for num in pedidos_aguardando.paginator.page_range %}
+        {% if pedidos_aguardando.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > pedidos_aguardando.number|add:'-3' and num < pedidos_aguardando.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?q={{ q }}&page_aguardando={{ num }}&page_corte={{ pedidos_em_corte.number }}">{{ num }}</a>
+          </li>
+        {% endif %}
+      {% endfor %}
+      {% if pedidos_aguardando.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?q={{ q }}&page_aguardando={{ pedidos_aguardando.next_page_number }}&page_corte={{ pedidos_em_corte.number }}">›</a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+</div>
+{% else %}
+<div class="mb-4"></div>
+{% endif %}
+
 {% else %}
 <div class="card mb-4">
   <div class="card-body p-4 text-center text-muted">
@@ -126,7 +180,7 @@
   <i class="bi bi-scissors text-primary me-1"></i>
   EM CORTE — corte parcial
 </p>
-<div class="row g-3 mb-4">
+<div class="row g-3 mb-2">
   {% for pedido in pedidos_em_corte %}
   <div class="col-md-6 col-lg-4">
     <div class="card h-100 border-primary {% if pedido.urgente %}border-danger{% endif %}">
@@ -212,6 +266,38 @@
   </div>
   {% endfor %}
 </div>
+
+{% if pedidos_em_corte.has_other_pages %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <span class="text-muted small">
+    Página {{ pedidos_em_corte.number }} de {{ pedidos_em_corte.paginator.num_pages }}
+  </span>
+  <nav>
+    <ul class="pagination pagination-sm mb-0">
+      {% if pedidos_em_corte.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?q={{ q }}&page_corte={{ pedidos_em_corte.previous_page_number }}&page_aguardando={{ pedidos_aguardando.number }}">‹</a>
+      </li>
+      {% endif %}
+      {% for num in pedidos_em_corte.paginator.page_range %}
+        {% if pedidos_em_corte.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > pedidos_em_corte.number|add:'-3' and num < pedidos_em_corte.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?q={{ q }}&page_corte={{ num }}&page_aguardando={{ pedidos_aguardando.number }}">{{ num }}</a>
+          </li>
+        {% endif %}
+      {% endfor %}
+      {% if pedidos_em_corte.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?q={{ q }}&page_corte={{ pedidos_em_corte.next_page_number }}&page_aguardando={{ pedidos_aguardando.number }}">›</a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+</div>
+{% endif %}
+
 {% endif %}
 
 {% endblock %}

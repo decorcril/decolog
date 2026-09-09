@@ -1,6 +1,8 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth.models import User
+from django.core.paginator import Paginator
+from django.db.models import Q
 
 from core.mixins import laser_ou_gerente, montagem_ou_gerente
 from vendas.models import Pedido
@@ -17,6 +19,7 @@ def laser_list(request):
         user.is_staff or
         user.groups.filter(name__in=['Supervisor de Laser', 'Gerente']).exists()
     )
+    q = request.GET.get('q', '')
 
     if is_supervisor:
         pedidos_aguardando = Pedido.objects.filter(
@@ -45,11 +48,32 @@ def laser_list(request):
 
         operadores = None
 
+    if q:
+        filtro_busca = (
+            Q(cliente__nome__icontains=q) |
+            Q(numero__icontains=q) |
+            Q(itens__produto__nome__icontains=q)
+        )
+        pedidos_aguardando = pedidos_aguardando.filter(filtro_busca).distinct()
+        pedidos_em_corte   = pedidos_em_corte.filter(filtro_busca).distinct()
+
+    total_aguardando = pedidos_aguardando.count()
+    total_corte      = pedidos_em_corte.count()
+
+    paginator_aguardando = Paginator(pedidos_aguardando, 9)
+    paginator_corte      = Paginator(pedidos_em_corte, 9)
+
+    pedidos_aguardando = paginator_aguardando.get_page(request.GET.get('page_aguardando', 1))
+    pedidos_em_corte   = paginator_corte.get_page(request.GET.get('page_corte', 1))
+
     return render(request, 'vendas/laser_list.html', {
         'pedidos_aguardando': pedidos_aguardando,
         'pedidos_em_corte':   pedidos_em_corte,
+        'total_aguardando':   total_aguardando,
+        'total_corte':        total_corte,
         'operadores':         operadores,
         'is_supervisor':      is_supervisor,
+        'q':                  q,
     })
 
 
