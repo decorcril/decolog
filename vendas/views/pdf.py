@@ -5,6 +5,7 @@ import os
 import zoneinfo
 
 from django.conf import settings
+from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 
@@ -20,7 +21,7 @@ from reportlab.platypus import (
 )
 import qrcode
 
-from core.mixins import acesso_vendas
+from core.mixins import acesso_pedido_detail, pedido_e_paraiso
 from vendas.models import Pedido
 
 
@@ -306,7 +307,7 @@ def _build_totals_table(pedido, content_w: float, s: dict) -> Table:
 # VIEW PRINCIPAL
 # ══════════════════════════════════════════════════════════════
 
-@acesso_vendas
+@acesso_pedido_detail
 def pedido_pdf(request, pk):
     pedido = get_object_or_404(
         Pedido.objects.select_related('cliente', 'criado_por'),

@@ -124,5 +124,5 @@ def acesso_pedido_detail(view_func):
     return grupo_requerido(
         'Vendedor', 'Financeiro', 'Gerente', 'Logística',
         'Supervisor de Montagem', 'Operador de Montagem', 'Logistica Loja',
-        'Supervisor de Laser',
+        'Supervisor de Laser', 'Operador de Laser',
     )(view_func)
