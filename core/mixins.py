@@ -126,3 +126,12 @@ def acesso_pedido_detail(view_func):
         'Supervisor de Montagem', 'Operador de Montagem', 'Logistica Loja',
         'Supervisor de Laser', 'Operador de Laser',
     )(view_func)
+
+def orcamento_e_paraiso(orcamento):
+    """
+    Retorna True se o orçamento foi criado por um vendedor da Paraíso do
+    Acrílico (PerfilVendedor.vende_paraiso=True) — decide qual timbre de
+    PDF gerar para ESSE orçamento especificamente, igual pedido_e_paraiso.
+    """
+    perfil = getattr(orcamento.criado_por, 'perfil_vendedor', None)
+    return bool(perfil and perfil.vende_paraiso)

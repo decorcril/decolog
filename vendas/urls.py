@@ -41,4 +41,5 @@ urlpatterns = [
     path('<int:pk>/comprovantes/<int:comprovante_pk>/editar-info/', views.comprovante_envio_editar_info, name='comprovante_envio_editar_info'),
     path('orcamentos/<int:pk>/pdf/', views.orcamento_pdf, name='orcamento_pdf'),
     path('<int:pk>/pdf-paraiso/', views.pedido_pdf_paraiso, name='pedido_pdf_paraiso'),
+    path('orcamentos/<int:pk>/pdf-paraiso/', views.orcamento_pdf_paraiso, name='orcamento_pdf_paraiso'),
 ]

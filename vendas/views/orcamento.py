@@ -11,6 +11,8 @@ from clientes.models import Cliente
 from core.mixins import acesso_orcamentos
 from vendas.models import Pedido, ItemPedido
 from vendas.models.orcamento import Orcamento, ItemOrcamento
+from core.mixins import orcamento_e_paraiso
+
 
 
 TRANSPORTADORA_CHOICES = [
@@ -139,7 +141,8 @@ def orcamento_detail(request, pk):
         pk=pk
     )
     return render(request, 'vendas/orcamento_detail.html', {
-        'orcamento': orcamento,
+        'orcamento':          orcamento,
+        'orcamento_e_paraiso': orcamento_e_paraiso(orcamento),
     })
 
 

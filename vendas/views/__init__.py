@@ -46,3 +46,4 @@ from .etiqueta import etiquetas_pedido
 from .unidade import unidade_pedido
 from .orcamento_pdf import orcamento_pdf
 from .pdf_paraiso import pedido_pdf_paraiso
+from .orcamento_pdf_paraiso import orcamento_pdf_paraiso
