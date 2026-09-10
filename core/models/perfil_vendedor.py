@@ -12,6 +12,11 @@ class PerfilVendedor(models.Model):
         null=True, blank=True,
         related_name='vendedores', verbose_name='Loja'
     )
+    vende_paraiso = models.BooleanField(
+        default=False,
+        verbose_name='Vende Paraíso do Acrílico',
+        help_text='Se ativo, este vendedor também vê a opção de gerar PDF com o timbre da Paraíso do Acrílico.'
+    )
 
     class Meta:
         verbose_name        = 'Perfil do Vendedor'

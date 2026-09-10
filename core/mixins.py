@@ -93,3 +93,29 @@ def loja_do_usuario(user):
         return perfil.loja
 
     return None
+
+def vende_paraiso(user):
+    """
+    Retorna True se o usuário pode gerar PDFs com o timbre da Paraíso do
+    Acrílico — staff e Gerente sempre podem (visão total); vendedor comum
+    só se marcado explicitamente no PerfilVendedor.
+    """
+    if user.is_staff:
+        return True
+
+    grupos = user.groups.values_list('name', flat=True)
+    if 'Gerente' in grupos:
+        return True
+
+    perfil = getattr(user, 'perfil_vendedor', None)
+    return bool(perfil and perfil.vende_paraiso)
+
+def pedido_e_paraiso(pedido):
+    """
+    Retorna True se o pedido foi criado por um vendedor da Paraíso do
+    Acrílico (PerfilVendedor.vende_paraiso=True) — decide qual timbre de
+    PDF gerar para ESSE pedido especificamente, independente de quem está
+    vendo a tela no momento (Gerente, Financeiro, outro vendedor, etc.).
+    """
+    perfil = getattr(pedido.criado_por, 'perfil_vendedor', None)
+    return bool(perfil and perfil.vende_paraiso)

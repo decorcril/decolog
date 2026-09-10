@@ -197,22 +197,25 @@
         {% endif %}
       </div>
     </div>
-
-    {# ── Ficha de envio ── #}
+        {# ── Ficha de envio ── #}
     {% if is_financeiro or is_gerente or is_logistica_loja or is_vendedor %}
     <div class="card mb-4">
       <div class="card-body p-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <p class="fw-semibold text-secondary small mb-0">FICHA DE ENVIO</p>
+          {% if pedido_e_paraiso %}
+          <a href="{% url 'vendas:pedido_pdf_paraiso' pedido.pk %}" target="_blank" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-printer me-1"></i> Gerar PDF
+          </a>
+          {% else %}
           <a href="{% url 'vendas:pedido_pdf' pedido.pk %}" target="_blank" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-printer me-1"></i> Gerar PDF
           </a>
+          {% endif %}
         </div>
-
       </div>
     </div>
     {% endif %}
-
     {# ── Comprovantes de Envio/Retirada (nota fiscal, comprovante de entrega, etc.) ── #}
     {% if is_financeiro or is_gerente or is_logistica_loja %}
     <div class="card mb-4">
