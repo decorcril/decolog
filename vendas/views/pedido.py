@@ -10,12 +10,11 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from clientes.models import Cliente
-from core.mixins import acesso_vendas, financeiro_ou_gerente, vendedor_ou_gerente
+from core.mixins import acesso_pedido_detail, acesso_vendas, financeiro_ou_gerente, vendedor_ou_gerente
 from core.models import Local
 from movimentacoes.models import Movimentacao
 from produtos.models import Produto
 from vendas.models import Pedido, ItemPedido
-
 
 def _parse_decimal(val, default='0'):
     try:
@@ -300,7 +299,7 @@ def pedido_create(request):
     })
 
 
-@acesso_vendas
+@acesso_pedido_detail
 def pedido_detail(request, pk):
     from vendas.models import UnidadePedido
     from core.mixins import pedido_e_paraiso

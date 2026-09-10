@@ -119,3 +119,10 @@ def pedido_e_paraiso(pedido):
     """
     perfil = getattr(pedido.criado_por, 'perfil_vendedor', None)
     return bool(perfil and perfil.vende_paraiso)
+
+def acesso_pedido_detail(view_func):
+    return grupo_requerido(
+        'Vendedor', 'Financeiro', 'Gerente', 'Logística',
+        'Supervisor de Montagem', 'Operador de Montagem', 'Logistica Loja',
+        'Supervisor de Laser',
+    )(view_func)
