@@ -2,11 +2,13 @@
   const btn   = document.getElementById('notif-btn');
   const badge = document.getElementById('notif-badge');
   const lista = document.getElementById('notif-lista');
+  const btnMarcarTodas = document.getElementById('notif-marcar-todas');
 
   if (!btn) return;
 
-  const URL_LISTA = btn.dataset.url;
-  const URL_LIDA  = btn.dataset.lidaUrl;
+  const URL_LISTA        = btn.dataset.url;
+  const URL_LIDA         = btn.dataset.lidaUrl;
+  const URL_MARCAR_TODAS = btn.dataset.marcarTodasUrl;
 
   const ICONS = {
     pagamento_pendente: 'bi-cash-coin text-danger',
@@ -31,6 +33,9 @@
       badge.style.display = '';
     } else {
       badge.style.display = 'none';
+    }
+    if (btnMarcarTodas) {
+      btnMarcarTodas.style.display = total > 0 ? '' : 'none';
     }
   }
 
@@ -99,6 +104,32 @@
         totalAnterior = data.total;
       })
       .catch(() => {});
+  }
+
+  function marcarTodasComoLidas() {
+    if (!URL_MARCAR_TODAS) return;
+
+    fetch(URL_MARCAR_TODAS, {
+      method:  'POST',
+      headers: {
+        'X-CSRFToken': getCsrf(),
+      },
+    })
+      .then(r => r.json())
+      .then(() => {
+        atualizarBadge(0);
+        renderLista([]);
+        totalAnterior = 0;
+      })
+      .catch(() => {});
+  }
+
+  if (btnMarcarTodas) {
+    btnMarcarTodas.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation(); // evita fechar/reabrir o dropdown ao clicar
+      marcarTodasComoLidas();
+    });
   }
 
   // Carrega ao abrir o dropdown

@@ -11,7 +11,7 @@ from core.views import (
     fornecedor_list, fornecedor_create, fornecedor_update, fornecedor_delete,
 )
 from core.views.fornecedor import tag_delete, tag_list
-from core.views.notificacao import notificacoes_lista, notificacoes_marcar_lida
+from core.views.notificacao import notificacoes_lista, notificacoes_marcar_lida, notificacoes_marcar_todas
 
 app_name = 'core'
 
@@ -32,6 +32,7 @@ urlpatterns = [
     # Notificações
     path('notificacoes/', notificacoes_lista, name='notificacoes_lista'),
     path('notificacoes/<int:pedido_pk>/lida/', notificacoes_marcar_lida, name='notificacoes_marcar_lida'),
+    path('notificacoes/marcar-todas/', notificacoes_marcar_todas, name='notificacoes_marcar_todas'),
     path('dashboard/vendas/', dashboard_vendas, name='dashboard_vendas'),
     path('dashboard/financeiro/', dashboard_financeiro, name='dashboard_financeiro'),
     path('dashboard/laser/', dashboard_laser, name='dashboard_laser'),

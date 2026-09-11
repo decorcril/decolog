@@ -479,12 +479,14 @@
     </div>
 
     {# ── Sininho de notificações ── #}
+        {# ── Sininho de notificações ── #}
     {% if user.is_authenticated %}
     <div class="dropdown ms-2" id="notif-dropdown">
       <button class="btn btn-sm btn-link text-white position-relative p-1"
             id="notif-btn" data-bs-toggle="dropdown" data-bs-auto-close="outside"
             data-url="{% url 'core:notificacoes_lista' %}"
-            data-lida-url="/notificacoes/">
+            data-lida-url="/notificacoes/"
+            data-marcar-todas-url="{% url 'core:notificacoes_marcar_todas' %}">
         <i class="bi bi-bell fs-5"></i>
         <span id="notif-badge"
               class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
@@ -494,8 +496,12 @@
       </button>
       <ul class="dropdown-menu dropdown-menu-end shadow p-0"
           style="min-width:320px; max-height:420px; overflow-y:auto;">
-        <li class="px-3 py-2 border-bottom">
+        <li class="px-3 py-2 border-bottom d-flex justify-content-between align-items-center">
           <span class="fw-semibold small">Notificações</span>
+          <button type="button" id="notif-marcar-todas"
+                  class="btn btn-link btn-sm p-0 text-decoration-none" style="display:none;">
+            Marcar todas como lidas
+          </button>
         </li>
         <div id="notif-lista">
           <li class="px-3 py-3 text-center text-muted small">

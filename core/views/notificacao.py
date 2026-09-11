@@ -283,3 +283,35 @@ def notificacoes_marcar_lida(request, pedido_pk):
                 )
 
     return JsonResponse({'ok': True})
+
+@login_required
+def notificacoes_marcar_todas(request):
+    """
+    Marca como lidas TODAS as notificações atualmente pendentes do usuário,
+    de uma vez — mesmo princípio de notificacoes_marcar_lida, mas em lote:
+    gera a lista de notificações "ao vivo" (a mesma que popularia o sininho)
+    e, pra cada uma, ou atualiza o registro existente pra lida=True, ou
+    cria um novo já marcado como lido (pros tipos "ao vivo" que nunca
+    tiveram um registro persistido antes).
+    """
+    if request.method == 'POST':
+        notificacoes = _gerar_notificacoes(request.user)
+
+        for n in notificacoes:
+            atualizados = Notificacao.objects.filter(
+                destinatario=request.user,
+                pedido_id=n['pedido_pk'],
+                tipo=n['tipo'],
+            ).update(lida=True)
+
+            if atualizados == 0:
+                Notificacao.objects.create(
+                    destinatario=request.user,
+                    pedido_id=n['pedido_pk'],
+                    tipo=n['tipo'],
+                    lida=True,
+                )
+
+        return JsonResponse({'ok': True, 'total': len(notificacoes)})
+
+    return JsonResponse({'ok': True, 'total': 0})
