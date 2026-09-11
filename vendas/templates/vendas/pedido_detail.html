@@ -61,6 +61,7 @@
   <div class="col-lg-8">
 
     {# ── Itens ── #}
+        {# ── Itens ── #}
     <div class="card mb-4">
       <div class="card-body p-4">
         <p class="fw-semibold text-secondary small mb-3">ITENS DO PEDIDO</p>
@@ -68,6 +69,7 @@
           <table class="table mb-0">
             <thead class="table-light">
               <tr>
+                <th>Código</th>
                 <th>Produto</th>
                 <th class="text-center">Qtd</th>
                 <th class="text-end">Preço Unit.</th>
@@ -77,6 +79,7 @@
             <tbody>
               {% for item in pedido.itens.all %}
               <tr>
+                <td class="text-muted small">{{ item.produto.codigo|default:"—" }}</td>
                 <td class="fw-semibold">{{ item.produto.nome }}</td>
                 <td class="text-center">{{ item.quantidade }}</td>
                 <td class="text-end">{{ item.preco_unitario|moeda }}</td>
@@ -166,6 +169,7 @@
     {% endif %}
 
     {# ── Cliente ── #}
+        {# ── Cliente ── #}
     <div class="card mb-4">
       <div class="card-body p-4">
         <p class="fw-semibold text-secondary small mb-3">CLIENTE</p>
@@ -193,6 +197,23 @@
         <div class="mb-2">
           <span class="text-muted small">Email</span>
           <div class="fw-semibold">{{ pedido.cliente.email }}</div>
+        </div>
+        {% endif %}
+        {% if pedido.cliente.logradouro %}
+        <div class="mb-2">
+          <span class="text-muted small">Endereço</span>
+          <div class="fw-semibold">
+            {{ pedido.cliente.logradouro }}{% if pedido.cliente.numero %}, {{ pedido.cliente.numero }}{% endif %}{% if pedido.cliente.complemento %} — {{ pedido.cliente.complemento }}{% endif %}
+            {% if pedido.cliente.bairro %}<br>{{ pedido.cliente.bairro }}{% endif %}
+            {% if pedido.cliente.is_brasil %}
+              {% if pedido.cliente.cidade or pedido.cliente.estado %}<br>{{ pedido.cliente.cidade }}{% if pedido.cliente.cidade and pedido.cliente.estado %} - {% endif %}{{ pedido.cliente.estado }}{% endif %}
+              {% if pedido.cliente.cep %}<br>CEP: {{ pedido.cliente.cep }}{% endif %}
+            {% else %}
+              {% if pedido.cliente.cidade or pedido.cliente.regiao %}<br>{{ pedido.cliente.cidade }}{% if pedido.cliente.cidade and pedido.cliente.regiao %}, {% endif %}{{ pedido.cliente.regiao }}{% endif %}
+              {% if pedido.cliente.codigo_postal %}<br>{{ pedido.cliente.codigo_postal }}{% endif %}
+              <br>{{ pedido.cliente.pais.name }}
+            {% endif %}
+          </div>
         </div>
         {% endif %}
       </div>

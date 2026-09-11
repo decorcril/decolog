@@ -155,7 +155,6 @@
       </div>
     </div>
 
-    {# PDF do Orçamento #}
         {# PDF do Orçamento #}
     <div class="card mb-4">
       <div class="card-body p-4">
@@ -175,6 +174,7 @@
     </div>
 
     {# Cliente #}
+        {# Cliente #}
     <div class="card mb-4">
       <div class="card-body p-4">
         <p class="fw-semibold text-secondary small mb-3">CLIENTE</p>
@@ -199,15 +199,38 @@
             <p class="fw-semibold mb-0">{{ orcamento.condicao_pagamento }}</p>
           </div>
           {% endif %}
-          {% if orcamento.cliente.cep %}
+          {% if orcamento.cliente.telefone %}
           <div>
-            <p class="text-muted small mb-0">CEP</p>
-            <p class="fw-semibold mb-0">{{ orcamento.cliente.cep }}</p>
+            <p class="text-muted small mb-0">Telefone</p>
+            <p class="fw-semibold mb-0">{{ orcamento.cliente.telefone }}</p>
+          </div>
+          {% endif %}
+          {% if orcamento.cliente.email %}
+          <div>
+            <p class="text-muted small mb-0">Email</p>
+            <p class="fw-semibold mb-0">{{ orcamento.cliente.email }}</p>
+          </div>
+          {% endif %}
+          {% if orcamento.cliente.logradouro %}
+          <div>
+            <p class="text-muted small mb-0">Endereço</p>
+            <p class="fw-semibold mb-0">
+              {{ orcamento.cliente.logradouro }}{% if orcamento.cliente.numero %}, {{ orcamento.cliente.numero }}{% endif %}{% if orcamento.cliente.complemento %} — {{ orcamento.cliente.complemento }}{% endif %}
+              {% if orcamento.cliente.bairro %}<br>{{ orcamento.cliente.bairro }}{% endif %}
+              {% if orcamento.cliente.is_brasil %}
+                {% if orcamento.cliente.cidade or orcamento.cliente.estado %}<br>{{ orcamento.cliente.cidade }}{% if orcamento.cliente.cidade and orcamento.cliente.estado %} - {% endif %}{{ orcamento.cliente.estado }}{% endif %}
+                {% if orcamento.cliente.cep %}<br>CEP: {{ orcamento.cliente.cep }}{% endif %}
+              {% else %}
+                {% if orcamento.cliente.cidade or orcamento.cliente.regiao %}<br>{{ orcamento.cliente.cidade }}{% if orcamento.cliente.cidade and orcamento.cliente.regiao %}, {% endif %}{{ orcamento.cliente.regiao }}{% endif %}
+                {% if orcamento.cliente.codigo_postal %}<br>{{ orcamento.cliente.codigo_postal }}{% endif %}
+                <br>{{ orcamento.cliente.pais.name }}
+              {% endif %}
+            </p>
           </div>
           {% endif %}
         </div>
       </div>
-    </div>
+    </div>  
 
     {# Financeiro #}
     <div class="card mb-4">
