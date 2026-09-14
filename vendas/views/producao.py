@@ -119,28 +119,47 @@ def laser_finalizar(request, pk):
 def montagem_list(request):
     from producao_corte.models import ProdutoCortado
 
+    q = request.GET.get('q', '')
+
     pedidos = Pedido.objects.filter(
         status='assembling',
     ).select_related('cliente', 'criado_por').order_by('criado_em')
 
-    pedidos_com_progresso = []
-    for pedido in pedidos:
-        pedidos_com_progresso.append({
-            'pedido':             pedido,
-            'progresso_montagem': pedido.progresso_montagem,
-        })
+    if q:
+        pedidos = pedidos.filter(
+            Q(cliente__nome__icontains=q) | Q(numero__icontains=q)
+        )
 
-    # ── Peças avulsas aguardando montagem (sem pedido vinculado) ──
+    total_pedidos = pedidos.count()
+
     pecas_avulsas = ProdutoCortado.objects.filter(
         pedido__isnull=True,
         status='aguardando',
     ).select_related('produto', 'cortada_por').order_by('item_corte__registro__criado_em')
 
-    return render(request, 'vendas/montagem_list.html', {
-        'pedidos':       pedidos_com_progresso,
-        'pecas_avulsas': pecas_avulsas,
-    })
+    total_avulsas = pecas_avulsas.count()
 
+    paginator_pedidos = Paginator(pedidos, 9)
+    paginator_avulsas = Paginator(pecas_avulsas, 9)
+
+    pedidos_pagina = paginator_pedidos.get_page(request.GET.get('page_pedidos', 1))
+    pecas_avulsas  = paginator_avulsas.get_page(request.GET.get('page_avulsas', 1))
+
+    pedidos_com_progresso = []
+    for pedido in pedidos_pagina:
+        pedidos_com_progresso.append({
+            'pedido':             pedido,
+            'progresso_montagem': pedido.progresso_montagem,
+        })
+
+    return render(request, 'vendas/montagem_list.html', {
+        'pedidos':        pedidos_com_progresso,
+        'pedidos_pagina': pedidos_pagina,
+        'pecas_avulsas':  pecas_avulsas,
+        'total_pedidos':  total_pedidos,
+        'total_avulsas':  total_avulsas,
+        'q':              q,
+    })
 
 @montagem_ou_gerente
 def montagem_finalizar(request, pk):
