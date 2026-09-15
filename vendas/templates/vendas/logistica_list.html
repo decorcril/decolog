@@ -12,10 +12,33 @@
   </div>
 </div>
 
+{# ── Busca ── #}
+<div class="card mb-4">
+  <div class="card-body p-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-8">
+        <label class="form-label fw-semibold text-secondary small mb-1">BUSCAR</label>
+        <input type="text" name="q" value="{{ q }}" class="form-control"
+               placeholder="Nome do cliente ou número do pedido...">
+      </div>
+      <div class="col-md-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-search me-1"></i> Buscar
+        </button>
+        <a href="{% url 'vendas:logistica_list' %}" class="btn btn-outline-secondary">
+          <i class="bi bi-x-lg me-1"></i> Limpar
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
 {# ── Pedidos aguardando produção ── #}
 {% if pedidos_aguardando %}
-<p class="fw-semibold text-secondary small mb-3">AGUARDANDO PRODUÇÃO — VERIFICAR ESTOQUE</p>
-<div class="row g-3 mb-4">
+<p class="fw-semibold text-secondary small mb-3">
+  AGUARDANDO PRODUÇÃO — VERIFICAR ESTOQUE ({{ total_aguardando }})
+</p>
+<div class="row g-3 mb-2">
   {% for item in pedidos_aguardando %}
   <div class="col-12">
     <div class="card {% if item.tudo_ok %}border-success{% else %}border-warning{% endif %}">
@@ -112,14 +135,47 @@
   </div>
   {% endfor %}
 </div>
+
+{% if pedidos_aguardando.has_other_pages %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <span class="text-muted small">
+    Página {{ pedidos_aguardando.number }} de {{ pedidos_aguardando.paginator.num_pages }}
+  </span>
+  <nav>
+    <ul class="pagination pagination-sm mb-0">
+      {% if pedidos_aguardando.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?q={{ q }}&page_aguardando={{ pedidos_aguardando.previous_page_number }}&page_separacao={{ pedidos_separacao.number }}&page_envio={{ pedidos_envio.number }}">‹</a>
+      </li>
+      {% endif %}
+      {% for num in pedidos_aguardando.paginator.page_range %}
+        {% if pedidos_aguardando.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > pedidos_aguardando.number|add:'-3' and num < pedidos_aguardando.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?q={{ q }}&page_aguardando={{ num }}&page_separacao={{ pedidos_separacao.number }}&page_envio={{ pedidos_envio.number }}">{{ num }}</a>
+          </li>
+        {% endif %}
+      {% endfor %}
+      {% if pedidos_aguardando.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?q={{ q }}&page_aguardando={{ pedidos_aguardando.next_page_number }}&page_separacao={{ pedidos_separacao.number }}&page_envio={{ pedidos_envio.number }}">›</a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+</div>
+{% else %}
+<div class="mb-4"></div>
+{% endif %}
 {% endif %}
 
 {# ── Aguardando separação ── #}
 {% if pedidos_separacao %}
 <p class="fw-semibold text-secondary small mb-3">
-  AGUARDANDO SEPARAÇÃO — {{ pedidos_separacao|length }} pedido{{ pedidos_separacao|length|pluralize }}
+  AGUARDANDO SEPARAÇÃO — {{ total_separacao }} pedido{{ total_separacao|pluralize }}
 </p>
-<div class="row g-3 mb-4">
+<div class="row g-3 mb-2">
   {% for item in pedidos_separacao %}
   <div class="col-12">
     <div class="card border-warning">
@@ -190,14 +246,47 @@
   </div>
   {% endfor %}
 </div>
+
+{% if pedidos_separacao.has_other_pages %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <span class="text-muted small">
+    Página {{ pedidos_separacao.number }} de {{ pedidos_separacao.paginator.num_pages }}
+  </span>
+  <nav>
+    <ul class="pagination pagination-sm mb-0">
+      {% if pedidos_separacao.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?q={{ q }}&page_separacao={{ pedidos_separacao.previous_page_number }}&page_aguardando={{ pedidos_aguardando.number }}&page_envio={{ pedidos_envio.number }}">‹</a>
+      </li>
+      {% endif %}
+      {% for num in pedidos_separacao.paginator.page_range %}
+        {% if pedidos_separacao.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > pedidos_separacao.number|add:'-3' and num < pedidos_separacao.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?q={{ q }}&page_separacao={{ num }}&page_aguardando={{ pedidos_aguardando.number }}&page_envio={{ pedidos_envio.number }}">{{ num }}</a>
+          </li>
+        {% endif %}
+      {% endfor %}
+      {% if pedidos_separacao.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?q={{ q }}&page_separacao={{ pedidos_separacao.next_page_number }}&page_aguardando={{ pedidos_aguardando.number }}&page_envio={{ pedidos_envio.number }}">›</a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+</div>
+{% else %}
+<div class="mb-4"></div>
+{% endif %}
 {% endif %}
 
 {# ── Prontos para envio ── #}
 {% if pedidos_envio %}
 <p class="fw-semibold text-secondary small mb-3">
-  PRONTOS PARA ENVIO — {{ pedidos_envio|length }} pedido{{ pedidos_envio|length|pluralize }}
+  PRONTOS PARA ENVIO — {{ total_envio }} pedido{{ total_envio|pluralize }}
 </p>
-<div class="row g-3 mb-4">
+<div class="row g-3 mb-2">
   {% for item in pedidos_envio %}
   <div class="col-12">
     <div class="card {% if item.is_retirada %}border-success{% else %}border-primary{% endif %}">
@@ -251,13 +340,44 @@
   </div>
   {% endfor %}
 </div>
+
+{% if pedidos_envio.has_other_pages %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <span class="text-muted small">
+    Página {{ pedidos_envio.number }} de {{ pedidos_envio.paginator.num_pages }}
+  </span>
+  <nav>
+    <ul class="pagination pagination-sm mb-0">
+      {% if pedidos_envio.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?q={{ q }}&page_envio={{ pedidos_envio.previous_page_number }}&page_aguardando={{ pedidos_aguardando.number }}&page_separacao={{ pedidos_separacao.number }}">‹</a>
+      </li>
+      {% endif %}
+      {% for num in pedidos_envio.paginator.page_range %}
+        {% if pedidos_envio.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > pedidos_envio.number|add:'-3' and num < pedidos_envio.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?q={{ q }}&page_envio={{ num }}&page_aguardando={{ pedidos_aguardando.number }}&page_separacao={{ pedidos_separacao.number }}">{{ num }}</a>
+          </li>
+        {% endif %}
+      {% endfor %}
+      {% if pedidos_envio.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?q={{ q }}&page_envio={{ pedidos_envio.next_page_number }}&page_aguardando={{ pedidos_aguardando.number }}&page_separacao={{ pedidos_separacao.number }}">›</a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+</div>
+{% endif %}
 {% endif %}
 
 {% if not pedidos_aguardando and not pedidos_separacao and not pedidos_envio %}
 <div class="card">
   <div class="card-body p-4 text-center text-muted">
     <i class="bi bi-box-seam fs-3 mb-2 d-block text-success"></i>
-    Nenhum pedido na fila.
+    {% if q %}Nenhum pedido encontrado para "{{ q }}".{% else %}Nenhum pedido na fila.{% endif %}
   </div>
 </div>
 {% endif %}

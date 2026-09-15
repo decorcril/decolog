@@ -192,7 +192,6 @@ def logistica_list(request):
         action    = request.POST.get('action', 'usar_estoque')
         pedido_pk = request.POST.get('pedido_pk')
 
-        # ── Usar estoque — insumos/peças avulsas aguardando produção ──
         if action == 'usar_estoque':
             pedido = get_object_or_404(Pedido, pk=pedido_pk, status=Pedido.Status.AGUARD_PRODUCAO)
             _, tudo_ok, local = _verificar_estoque_pedido(pedido)
@@ -206,7 +205,6 @@ def logistica_list(request):
             else:
                 messages.error(request, f'Estoque insuficiente para o pedido {pedido.numero}.')
 
-        # ── Separar insumos ──
         elif action == 'separar_insumos':
             pedido   = get_object_or_404(Pedido, pk=pedido_pk, status=Pedido.Status.PICKING)
             unidades = UnidadePedido.objects.filter(item__pedido=pedido, separada=False)
@@ -219,10 +217,16 @@ def logistica_list(request):
 
         return redirect('vendas:logistica_list')
 
+    q = request.GET.get('q', '')
+    filtro_busca = Q(cliente__nome__icontains=q) | Q(numero__icontains=q) if q else None
+
     # ── Pedidos aguardando produção ──
     pedidos_aguardando_qs = Pedido.objects.filter(
         status=Pedido.Status.AGUARD_PRODUCAO
     ).select_related('cliente', 'local_saida').prefetch_related('itens__produto')
+
+    if filtro_busca:
+        pedidos_aguardando_qs = pedidos_aguardando_qs.filter(filtro_busca)
 
     pedidos_aguardando = []
     for pedido in pedidos_aguardando_qs:
@@ -235,12 +239,19 @@ def logistica_list(request):
             'todos_insumos': _todos_insumos(pedido),
         })
 
+    total_aguardando = len(pedidos_aguardando)
+    paginator_aguardando = Paginator(pedidos_aguardando, 5)
+    pedidos_aguardando   = paginator_aguardando.get_page(request.GET.get('page_aguardando', 1))
+
     # ── Pedidos em picking ──
     pedidos_picking = Pedido.objects.filter(
         status='picking',
     ).select_related('cliente', 'criado_por').prefetch_related(
         'itens__produto'
     ).order_by('criado_em')
+
+    if filtro_busca:
+        pedidos_picking = pedidos_picking.filter(filtro_busca)
 
     pedidos_separacao = []
     pedidos_envio     = []
@@ -260,11 +271,25 @@ def logistica_list(request):
         else:
             pedidos_separacao.append(info)
 
+    total_separacao = len(pedidos_separacao)
+    total_envio     = len(pedidos_envio)
+
+    paginator_separacao = Paginator(pedidos_separacao, 5)
+    paginator_envio      = Paginator(pedidos_envio, 5)
+
+    pedidos_separacao = paginator_separacao.get_page(request.GET.get('page_separacao', 1))
+    pedidos_envio      = paginator_envio.get_page(request.GET.get('page_envio', 1))
+
     return render(request, 'vendas/logistica_list.html', {
         'pedidos_aguardando': pedidos_aguardando,
         'pedidos_separacao':  pedidos_separacao,
         'pedidos_envio':      pedidos_envio,
+        'total_aguardando':   total_aguardando,
+        'total_separacao':    total_separacao,
+        'total_envio':        total_envio,
+        'q':                  q,
     })
+
 
 
 @logistica_ou_gerente
