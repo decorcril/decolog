@@ -13,7 +13,7 @@ from core.models import Local
 from producao_corte.services import disponibilidade_produto_final, consumir_produto_final
 
 
-def _verificar_estoque_pedido(pedido):
+def _verificar_estoque_pedido(pedido, cache=None):
     local = pedido.local_saida
     if not local:
         local = Local.objects.filter(tipo='fabrica').first()
@@ -23,10 +23,9 @@ def _verificar_estoque_pedido(pedido):
 
     for item in pedido.itens.select_related('produto').all():
 
-        # ── Produto final — peça direta, ou Kit decomposto em avulsas ──
         if item.produto.categoria == 'produto_final':
             ok, n_diretas, componentes = disponibilidade_produto_final(
-                item.produto, item.quantidade
+                item.produto, item.quantidade, cache=cache
             )
             if not ok:
                 tudo_ok = False
@@ -39,7 +38,6 @@ def _verificar_estoque_pedido(pedido):
                 'ok':          ok,
             })
 
-        # ── Insumo cobrável — sem controle de estoque, sempre ok ──
         elif item.produto.categoria == 'insumo' and item.produto.is_insumo_cobravel:
             resultado.append({
                 'nome':       item.produto.nome,
@@ -50,7 +48,6 @@ def _verificar_estoque_pedido(pedido):
             })
 
         else:
-            # ── Insumo ou receita com matéria-prima — verifica Estoque normal ──
             try:
                 ficha = item.produto.ficha_tecnica
                 itens_ok    = True
@@ -93,14 +90,14 @@ def _verificar_estoque_pedido(pedido):
     return resultado, tudo_ok, local
 
 
-def _todos_insumos(pedido):
+def _todos_insumos(pedido, cache=None):
     """Retorna True se todos os itens são insumos OU produto_final (simples
     ou Kit) já resolvíveis com peças avulsas em estoque."""
     for item in pedido.itens.select_related('produto').all():
         if item.produto.categoria == 'insumo':
             continue
         if item.produto.categoria == 'produto_final':
-            ok, _, _ = disponibilidade_produto_final(item.produto, item.quantidade)
+            ok, _, _ = disponibilidade_produto_final(item.produto, item.quantidade, cache=cache)
             if ok:
                 continue
         return False
@@ -220,7 +217,8 @@ def logistica_list(request):
     q = request.GET.get('q', '')
     filtro_busca = Q(cliente__nome__icontains=q) | Q(numero__icontains=q) if q else None
 
-    # ── Pedidos aguardando produção ──
+    cache = {}  # ← cache compartilhado por toda a montagem da página
+
     pedidos_aguardando_qs = Pedido.objects.filter(
         status=Pedido.Status.AGUARD_PRODUCAO
     ).select_related('cliente', 'local_saida').prefetch_related('itens__produto')
@@ -230,20 +228,19 @@ def logistica_list(request):
 
     pedidos_aguardando = []
     for pedido in pedidos_aguardando_qs:
-        itens_status, tudo_ok, local = _verificar_estoque_pedido(pedido)
+        itens_status, tudo_ok, local = _verificar_estoque_pedido(pedido, cache=cache)
         pedidos_aguardando.append({
             'pedido':        pedido,
             'itens_status':  itens_status,
             'tudo_ok':       tudo_ok,
             'local':         local,
-            'todos_insumos': _todos_insumos(pedido),
+            'todos_insumos': _todos_insumos(pedido, cache=cache),
         })
 
     total_aguardando = len(pedidos_aguardando)
     paginator_aguardando = Paginator(pedidos_aguardando, 5)
     pedidos_aguardando   = paginator_aguardando.get_page(request.GET.get('page_aguardando', 1))
 
-    # ── Pedidos em picking ──
     pedidos_picking = Pedido.objects.filter(
         status='picking',
     ).select_related('cliente', 'criado_por').prefetch_related(
@@ -263,7 +260,7 @@ def logistica_list(request):
             'total':         pedido.status_separacao['total'],
             'separadas':     pedido.status_separacao['separadas'],
             'tudo_separado': pedido.status_separacao['tudo_separado'],
-            'todos_insumos': _todos_insumos(pedido),
+            'todos_insumos': _todos_insumos(pedido, cache=cache),
         }
 
         if info['tudo_separado']:

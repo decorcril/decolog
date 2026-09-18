@@ -21,38 +21,53 @@ def _kit_que_contem(produto):
     return None
 
 
-def disponibilidade_produto_final(produto, quantidade):
+def disponibilidade_produto_final(produto, quantidade, cache=None):
     """
     Verifica quantas unidades de `produto` (produto_final) já estão prontas
     em estoque avulso, sem precisar cortar de novo.
+
+    `cache`, se informado (um dict comum, criado pelo chamador e reutilizado
+    entre várias chamadas), evita reconsultar o banco pra um mesmo produto
+    mais de uma vez dentro da mesma requisição — essencial em telas como a
+    fila de Logística, onde o mesmo produto aparece em vários pedidos e a
+    disponibilidade dele não muda entre uma checagem e outra na mesma leitura
+    de página.
 
     Combina, nessa ordem:
     1. Peças cortadas diretamente como esse produto.
     2. Se sobrar quantidade e o produto for Kit: peças avulsas dos
        componentes, decompostas via FichaTecnica.
-    3. Se sobrar quantidade e o produto NÃO for Kit, mas for componente de
-       algum Kit: Kits inteiros disponíveis que podem ser desmembrados pra
-       liberar esse componente.
 
     Retorna (ok, n_diretas, componentes).
     """
     from producao_corte.models import ProdutoCortado
+    from estoque.models import Estoque
 
-    fabrica = Local.objects.filter(tipo='fabrica').first()
+    if cache is not None and '_fabrica' in cache:
+        fabrica = cache['_fabrica']
+    else:
+        fabrica = Local.objects.filter(tipo='fabrica').first()
+        if cache is not None:
+            cache['_fabrica'] = fabrica
 
     def _disponivel_real(prod):
+        if cache is not None and prod.pk in cache:
+            return cache[prod.pk]
+
         n_pecas = ProdutoCortado.objects.filter(
             produto=prod, status='montado', pedido=None,
         ).count()
 
         if prod.is_kit:
-            # Kit não tem Estoque próprio por design — a entrada da peça
-            # pronta é pulada de propósito na montagem (confirmar_montagem_peca).
-            return n_pecas
+            resultado = n_pecas
+        else:
+            saldo = Estoque.objects.filter(produto=prod, local=fabrica).first()
+            n_estoque = int(saldo.quantidade) if saldo else 0
+            resultado = min(n_pecas, n_estoque)
 
-        saldo = Estoque.objects.filter(produto=prod, local=fabrica).first()
-        n_estoque = int(saldo.quantidade) if saldo else 0
-        return min(n_pecas, n_estoque)
+        if cache is not None:
+            cache[prod.pk] = resultado
+        return resultado
 
     n_diretas = min(_disponivel_real(produto), quantidade)
     restante  = quantidade - n_diretas
@@ -78,7 +93,6 @@ def disponibilidade_produto_final(produto, quantidade):
             })
         return ok, n_diretas, componentes
 
-    # ── Produto não é Kit — checa se é componente de algum Kit disponível ──
     kit = _kit_que_contem(produto)
     if not kit:
         return False, n_diretas, []
@@ -92,7 +106,6 @@ def disponibilidade_produto_final(produto, quantidade):
         'ok':         ok,
     }]
     return ok, n_diretas, componentes
-
 
 def _local_com_saldo(produto, local_preferido, local_fallback, quantidade):
     """
