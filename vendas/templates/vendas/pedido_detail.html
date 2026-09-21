@@ -93,6 +93,7 @@
     </div>
 
     {# ── Pagamentos ── #}
+        {# ── Pagamentos ── #}
     {% if is_financeiro or is_gerente %}
     <div class="card mb-4">
       <div class="card-body p-4">
@@ -106,6 +107,7 @@
                 <th>Data</th>
                 <th>Forma</th>
                 <th>Transação</th>
+                <th>Registrado por</th>
                 <th class="text-end">Valor</th>
                 <th></th>
               </tr>
@@ -116,6 +118,7 @@
                 <td class="text-muted small">{{ pag.pago_em|date:"d/m/Y H:i" }}</td>
                 <td class="small">{{ pag.get_metodo_display }}</td>
                 <td class="text-muted small">{{ pag.transacao|default:"—" }}</td>
+                <td class="text-muted small">{{ pag.criado_por.get_full_name|default:pag.criado_por.username }}</td>
                 <td class="text-end fw-semibold">{{ pag.valor|moeda }}</td>
                 <td class="text-end">
                   <form method="post" action="{% url 'vendas:pagamento_delete' pedido.pk pag.pk %}">
