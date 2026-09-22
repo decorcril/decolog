@@ -18,7 +18,7 @@ from core.mixins import orcamento_e_paraiso
 TRANSPORTADORA_CHOICES = [
     'Contratação Remetente - CIF',
     'Contratação Destinatário - FOB',
-    'Envio pela Decorcril',
+    'Envio pela Empresa',
     'Retirada na Loja',
 ]
 
