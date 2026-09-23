@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db.models import Q, Sum, F
+import unicodedata
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -132,6 +133,17 @@ TRANSPORTADORA_CHOICES = [
 ]
 
 
+def _normalizar(texto):
+    """Remove acentos e baixa a caixa — permite buscar 'thais' e encontrar
+    'Thaís', ou 'joao' e encontrar 'João', sem se importar com acento ou
+    maiúscula/minúscula."""
+    if not texto:
+        return ''
+    nfkd       = unicodedata.normalize('NFKD', texto)
+    sem_acento = ''.join(c for c in nfkd if not unicodedata.combining(c))
+    return sem_acento.lower()
+
+
 @acesso_vendas
 def pedido_list(request):
     q           = request.GET.get('q', '')
@@ -154,11 +166,6 @@ def pedido_list(request):
         grupos = request.user.groups.values_list('name', flat=True)
         if 'Vendedor' in grupos and 'Financeiro' not in grupos and 'Gerente' not in grupos:
             pedidos = pedidos.filter(criado_por=request.user)
-
-    if q:
-        pedidos = pedidos.filter(
-            Q(numero__icontains=q) | Q(cliente__nome__icontains=q)
-        )
 
     # "Aguardando Envio" não é um status real no banco — é 'picking' com
     # tudo já separado (status_separacao.tudo_separado). Como isso depende
@@ -199,6 +206,17 @@ def pedido_list(request):
             Q(itens__produto__nome__icontains=produto_q) |
             Q(itens__produto__codigo__icontains=produto_q)
         ).distinct()
+
+    # Busca por nome do cliente / número — feita em Python, não no banco,
+    # pra ignorar acento E maiúscula/minúscula ao mesmo tempo. icontains do
+    # banco já ignora maiúscula, mas não ignora acento (por isso "Thaís"
+    # não batia com "thais" antes).
+    if q:
+        q_norm  = _normalizar(q)
+        pedidos = [
+            p for p in pedidos
+            if q_norm in _normalizar(p.numero) or q_norm in _normalizar(p.cliente.nome)
+        ]
 
     if status == 'aguardando_envio':
         pedidos = [p for p in pedidos if p.status_separacao['tudo_separado']]
