@@ -10,6 +10,7 @@ from .pedido import (
     comprovante_envio_add,
     comprovante_envio_delete,
     comprovante_envio_editar_info,
+    pedido_retirado_ficha,
 )
 
 from .pagamento import (

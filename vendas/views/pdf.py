@@ -313,6 +313,10 @@ def pedido_pdf(request, pk):
         Pedido.objects.select_related('cliente', 'criado_por'),
         pk=pk
     )
+
+    from vendas.models import ImpressaoFichaEnvio
+    ImpressaoFichaEnvio.objects.create(pedido=pedido, usuario=request.user)
+
     cliente = pedido.cliente
     s       = _styles()
     now     = datetime.now(tz=zoneinfo.ZoneInfo("America/Sao_Paulo")).strftime('%d/%m/%Y  %H:%M')
@@ -330,12 +334,7 @@ def pedido_pdf(request, pk):
     )
 
     el = []
-###
 
-
-
-
-###
     # ── Cabeçalho ──
     left_col = [
         Paragraph("DECORCRIL", s['company']),
@@ -355,7 +354,7 @@ def pedido_pdf(request, pk):
         [[left_col, right_col]],
         colWidths=[CONTENT_W * 0.65, CONTENT_W * 0.35],   # era 0.55 / 0.45
         rowHeights=[30 * mm],
-)
+    )
     header.setStyle(TableStyle([
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('LEFTPADDING', (0, 0), (-1, -1), 4 * mm),

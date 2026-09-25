@@ -324,7 +324,11 @@ def pedido_detail(request, pk):
 
     pedido = get_object_or_404(
         Pedido.objects.select_related('cliente', 'criado_por', 'responsavel', 'local_saida')
-                      .prefetch_related('itens__produto', 'pagamentos', 'comprovantes_envio__enviado_por'),
+                      .prefetch_related(
+                          'itens__produto', 'pagamentos',
+                          'comprovantes_envio__enviado_por',
+                          'impressoes_ficha__usuario',
+                      ),
         pk=pk
     )
 
@@ -339,6 +343,9 @@ def pedido_detail(request, pk):
     separadas      = UnidadePedido.objects.filter(item__pedido=pedido, separada=True).count()
     tudo_separado  = separadas >= total_unidades
 
+    impressoes       = list(pedido.impressoes_ficha.all())
+    ultima_impressao = impressoes[0] if impressoes else None
+
     return render(request, 'vendas/pedido_detail.html', {
         'pedido':            pedido,
         'status_choices':    Pedido.Status.choices,
@@ -346,8 +353,25 @@ def pedido_detail(request, pk):
         'separadas':         separadas,
         'tudo_separado':     tudo_separado,
         'pedido_e_paraiso':  pedido_e_paraiso(pedido),
+        'ultima_impressao':  ultima_impressao,
+        'impressoes':        impressoes,
     })
 
+@financeiro_ou_gerente
+def pedido_retirado_ficha(request, pk):
+    pedido = get_object_or_404(Pedido, pk=pk)
+
+    if request.method == 'POST':
+        nome = request.POST.get('retirado_por', '').strip()
+        if nome:
+            pedido.retirado_por = nome
+            pedido.retirado_em  = timezone.now()
+            pedido.save(update_fields=['retirado_por', 'retirado_em'])
+            messages.success(request, 'Retirada registrada.')
+        else:
+            messages.error(request, 'Informe o nome de quem retirou.')
+
+    return redirect('vendas:pedido_detail', pk=pedido.pk)
 
 @vendedor_ou_gerente
 def pedido_edit(request, pk):

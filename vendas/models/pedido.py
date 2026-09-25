@@ -129,6 +129,8 @@ class Pedido(models.Model):
         verbose_name='Token de Separação'
     )
     separado         = models.BooleanField(default=False, verbose_name='Separado')
+    retirado_por     = models.CharField(max_length=150, blank=True, verbose_name='Ficha retirada por')
+    retirado_em      = models.DateTimeField(null=True, blank=True, verbose_name='Ficha retirada em')
 
     class Meta:
         verbose_name        = 'Pedido'

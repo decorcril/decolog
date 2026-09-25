@@ -317,6 +317,9 @@ def pedido_pdf_paraiso(request, pk):
     if not pedido_e_paraiso(pedido):
         raise PermissionDenied('Este pedido não pertence à Paraíso do Acrílico.')
 
+    from vendas.models import ImpressaoFichaEnvio
+    ImpressaoFichaEnvio.objects.create(pedido=pedido, usuario=request.user)
+
     cliente = pedido.cliente
     s       = _styles()
     now     = datetime.now(tz=zoneinfo.ZoneInfo("America/Sao_Paulo")).strftime('%d/%m/%Y  %H:%M')
