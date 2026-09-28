@@ -314,8 +314,10 @@ def pedido_pdf(request, pk):
         pk=pk
     )
 
-    from vendas.models import ImpressaoFichaEnvio
-    ImpressaoFichaEnvio.objects.create(pedido=pedido, usuario=request.user)
+    grupos = request.user.groups.values_list('name', flat=True)
+    if request.user.is_staff or 'Financeiro' in grupos or 'Gerente' in grupos:
+        from vendas.models import ImpressaoFichaEnvio
+        ImpressaoFichaEnvio.objects.create(pedido=pedido, usuario=request.user)
 
     cliente = pedido.cliente
     s       = _styles()

@@ -317,8 +317,10 @@ def pedido_pdf_paraiso(request, pk):
     if not pedido_e_paraiso(pedido):
         raise PermissionDenied('Este pedido não pertence à Paraíso do Acrílico.')
 
-    from vendas.models import ImpressaoFichaEnvio
-    ImpressaoFichaEnvio.objects.create(pedido=pedido, usuario=request.user)
+    grupos = request.user.groups.values_list('name', flat=True)
+    if request.user.is_staff or 'Financeiro' in grupos or 'Gerente' in grupos:
+        from vendas.models import ImpressaoFichaEnvio
+        ImpressaoFichaEnvio.objects.create(pedido=pedido, usuario=request.user)
 
     cliente = pedido.cliente
     s       = _styles()
