@@ -100,6 +100,43 @@ document.addEventListener('DOMContentLoaded', function () {
     },
   });
 
+  // ── Pré-carregamento em modo edição ──
+  const clienteInicialEl    = document.getElementById('cliente-inicial-data');
+  const itensIniciaisEl     = document.getElementById('itens-iniciais-data');
+  const financeiroInicialEl = document.getElementById('financeiro-inicial-data');
+
+  if (clienteInicialEl) {
+    const clienteInicial = JSON.parse(clienteInicialEl.textContent);
+    const option = {
+      value: String(clienteInicial.id),
+      text:  clienteInicial.nome,
+      nome:  clienteInicial.nome,
+      cep:   clienteInicial.cep,
+    };
+    tsCliente.addOption(option);
+    tsCliente.setValue(option.value, true);
+    clienteSelecionado = option;
+    if (option.cep) {
+      document.getElementById('cep_destino').value = option.cep;
+    }
+  }
+
+  if (itensIniciaisEl) {
+    items = JSON.parse(itensIniciaisEl.textContent);
+  }
+
+  if (financeiroInicialEl) {
+    const financeiroInicial = JSON.parse(financeiroInicialEl.textContent);
+
+    const freteEl = document.getElementById('id_frete');
+    freteEl.value = formatMoeda(financeiroInicial.frete);
+    freteEl.dispatchEvent(new Event('input'));
+
+    const descontoEl = document.getElementById('id_desconto');
+    descontoEl.value = formatMoeda(financeiroInicial.desconto);
+    descontoEl.dispatchEvent(new Event('input'));
+  }
+
   // ── Itens ──
   function renderItems() {
     const tbody    = document.getElementById('items_body');

@@ -2,17 +2,16 @@ import json
 from decimal import Decimal
 
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from clientes.models import Cliente
-from core.mixins import acesso_orcamentos
+from core.mixins import acesso_orcamentos, orcamento_e_paraiso
 from vendas.models import Pedido, ItemPedido
 from vendas.models.orcamento import Orcamento, ItemOrcamento
-from core.mixins import orcamento_e_paraiso
-
 
 
 TRANSPORTADORA_CHOICES = [
@@ -134,6 +133,126 @@ def orcamento_create(request):
 
 
 @acesso_orcamentos
+def orcamento_edit(request, pk):
+    orcamento = get_object_or_404(
+        Orcamento.objects.select_related('cliente').prefetch_related('itens__produto'),
+        pk=pk
+    )
+
+    if not request.user.is_staff:
+        grupos = request.user.groups.values_list('name', flat=True)
+        if 'Gerente' not in grupos:
+            if orcamento.criado_por != request.user:
+                raise PermissionDenied
+            if orcamento.status != Orcamento.Status.DRAFT:
+                messages.error(request, 'Só é possível editar orçamentos em elaboração.')
+                return redirect('vendas:orcamento_detail', pk=orcamento.pk)
+
+    if orcamento.status != Orcamento.Status.DRAFT:
+        messages.error(request, 'Só é possível editar orçamentos em elaboração.')
+        return redirect('vendas:orcamento_detail', pk=orcamento.pk)
+
+    if request.method == 'POST':
+        cliente_id           = request.POST.get('cliente')
+        tipo_venda           = request.POST.get('tipo_venda')
+        condicao_pagamento   = request.POST.get('condicao_pagamento', '')
+        contato              = request.POST.get('contato', '')
+        prazo_confeccao      = request.POST.get('prazo_confeccao', '')
+        urgente              = request.POST.get('urgente') == 'on'
+        total_desconto       = request.POST.get('total_desconto', '0').replace('.', '').replace(',', '.') or '0'
+        observacoes          = request.POST.get('observacoes', '')
+        observacoes_internas = request.POST.get('observacoes_internas', '')
+        items_json           = request.POST.get('items_json', '[]')
+
+        transportadora = request.POST.get('transportadora_frete') or request.POST.get('transportadora', '')
+
+        try:
+            frete = Decimal(
+                request.POST.get('frete', '0').replace('.', '').replace(',', '.') or '0'
+            )
+        except Exception:
+            frete = Decimal('0')
+
+        if not cliente_id:
+            messages.error(request, 'Selecione um cliente.')
+        elif not tipo_venda:
+            messages.error(request, 'Selecione o tipo de venda.')
+        else:
+            try:
+                items = json.loads(items_json)
+            except Exception:
+                items = []
+
+            if not items:
+                messages.error(request, 'Adicione pelo menos um produto ao orçamento.')
+            else:
+                cliente = get_object_or_404(Cliente, pk=cliente_id)
+
+                orcamento.cliente              = cliente
+                orcamento.tipo_venda           = tipo_venda
+                orcamento.condicao_pagamento   = condicao_pagamento
+                orcamento.contato              = contato
+                orcamento.transportadora       = transportadora
+                orcamento.frete                = frete
+                orcamento.prazo_confeccao      = prazo_confeccao
+                orcamento.urgente              = urgente
+                orcamento.total_desconto       = Decimal(total_desconto)
+                orcamento.observacoes          = observacoes
+                orcamento.observacoes_internas = observacoes_internas
+                orcamento.save()
+
+                # Substitui todos os itens — mais simples e seguro do que
+                # tentar casar item por item com o que já existia
+                orcamento.itens.all().delete()
+                for item in items:
+                    ItemOrcamento.objects.create(
+                        orcamento      = orcamento,
+                        produto_id     = item['id'],
+                        quantidade     = item['quantidade'],
+                        preco_unitario = Decimal(str(item['preco'])),
+                    )
+
+                messages.success(request, f'Orçamento {orcamento.numero} atualizado!')
+                return redirect('vendas:orcamento_detail', pk=orcamento.pk)
+
+    itens_iniciais = [
+        {
+            'id':          item.produto_id,
+            'nome':        item.produto.nome,
+            'quantidade':  item.quantidade,
+            'preco':       float(item.preco_unitario),
+            'peso':        0,
+            'largura':     0,
+            'altura':      0,
+            'comprimento': 0,
+        }
+        for item in orcamento.itens.all()
+    ]
+
+    cliente_inicial = {
+        'id':   orcamento.cliente.pk,
+        'nome': orcamento.cliente.nome,
+        'cep':  orcamento.cliente.cep or '',
+    }
+
+    financeiro_inicial = {
+        'frete':    float(orcamento.frete),
+        'desconto': float(orcamento.total_desconto),
+    }
+
+    return render(request, 'vendas/orcamento_form.html', {
+        'titulo':                  f'Editar Orçamento {orcamento.numero}',
+        'orcamento':               orcamento,
+        'tipo_venda_choices':      Orcamento._meta.get_field('tipo_venda').choices,
+        'transportadora_choices':  TRANSPORTADORA_CHOICES,
+        'prazo_confeccao_choices': Orcamento.PrazoConfeccao.choices,
+        'itens_iniciais':          itens_iniciais,
+        'cliente_inicial':         cliente_inicial,
+        'financeiro_inicial':      financeiro_inicial,
+    })
+
+
+@acesso_orcamentos
 def orcamento_detail(request, pk):
     orcamento = get_object_or_404(
         Orcamento.objects.select_related('cliente', 'criado_por')
@@ -141,7 +260,7 @@ def orcamento_detail(request, pk):
         pk=pk
     )
     return render(request, 'vendas/orcamento_detail.html', {
-        'orcamento':          orcamento,
+        'orcamento':           orcamento,
         'orcamento_e_paraiso': orcamento_e_paraiso(orcamento),
     })
 

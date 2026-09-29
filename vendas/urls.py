@@ -43,4 +43,5 @@ urlpatterns = [
     path('<int:pk>/pdf-paraiso/', views.pedido_pdf_paraiso, name='pedido_pdf_paraiso'),
     path('orcamentos/<int:pk>/pdf-paraiso/', views.orcamento_pdf_paraiso, name='orcamento_pdf_paraiso'),
     path('<int:pk>/retirado/', views.pedido_retirado_ficha, name='pedido_retirado_ficha'),
+    path('orcamentos/<int:pk>/editar/', views.orcamento_edit, name='orcamento_edit'),
 ]

@@ -21,6 +21,12 @@
   </p>
 </div>
 
+{% if orcamento %}
+{{ cliente_inicial|json_script:"cliente-inicial-data" }}
+{{ itens_iniciais|json_script:"itens-iniciais-data" }}
+{{ financeiro_inicial|json_script:"financeiro-inicial-data" }}
+{% endif %}
+
 <div class="row justify-content-center">
   <div class="col-lg-10">
 
@@ -40,14 +46,15 @@
             </div>
             <div class="col-md-4">
               <label class="form-label fw-semibold text-secondary small">Responsável</label>
-              <input type="text" name="contato" class="form-control" placeholder="Responsável pelo recebimento">
+              <input type="text" name="contato" class="form-control" placeholder="Responsável pelo recebimento"
+                     value="{{ orcamento.contato|default:'' }}">
             </div>
           </div>
           <input type="hidden" id="cep_destino">
         </div>
       </div>
 
-            {# Comercial #}
+      {# Comercial #}
       <div class="card mb-4">
         <div class="card-body p-4">
           <p class="fw-semibold text-secondary small mb-3">DADOS COMERCIAIS</p>
@@ -57,21 +64,21 @@
               <select name="tipo_venda" id="id_tipo_venda" class="form-select" required>
                 <option value="">Selecione...</option>
                 {% for value, label in tipo_venda_choices %}
-                  <option value="{{ value }}">{{ label }}</option>
+                  <option value="{{ value }}" {% if orcamento.tipo_venda == value %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
               </select>
             </div>
             <div class="col-md-4">
               <label class="form-label fw-semibold text-secondary small">CONDIÇÃO DE PAGAMENTO</label>
               <input type="text" name="condicao_pagamento" class="form-control"
-                     placeholder="Ex: 30/60 dias">
+                     placeholder="Ex: 30/60 dias" value="{{ orcamento.condicao_pagamento|default:'' }}">
             </div>
             <div class="col-md-4">
               <label class="form-label fw-semibold text-secondary small">TIPO DE ENVIO</label>
               <select name="transportadora" class="form-select">
                 <option value="">Selecione...</option>
                 {% for op in transportadora_choices %}
-                  <option value="{{ op }}">{{ op }}</option>
+                  <option value="{{ op }}" {% if orcamento.transportadora == op %}selected{% endif %}>{{ op }}</option>
                 {% endfor %}
               </select>
             </div>
@@ -86,13 +93,14 @@
               <select name="prazo_confeccao" class="form-select">
                 <option value="">Selecione...</option>
                 {% for value, label in prazo_confeccao_choices %}
-                  <option value="{{ value }}">{{ label }}</option>
+                  <option value="{{ value }}" {% if orcamento.prazo_confeccao == value %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
               </select>
             </div>
             <div class="col-md-4 d-flex align-items-end">
               <div class="form-check">
-                <input type="checkbox" name="urgente" id="id_urgente" class="form-check-input">
+                <input type="checkbox" name="urgente" id="id_urgente" class="form-check-input"
+                       {% if orcamento.urgente %}checked{% endif %}>
                 <label class="form-check-label fw-semibold text-danger" for="id_urgente">
             <i class="bi bi-exclamation-triangle-fill me-1"></i>Urgente
           </label>
@@ -202,13 +210,13 @@
           <div class="col-md-6">
             <label class="form-label fw-semibold text-secondary small">OBSERVAÇÕES</label>
             <textarea name="observacoes" form="form-orcamento"
-                      class="form-control" rows="3"></textarea>
+                      class="form-control" rows="3">{{ orcamento.observacoes|default:'' }}</textarea>
           </div>
           {% if is_gerente or is_financeiro %}
           <div class="col-md-6">
             <label class="form-label fw-semibold text-secondary small">OBSERVAÇÕES INTERNAS</label>
             <textarea name="observacoes_internas" form="form-orcamento"
-                      class="form-control" rows="3"></textarea>
+                      class="form-control" rows="3">{{ orcamento.observacoes_internas|default:'' }}</textarea>
           </div>
           {% endif %}
         </div>
@@ -218,11 +226,17 @@
     <div class="d-flex gap-2 mb-4">
       <button type="submit" form="form-orcamento" class="btn btn-primary px-4"
           onclick="return confirm('Tem certeza que deseja salvar esse orçamento?')">
-        <i class="bi bi-arrow-up-circle me-1"></i> Salvar Orçamento
+        <i class="bi bi-arrow-up-circle me-1"></i> {% if orcamento %}Salvar Alterações{% else %}Salvar Orçamento{% endif %}
       </button>
+      {% if orcamento %}
+      <a href="{% url 'vendas:orcamento_detail' orcamento.pk %}" class="btn btn-outline-secondary px-4">
+        Cancelar
+      </a>
+      {% else %}
       <a href="{% url 'vendas:orcamento_list' %}" class="btn btn-outline-secondary px-4">
         Cancelar
       </a>
+      {% endif %}
     </div>
 
   </div>

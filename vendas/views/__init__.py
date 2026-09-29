@@ -22,9 +22,11 @@ from .autocomplete import (
     autocomplete_produto,
 )
 from .frete import calcular_frete_view
+
 from .orcamento import (
     orcamento_list,
     orcamento_create,
+    orcamento_edit,
     orcamento_detail,
     orcamento_aprovar,
     orcamento_rejeitar,
