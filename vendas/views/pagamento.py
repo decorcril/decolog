@@ -13,9 +13,10 @@ def pagamento_add(request, pk):
     pedido = get_object_or_404(Pedido, pk=pk)
 
     if request.method == 'POST':
-        metodo    = request.POST.get('metodo', '')
-        valor_raw = request.POST.get('valor', '0')
-        transacao = request.POST.get('transacao', '').strip() or None
+        metodo      = request.POST.get('metodo', '')
+        valor_raw   = request.POST.get('valor', '0')
+        transacao   = request.POST.get('transacao', '').strip() or None
+        observacoes = request.POST.get('observacoes', '').strip()
 
         # Limpa máscara: 1.500,00 → 1500.00
         valor_limpo = valor_raw.replace('.', '').replace(',', '.')
@@ -35,11 +36,12 @@ def pagamento_add(request, pk):
 
         try:
             Pagamento.objects.create(
-                pedido     = pedido,
-                metodo     = metodo,
-                valor      = valor,
-                transacao  = transacao,
-                criado_por = request.user,
+                pedido      = pedido,
+                metodo      = metodo,
+                valor       = valor,
+                transacao   = transacao,
+                observacoes = observacoes,
+                criado_por  = request.user,
             )
             messages.success(request, 'Pagamento registrado com sucesso!')
         except ValidationError as e:
