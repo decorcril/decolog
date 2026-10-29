@@ -162,6 +162,11 @@ class Pedido(models.Model):
 
     @property
     def total_pago(self) -> Decimal:
+        # Se a listagem já trouxe o total pela query (pago_ann), usa direto
+        # e evita uma agregação por pedido.
+        anotado = getattr(self, 'pago_ann', None)
+        if anotado is not None:
+            return Decimal(anotado).quantize(TWO)
         result = self.pagamentos.aggregate(total=models.Sum('valor'))['total']
         return (result or Decimal("0.00")).quantize(TWO)
 

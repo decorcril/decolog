@@ -1,10 +1,10 @@
+import unicodedata
 from decimal import Decimal
 
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
-from django.db.models import Q, Sum, F
-import unicodedata
+from django.db.models import DecimalField, F, OuterRef, Q, Subquery, Sum
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -146,6 +146,8 @@ def _normalizar(texto):
 
 @acesso_vendas
 def pedido_list(request):
+    from vendas.models.pagamento import Pagamento
+
     q           = request.GET.get('q', '')
     status      = request.GET.get('status', '')
     pendentes   = request.GET.get('pendentes', '')
@@ -157,7 +159,23 @@ def pedido_list(request):
     vendedor_id = request.GET.get('vendedor', '')
     produto_q   = request.GET.get('produto', '')
 
-    pedidos = Pedido.objects.select_related('cliente', 'criado_por').all()
+    # Total pago por subquery: uma query traz o valor de todos os pedidos
+    # (em vez de uma agregação por card) e não multiplica linhas quando o
+    # filtro de produto faz join com os itens.
+    pago_sq = (
+        Pagamento.objects.filter(pedido=OuterRef('pk'))
+        .order_by()
+        .values('pedido')
+        .annotate(total=Sum('valor'))
+        .values('total')
+    )
+    pedidos = Pedido.objects.select_related('cliente', 'criado_por').annotate(
+        pago_ann=Coalesce(
+            Subquery(pago_sq, output_field=DecimalField(max_digits=12, decimal_places=2)),
+            Decimal('0.00'),
+            output_field=DecimalField(max_digits=12, decimal_places=2),
+        )
+    )
 
     if tipo_venda:
         pedidos = pedidos.filter(tipo_venda=tipo_venda)
@@ -167,9 +185,7 @@ def pedido_list(request):
         if 'Vendedor' in grupos and 'Financeiro' not in grupos and 'Gerente' not in grupos:
             pedidos = pedidos.filter(criado_por=request.user)
 
-    # "Aguardando Envio" não é um status real no banco — é 'picking' com
-    # tudo já separado (status_separacao.tudo_separado). Como isso depende
-    # de uma property calculada, filtramos em Python depois da query.
+    # "Aguardando Envio" não é status real: é 'picking' com tudo separado.
     if status == 'aguardando_envio':
         pedidos = pedidos.filter(status='picking')
     elif status:
@@ -185,14 +201,9 @@ def pedido_list(request):
         pedidos = pedidos.filter(urgente=True)
 
     if pendentes == '1':
-        pedidos = pedidos.annotate(
-            total_pago_ann=Coalesce(Sum('pagamentos__valor'), Decimal('0.00'))
-        ).filter(
-            total_pago_ann__lt=F('total_geral')
-        ).exclude(status='canceled')
+        pedidos = pedidos.filter(pago_ann__lt=F('total_geral')).exclude(status='canceled')
 
     if transacao:
-        from vendas.models.pagamento import Pagamento
         pedido_ids = Pagamento.objects.filter(
             transacao__icontains=transacao
         ).values_list('pedido_id', flat=True)
@@ -207,16 +218,17 @@ def pedido_list(request):
             Q(itens__produto__codigo__icontains=produto_q)
         ).distinct()
 
-    # Busca por nome do cliente / número — feita em Python, não no banco,
-    # pra ignorar acento E maiúscula/minúscula ao mesmo tempo. icontains do
-    # banco já ignora maiúscula, mas não ignora acento (por isso "Thaís"
-    # não batia com "thais" antes).
+    # Busca ignorando acento, em duas etapas: primeiro traz só 3 colunas
+    # (pk, número, nome) pra comparar em Python, depois filtra o queryset
+    # pelos pks encontrados. Assim a página continua sendo paginada no banco,
+    # sem instanciar todos os pedidos na memória.
     if q:
-        q_norm  = _normalizar(q)
-        pedidos = [
-            p for p in pedidos
-            if q_norm in _normalizar(p.numero) or q_norm in _normalizar(p.cliente.nome)
+        q_norm = _normalizar(q)
+        ids = [
+            pk for pk, numero, nome in pedidos.values_list('pk', 'numero', 'cliente__nome')
+            if q_norm in _normalizar(numero) or q_norm in _normalizar(nome)
         ]
+        pedidos = pedidos.filter(pk__in=ids)
 
     if status == 'aguardando_envio':
         pedidos = [p for p in pedidos if p.status_separacao['tudo_separado']]
