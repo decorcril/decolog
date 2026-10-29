@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+import tempfile
 import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -101,6 +102,13 @@ else:
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+        'LOCATION': os.path.join(tempfile.gettempdir(), 'decolog_cache'),
+    }
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},

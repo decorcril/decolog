@@ -1,9 +1,18 @@
+import time
+
+from django.core.cache import cache
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 
 from core.models.notificacao import Notificacao
 from vendas.models import Pedido
+
+
+# Por quanto tempo (segundos) o resultado de "este pedido já pode ser atendido
+# só com estoque?" é reaproveitado entre usuários e requisições.
+_CACHE_TTL = 60
+_CHAVE_TODOS_INSUMOS = 'notificacoes:todos_insumos'
 
 
 def _grupos(user):
@@ -28,6 +37,39 @@ def _pedidos_nao_lidos(user, tipo, queryset):
 
 def _pode_ver(user, grupos, *nomes_grupos):
     return user.is_staff or any(nome in grupos for nome in nomes_grupos)
+
+
+def _todos_insumos_compartilhado(pedidos):
+    """
+    Retorna {pedido_pk: bool}: True se o pedido já pode ser atendido
+    inteiramente pelo estoque (_todos_insumos).
+
+    O cálculo é caro (dezenas de queries por pedido) e o resultado não
+    depende de quem está perguntando, então fica guardado por _CACHE_TTL
+    segundos e é reaproveitado entre usuários, entre os blocos de laser e de
+    logística, e entre os workers do gunicorn. Cada pedido tem o próprio
+    carimbo de tempo, para que a entrada de um pedido novo não prolongue a
+    validade das antigas.
+    """
+    from vendas.views.logistica import _todos_insumos
+
+    agora = time.time()
+    mapa = {
+        pk: entrada
+        for pk, entrada in (cache.get(_CHAVE_TODOS_INSUMOS) or {}).items()
+        if agora - entrada[1] <= _CACHE_TTL
+    }
+
+    novos = False
+    for pedido in pedidos:
+        if pedido.pk not in mapa:
+            mapa[pedido.pk] = (_todos_insumos(pedido), agora)
+            novos = True
+
+    if novos:
+        cache.set(_CHAVE_TODOS_INSUMOS, mapa, _CACHE_TTL * 2)
+
+    return {pk: entrada[0] for pk, entrada in mapa.items()}
 
 
 def _notificacao_pagamento_pendente(user, grupos):
@@ -82,12 +124,14 @@ def _notificacao_aguardando_corte(user, grupos):
     if not _pode_ver(user, grupos, 'Operador de Laser', 'Supervisor de Laser', 'Gerente'):
         return []
 
-    from vendas.views.logistica import _todos_insumos
-
-    pedidos = _pedidos_nao_lidos(
+    pedidos = list(_pedidos_nao_lidos(
         user, 'aguard_producao',
         Pedido.objects.filter(status='aguard_producao'),
-    )
+    ))
+    if not pedidos:
+        return []
+
+    atende_por_estoque = _todos_insumos_compartilhado(pedidos)
 
     return [
         {
@@ -99,7 +143,7 @@ def _notificacao_aguardando_corte(user, grupos):
             'pedido_pk': pedido.pk,
         }
         for pedido in pedidos
-        if not _todos_insumos(pedido)
+        if not atende_por_estoque[pedido.pk]
     ]
 
 
@@ -110,12 +154,14 @@ def _notificacao_estoque_disponivel(user, grupos):
     if not _pode_ver(user, grupos, 'Logística', 'Logistica Loja', 'Gerente'):
         return []
 
-    from vendas.views.logistica import _todos_insumos
-
-    pedidos = _pedidos_nao_lidos(
+    pedidos = list(_pedidos_nao_lidos(
         user, 'estoque_disponivel',
         Pedido.objects.filter(status='aguard_producao'),
-    )
+    ))
+    if not pedidos:
+        return []
+
+    atende_por_estoque = _todos_insumos_compartilhado(pedidos)
 
     return [
         {
@@ -127,7 +173,7 @@ def _notificacao_estoque_disponivel(user, grupos):
             'pedido_pk': pedido.pk,
         }
         for pedido in pedidos
-        if _todos_insumos(pedido)
+        if atende_por_estoque[pedido.pk]
     ]
 
 
@@ -283,6 +329,7 @@ def notificacoes_marcar_lida(request, pedido_pk):
                 )
 
     return JsonResponse({'ok': True})
+
 
 @login_required
 def notificacoes_marcar_todas(request):
