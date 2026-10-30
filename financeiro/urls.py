@@ -1,6 +1,6 @@
 # financeiro/urls.py
 from django.urls import path
-from financeiro.views import contas_pagar
+from financeiro.views import contas_pagar, relatorio_pagar
 
 app_name = 'financeiro'
 
@@ -15,4 +15,6 @@ urlpatterns = [
          contas_pagar.pagamento_parcela_add, name='pagamento_parcela_add'),
     path('contas-pagar/<int:conta_pk>/parcela/<int:parcela_pk>/pagamento/<int:pag_pk>/excluir/',
          contas_pagar.pagamento_parcela_delete, name='pagamento_parcela_delete'),
+    path('contas-pagar/relatorio/', relatorio_pagar.relatorio_pagar, name='relatorio_pagar'),
+    path('contas-pagar/relatorio/pdf/', relatorio_pagar.relatorio_pagar_pdf, name='relatorio_pagar_pdf'),
 ]

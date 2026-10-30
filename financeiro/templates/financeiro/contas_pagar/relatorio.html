@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+{% load core_extras %}
+
+{% block title %}Relatório de Contas a Pagar — Decolog{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">Relatório de Contas a Pagar</h4>
+    <p class="text-muted small mb-0">
+      <a href="{% url 'financeiro:contas_pagar_list' %}" class="text-muted text-decoration-none">
+        <i class="bi bi-cash-stack me-1"></i>Contas a Pagar
+      </a>
+      <i class="bi bi-chevron-right mx-1" style="font-size: 0.7rem;"></i>
+      Relatório — {{ linhas|length }} parcela{{ linhas|length|pluralize }}
+    </p>
+  </div>
+  <a href="{% url 'financeiro:relatorio_pagar_pdf' %}?{{ querystring }}" target="_blank"
+     class="btn btn-outline-secondary">
+    <i class="bi bi-printer me-1"></i> Gerar PDF
+  </a>
+</div>
+
+{# Resumo #}
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card"><div class="card-body p-3">
+      <span class="text-muted small d-block mb-1">Saldo a pagar</span>
+      <span class="fw-bold fs-5">{{ tot.saldo|moeda }}</span>
+    </div></div>
+  </div>
+  <div class="col-md-3">
+    <div class="card"><div class="card-body p-3">
+      <span class="text-muted small d-block mb-1">Vencido</span>
+      <span class="fw-bold fs-5 text-danger">{{ tot.vencido|moeda }}</span>
+    </div></div>
+  </div>
+  <div class="col-md-3">
+    <div class="card"><div class="card-body p-3">
+      <span class="text-muted small d-block mb-1">A vencer</span>
+      <span class="fw-bold fs-5 text-warning">{{ tot.a_vencer|moeda }}</span>
+    </div></div>
+  </div>
+  <div class="col-md-3">
+    <div class="card"><div class="card-body p-3">
+      <span class="text-muted small d-block mb-1">Pago</span>
+      <span class="fw-bold fs-5 text-success">{{ tot.pago|moeda }}</span>
+      <span class="text-muted small d-block">+ {{ tot.juros|moeda }} de juros/multa</span>
+    </div></div>
+  </div>
+</div>
+
+{# Filtros #}
+<div class="card mb-4">
+  <div class="card-body p-3">
+    <form method="get" class="row g-2 align-items-end">
+
+      <div class="col-md-2">
+        <label class="form-label small text-muted mb-0">Situação</label>
+        <select name="status" class="form-select">
+          {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label small text-muted mb-0">Fornecedor</label>
+        <select name="fornecedor" class="form-select">
+          <option value="">Todos os fornecedores</option>
+          {% for f in fornecedores %}
+            <option value="{{ f.pk }}" {% if fornecedor == f.pk|stringformat:"s" %}selected{% endif %}>{{ f.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label small text-muted mb-0">Categoria</label>
+        <select name="categoria" class="form-select">
+          <option value="">Todas</option>
+          {% for value, label in categoria_choices %}
+            <option value="{{ value }}" {% if categoria == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label small text-muted mb-0">Vencimento de</label>
+        <input type="date" name="venc_de" value="{{ venc_de }}" class="form-control">
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label small text-muted mb-0">até</label>
+        <input type="date" name="venc_ate" value="{{ venc_ate }}" class="form-control">
+      </div>
+
+      <div class="col-md-1 d-flex gap-2 justify-content-end">
+        <button type="submit" class="btn btn-primary" title="Filtrar">
+          <i class="bi bi-search"></i>
+        </button>
+        <a href="{% url 'financeiro:relatorio_pagar' %}" class="btn btn-outline-secondary" title="Limpar">
+          <i class="bi bi-x-lg"></i>
+        </a>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{# Tabela #}
+{% if linhas %}
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Vencimento</th>
+          <th>Fornecedor</th>
+          <th>Descrição</th>
+          <th class="text-center">Parc.</th>
+          <th>Categoria</th>
+          <th class="text-end">Valor</th>
+          <th class="text-end">Pago</th>
+          <th class="text-end">Saldo</th>
+          <th class="text-center">Situação</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in linhas %}
+        <tr {% if l.situacao == 'vencido' %}class="table-danger"{% endif %}>
+          <td class="small">{{ l.parcela.vencimento|date:"d/m/Y" }}</td>
+          <td class="small fw-semibold">{{ l.fornecedor }}</td>
+          <td class="small">
+            <a href="{% url 'financeiro:contas_pagar_detail' l.conta.pk %}" class="text-decoration-none">
+              {{ l.conta.descricao }}
+            </a>
+            {% if l.conta.numero_documento %}
+            <span class="text-muted">· Doc. {{ l.conta.numero_documento }}</span>
+            {% endif %}
+          </td>
+          <td class="small text-center">{{ l.parcela.numero }}/{{ l.n_parcelas }}</td>
+          <td class="small text-muted">{{ l.conta.get_categoria_display|default:"—" }}</td>
+          <td class="small text-end">{{ l.parcela.valor|moeda }}</td>
+          <td class="small text-end text-muted">{{ l.pago|moeda }}</td>
+          <td class="small text-end fw-semibold">{{ l.saldo|moeda }}</td>
+          <td class="text-center">
+            <span class="badge
+              {% if l.situacao == 'vencido' %}bg-danger bg-opacity-10 text-danger
+              {% elif l.situacao == 'a_vencer' %}bg-warning bg-opacity-10 text-warning
+              {% elif l.situacao == 'parcial' %}bg-info bg-opacity-10 text-info
+              {% elif l.situacao == 'pago' %}bg-success bg-opacity-10 text-success
+              {% else %}bg-secondary bg-opacity-10 text-secondary{% endif %}">
+              {{ l.situacao_label }}
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot class="table-light">
+        <tr class="fw-bold">
+          <td colspan="5" class="text-end">Total</td>
+          <td class="text-end">{{ tot.valor|moeda }}</td>
+          <td class="text-end">{{ tot.pago|moeda }}</td>
+          <td class="text-end">{{ tot.saldo|moeda }}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body p-4 text-center text-muted">
+    <i class="bi bi-cash-stack fs-3 mb-2 d-block"></i>
+    Nenhuma parcela encontrada com esses filtros.
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
