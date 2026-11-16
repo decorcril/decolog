@@ -38,7 +38,7 @@ MARGIN         = 6 * mm
 CONTENT_W      = PAGE_W - 2 * MARGIN
 
 # Caminho do logo/mascote — ajuste se o arquivo estiver em outro lugar
-LOGO_PATH = os.path.join(settings.BASE_DIR, 'static', 'img', 'mascote.png')
+LOGO_PATH = os.path.join(settings.BASE_DIR, 'static', 'img', 'mascote_novo.png')
 
 
 # ══════════════════════════════════════════════════════════════
@@ -87,7 +87,7 @@ def _draw_footer_extras(canvas, doc, pedido, request, s):
 
     # ── Logo/mascote — canto inferior direito, mesma altura do QR ──
     if os.path.exists(LOGO_PATH):
-        logo_size = 31 * mm
+        logo_size = 35 * mm
         logo_x    = PAGE_W - MARGIN - logo_size
         logo_y    = MARGIN - 2 * mm
 
