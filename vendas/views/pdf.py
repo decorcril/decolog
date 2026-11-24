@@ -369,7 +369,7 @@ def pedido_pdf(request, pk):
     el.append(_section_title('Dados do Cliente', s))
     el.append(Spacer(1, 2 * mm))
     el.append(_info_grid([
-        [('Cliente',    cliente.nome),
+        [('Cliente',    cliente.nome.upper()),
          ('Pedido Nº',  pedido.numero)],
         [('CNPJ / CPF', cliente.documento),
          ('Data',       pedido.criado_em.strftime('%d/%m/%Y'))],
