@@ -2,19 +2,19 @@
 {% load static %}
 {% load core_extras %}
 
-{% block title %}{{ cliente.nome }} — Decolog{% endblock %}
+{% block title %}{{ cliente.nome | upper }} — Decolog{% endblock %}
 
 {% block content %}
 
 <div class="d-flex justify-content-between align-items-start mb-4">
   <div>
-    <h4 class="fw-bold mb-1">{{ cliente.nome }}</h4>
+    <h4 class="fw-bold mb-1">{{ cliente.nome | upper }}</h4>
     <p class="text-muted small mb-0">
       <a href="{% url 'clientes:list' %}" class="text-muted text-decoration-none">
         <i class="bi bi-people me-1"></i>Clientes
       </a>
       <i class="bi bi-chevron-right mx-1" style="font-size: 0.7rem;"></i>
-      {{ cliente.codigo }} — {{ cliente.nome }}
+      {{ cliente.codigo }} — {{ cliente.nome | upper }}
     </p>
   </div>
   {% if user.is_staff or is_gerente or cliente.criado_por == user %}
@@ -53,7 +53,7 @@
           {% if cliente.nome_fantasia %}
           <div class="col-md-6">
             <p class="text-muted small mb-1">NOME FANTASIA</p>
-            <p class="fw-semibold mb-0">{{ cliente.nome_fantasia }}</p>
+            <p class="fw-semibold mb-0">{{ cliente.nome_fantasia | upper }}</p>
           </div>
           {% endif %}
           {% if cliente.inscricao_estadual %}

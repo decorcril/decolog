@@ -183,7 +183,7 @@
           <span class="text-muted small">Nome</span>
           <div class="fw-semibold">
             <a href="{% url 'clientes:detail' pedido.cliente.pk %}" class="text-decoration-none">
-              {{ pedido.cliente.nome }}
+              {{ pedido.cliente.nome | upper }}
             </a>
           </div>
         </div>
