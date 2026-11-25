@@ -59,9 +59,9 @@
               {% endif %}
             </div>
           </div>
-          <p class="fw-semibold mb-1">{{ cliente.nome }}</p>
+          <p class="fw-semibold mb-1">{{ cliente.nome | upper }}</p>
           {% if cliente.nome_fantasia %}
-            <p class="text-muted small mb-1">{{ cliente.nome_fantasia }}</p>
+            <p class="text-muted small mb-1">{{ cliente.nome_fantasia | upper }}</p>
           {% endif %}
           <p class="text-muted small mb-0">{{ cliente.documento }}</p>
           {% if cliente.cidade %}
